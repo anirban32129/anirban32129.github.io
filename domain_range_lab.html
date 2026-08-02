@@ -1,0 +1,3810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Domain & Range Viewer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  --bg: #0f1117;
+  --surface: #181c27;
+  --card: #1e2333;
+  --border: #2e3450;
+  --d-color: #f4845f;
+  --d-fill: rgba(244,132,95,0.15);
+  --d-fill2: rgba(244,132,95,0.08);
+  --r-color: #5fc4f4;
+  --r-fill: rgba(95,196,244,0.15);
+  --r-fill2: rgba(95,196,244,0.08);
+  --c-color: #f4d45f;
+  --c-fill: rgba(244,212,95,0.15);
+  --c-fill2: rgba(244,212,95,0.08);
+  --intersect-stroke: #b482f4;
+  --text: #e8eaf2;
+  --muted: #7a80a0;
+  --tick: #3a4060;
+  --axis: #4a5070;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 12px 48px;
+}
+
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image: linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity:0.14;
+  pointer-events:none;
+  z-index:0;
+}
+
+.container { position:relative; z-index:1; width:100%; max-width:1000px; }
+
+header { text-align:center; margin-bottom:24px; }
+header h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.9rem;
+  color: var(--text);
+}
+header h1 .d { color: var(--d-color); }
+header h1 .r { color: var(--r-color); }
+header p { font-size:0.82rem; color:var(--muted); margin-top:4px; font-style:italic; }
+
+.layout {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* ── Builder ── */
+.builder { width: 320px; }
+
+.sec-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.set-header {
+  display:flex; align-items:center; gap:8px; margin-bottom:8px;
+}
+.dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.dot-d { background:var(--d-color); }
+.dot-r { background:var(--r-color); }
+.dot-c { background:var(--c-color); }
+.set-name { font-family:'DM Mono',monospace; font-size:0.8rem; font-weight:500; flex:1; }
+
+.add-btn {
+  background:var(--border); border:1px solid var(--axis);
+  color:var(--muted); border-radius:5px; padding:2px 10px;
+  font-size:0.73rem; cursor:pointer; font-family:'DM Mono',monospace;
+  transition:background 0.15s,color 0.15s;
+}
+.add-btn:hover { background:var(--axis); color:var(--text); }
+
+.intervals-list { display:flex; flex-direction:column; gap:6px; }
+
+.iv-row {
+  display:flex; align-items:center; gap:4px;
+  animation: fadeIn 0.18s ease;
+}
+@keyframes fadeIn { from{opacity:0;transform:translateY(-3px)} to{opacity:1;} }
+
+.brk-btn {
+  width:28px; height:30px;
+  border-radius:5px;
+  border:1.5px solid var(--border);
+  background:var(--surface);
+  color:var(--text);
+  font-family:'DM Mono',monospace;
+  font-size:1.1rem;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s;
+  user-select:none;
+}
+.brk-btn:hover { background:var(--border); }
+.brk-d { border-color:var(--d-color); color:var(--d-color); background:var(--d-fill2); }
+.brk-r { border-color:var(--r-color); color:var(--r-color); background:var(--r-fill2); }
+.brk-c { border-color:var(--c-color); color:var(--c-color); background:var(--c-fill2); }
+
+.num-in {
+  width:58px; height:30px;
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:5px; color:var(--text);
+  font-family:'DM Mono',monospace; font-size:0.88rem;
+  text-align:center; outline:none;
+  transition:border-color 0.15s;
+}
+.num-in:focus { border-color:var(--axis); }
+.num-in.err { border-color:#f45f5f!important; }
+.comma { color:var(--muted); font-family:'DM Mono',monospace; }
+
+.rm-btn {
+  width:22px; height:22px; border-radius:50%;
+  border:none; background:transparent; color:var(--muted);
+  cursor:pointer; font-size:1rem; line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  transition:color 0.15s;
+}
+.rm-btn:hover { color:#f45f5f; }
+
+.op-row { display:flex; align-items:center; gap:6px; margin:8px 0 2px; flex-wrap:wrap; }
+.op-lbl { font-size:0.72rem; color:var(--muted); font-family:'DM Mono',monospace; }
+.op-btn {
+  padding:3px 11px; border-radius:5px;
+  border:1.5px solid var(--border); background:var(--surface);
+  color:var(--muted); font-family:'DM Mono',monospace;
+  font-size:0.76rem; cursor:pointer; transition:all 0.15s;
+}
+.op-btn:hover { border-color:var(--axis); color:var(--text); }
+.op-btn.active { border-color:var(--intersect-stroke); color:var(--intersect-stroke); background:rgba(180,130,244,0.1); }
+
+.divider { height:1px; background:var(--border); margin:14px 0; }
+
+.axis-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.axis-row label { font-size:0.76rem; color:var(--muted); font-family:'DM Mono',monospace; }
+.axis-row input {
+  width:54px; height:28px;
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:5px; color:var(--text);
+  font-family:'DM Mono',monospace; font-size:0.85rem;
+  text-align:center; outline:none;
+}
+.axis-row input:focus { border-color:var(--axis); }
+
+.err-msg { font-family:'DM Mono',monospace; font-size:0.7rem; color:#f47f5f; min-height:14px; margin-top:6px; }
+
+/* ── Scale SVGs ── */
+.scales-card { width: 240px; padding: 18px 16px; }
+
+.scale-toolbar {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.scale-axis-label {
+  font-family: 'DM Serif Display', serif;
+  font-size: 0.78rem; letter-spacing: 0.06em;
+  display: flex; align-items: center; flex: 1;
+}
+.scale-zoom-group {
+  display: flex; gap: 3px; align-items: center; margin-left: auto;
+}
+.scale-zbtn {
+  width: 26px; height: 26px;
+  border-radius: 5px;
+  border: 1px solid var(--axis);
+  background: var(--surface);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.14s; user-select: none; line-height: 1;
+}
+.scale-zbtn:hover { background: var(--border); border-color: var(--text); }
+.scale-zbtn:active { transform: scale(0.9); }
+.scale-zbtn-reset {
+  font-size: 1rem;
+  color: var(--muted);
+  border-color: var(--border);
+}
+.scale-zbtn-reset:hover { color: var(--text); }
+
+.scale-hint-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.59rem; color: var(--muted);
+  margin-bottom: 10px; line-height: 1.8;
+}
+
+.scales-canvas-wrap {
+  touch-action: none; user-select: none; cursor: grab;
+  border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; background: var(--surface);
+}
+.scales-canvas-wrap:active { cursor: grabbing; }
+.scales-inner {
+  display: flex; gap: 0;
+}
+.scale-col {
+  display: flex; flex-direction: column; align-items: center;
+  flex: 1;
+}
+.scale-cv {
+  display: block; width: 100%;
+}
+
+/* ── Info ── */
+.info-card { width:220px; }
+.info-sec { margin-bottom:14px; }
+.info-sec-title {
+  font-family:'DM Mono',monospace; font-size:0.64rem;
+  letter-spacing:0.14em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:7px;
+}
+.info-note { font-family:'DM Mono',monospace; font-size:0.88rem; line-height:1.8; }
+.dn { color:var(--d-color); }
+.rn { color:var(--r-color); }
+.usym { color:var(--muted); font-size:0.76rem; margin:0 3px; }
+.badge {
+  display:inline-block; padding:2px 8px;
+  border-radius:4px; font-family:'DM Mono',monospace;
+  font-size:0.72rem; margin-top:5px;
+}
+.bd { background:var(--d-fill); color:var(--d-color); }
+.br { background:var(--r-fill); color:var(--r-color); }
+.guide-line { font-family:'DM Mono',monospace; font-size:0.72rem; color:var(--muted); line-height:2.0; }
+.guide-line span { color:var(--text); }
+
+/* ── 2D Grid Canvas ── */
+.grid2d-card {
+  width: 100%;
+  max-width: 1000px;
+  margin-top: 16px;
+  padding: 18px 20px;
+}
+.grid2d-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.grid2d-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 1;
+}
+.grid2d-legend {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--muted);
+}
+.grid2d-legend span { display: flex; align-items: center; gap: 5px; }
+.grid2d-legend .swatch {
+  width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0;
+}
+.grid2d-wrap {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+#grid2dCanvas { display: block; width: 100%; }
+
+/* ── Discrete Points ── */
+.pts-row {
+  display:flex; align-items:center; gap:6px;
+  animation: fadeIn 0.18s ease;
+  margin-top:2px;
+}
+.pts-input {
+  flex:1; height:30px; min-width:0;
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:5px; color:var(--text);
+  font-family:'DM Mono',monospace; font-size:0.82rem;
+  padding:0 8px; outline:none;
+  transition:border-color 0.15s;
+}
+.pts-input:focus { border-color:var(--axis); }
+.pts-label {
+  font-family:'DM Mono',monospace; font-size:1rem;
+  color:var(--muted); flex-shrink:0;
+}
+.pts-d { color:var(--d-color)!important; }
+.pts-r { color:var(--r-color)!important; }
+.pts-c { color:var(--c-color)!important; }
+.preset-c { border-color:rgba(244,212,95,0.4); color:var(--c-color); background:var(--c-fill2); }
+.preset-c:hover { background:var(--c-fill); border-color:var(--c-color); }
+.cn { color:var(--c-color); }
+
+/* ── ℝ Presets ── */
+.preset-row {
+  display:flex; align-items:center; gap:5px; flex-wrap:wrap;
+  margin-bottom:9px;
+}
+.preset-lbl {
+  font-family:'DM Mono',monospace; font-size:0.65rem;
+  color:var(--muted); white-space:nowrap;
+}
+.preset-btn {
+  padding:3px 9px; border-radius:5px;
+  font-family:'DM Mono',monospace; font-size:0.78rem;
+  cursor:pointer; transition:all 0.15s;
+  border:1.5px solid var(--border); background:var(--surface);
+  color:var(--text);
+}
+.preset-d { border-color:rgba(244,132,95,0.4); color:var(--d-color); background:var(--d-fill2); }
+.preset-d:hover { background:var(--d-fill); border-color:var(--d-color); }
+.preset-r { border-color:rgba(95,196,244,0.4); color:var(--r-color); background:var(--r-fill2); }
+.preset-r:hover { background:var(--r-fill); border-color:var(--r-color); }
+
+/* ── R Presets ── */
+.inf-btn {
+  height:30px; padding:0 6px;
+  border-radius:5px; border:1.5px solid var(--border);
+  background:var(--surface); color:var(--muted);
+  font-family:'DM Mono',monospace; font-size:0.78rem;
+  cursor:pointer; transition:all 0.15s; white-space:nowrap;
+}
+.inf-btn:hover { border-color:#b482f4; color:#b482f4; }
+.inf-active { border-color:#b482f4!important; color:#b482f4!important; background:rgba(180,130,244,0.12)!important; }
+
+/* ── Dynamic Mode Block ── */
+.mode-header {
+  display:flex; align-items:center; gap:6px; margin-bottom:7px; flex-wrap:wrap;
+}
+.mode-label {
+  font-family:'DM Mono',monospace; font-size:0.68rem;
+  color:#b482f4; flex:1; white-space:nowrap;
+}
+.mode-add-btn {
+  padding:2px 9px; border-radius:5px;
+  font-family:'DM Mono',monospace; font-size:0.72rem;
+  cursor:pointer; transition:all 0.15s;
+  border:1.5px solid; background:transparent;
+}
+.mode-exit-btn {
+  width:20px; height:20px; border-radius:50%;
+  border:none; background:transparent; color:var(--muted);
+  cursor:pointer; font-size:0.85rem;
+  display:flex;align-items:center;justify-content:center;
+  transition:color 0.15s;
+}
+.mode-exit-btn:hover { color:#f45f5f; }
+.mode-iv-list { display:flex; flex-direction:column; gap:5px; margin-bottom:8px; }
+.mode-iv-row {
+  display:flex; align-items:center; gap:4px;
+  animation: fadeIn 0.18s ease;
+}
+.mode-brk {
+  font-family:'DM Mono',monospace; font-size:1.15rem; font-weight:500;
+  width:14px; text-align:center; flex-shrink:0;
+}
+
+/* Bracket locked by infinity */
+.brk-locked {
+  opacity:0.35 !important;
+  cursor:not-allowed !important;
+  border-style: dashed !important;
+}
+/* ── Tab Navigation ── */
+.tab-nav {
+  display:flex; gap:0; margin-bottom:22px; justify-content:center;
+  border:1px solid var(--border); border-radius:8px; overflow:hidden;
+  width:fit-content; margin-left:auto; margin-right:auto;
+}
+.tab-btn {
+  padding:8px 22px; font-family:'DM Mono',monospace; font-size:0.78rem;
+  background:var(--surface); color:var(--muted); border:none; cursor:pointer;
+  transition:all 0.18s; letter-spacing:0.05em;
+}
+.tab-btn:not(:last-child) { border-right:1px solid var(--border); }
+.tab-btn.active { background:var(--card); color:var(--text); }
+.tab-btn:hover:not(.active) { color:var(--text); }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+
+/* ── Function Mapper ── */
+.mapper-wrap {
+  display:flex; flex-direction:column; align-items:center; gap:16px;
+}
+.mapper-controls {
+  display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:flex-end;
+}
+.ctrl-group { display:flex; flex-direction:column; gap:4px; }
+.ctrl-lbl { font-family:'DM Mono',monospace; font-size:0.64rem; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; }
+.fn-input {
+  height:34px; padding:0 12px; min-width:180px;
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:6px; color:var(--text);
+  font-family:'DM Mono',monospace; font-size:0.92rem;
+  outline:none; transition:border-color 0.15s;
+}
+.fn-input:focus { border-color:#b482f4; }
+.fn-input.err { border-color:#f45f5f; }
+.range-inputs { display:flex; align-items:center; gap:6px; }
+.range-in {
+  width:60px; height:34px; text-align:center;
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:6px; color:var(--text);
+  font-family:'DM Mono',monospace; font-size:0.88rem;
+  outline:none; transition:border-color 0.15s;
+}
+.range-in:focus { border-color:#b482f4; }
+.range-sep { color:var(--muted); font-family:'DM Mono',monospace; }
+.pts-count-in {
+  width:56px; height:34px; text-align:center;
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:6px; color:var(--text);
+  font-family:'DM Mono',monospace; font-size:0.88rem;
+  outline:none;
+}
+.draw-btn {
+  height:34px; padding:0 18px;
+  background:linear-gradient(135deg,rgba(180,130,244,0.25),rgba(95,196,244,0.15));
+  border:1.5px solid #b482f4; color:#b482f4;
+  border-radius:6px; font-family:'DM Mono',monospace; font-size:0.82rem;
+  cursor:pointer; transition:all 0.15s; white-space:nowrap;
+}
+.draw-btn:hover { background:rgba(180,130,244,0.35); }
+.fn-presets { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+.fn-pre-btn {
+  padding:3px 10px; border-radius:5px;
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--muted); font-family:'DM Mono',monospace; font-size:0.75rem;
+  cursor:pointer; transition:all 0.15s;
+}
+.fn-pre-btn:hover { border-color:#b482f4; color:#b482f4; }
+.mapper-canvas-wrap {
+  position:relative; width:100%; max-width:760px;
+}
+/* ── Multi-function list ── */
+.mfn-list { display:flex; flex-direction:column; gap:6px; }
+.mfn-row {
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  animation: fadeIn 0.16s ease;
+  padding:6px 8px;
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:7px;
+}
+.mfn-row.mfn-err { border-color:#f45f5f44; }
+.mfn-swatch {
+  width:14px; height:14px; border-radius:3px; flex-shrink:0; cursor:pointer;
+  border:1.5px solid rgba(255,255,255,0.15);
+}
+.mfn-expr {
+  flex:1; min-width:120px; height:28px; padding:0 8px;
+  background:var(--bg); border:1.5px solid var(--border);
+  border-radius:5px; color:var(--text);
+  font-family:'DM Mono',monospace; font-size:0.85rem;
+  outline:none; transition:border-color 0.15s;
+}
+.mfn-expr:focus { border-color:var(--axis); }
+.mfn-expr.err { border-color:#f45f5f; }
+.mfn-sep { font-family:'DM Mono',monospace; font-size:0.72rem; color:var(--muted); }
+.mfn-num {
+  width:54px; height:28px; text-align:center;
+  background:var(--bg); border:1.5px solid var(--border);
+  border-radius:5px; color:var(--text);
+  font-family:'DM Mono',monospace; font-size:0.82rem;
+  outline:none;
+}
+.mfn-num:focus { border-color:var(--axis); }
+.mfn-err-msg { font-family:'DM Mono',monospace; font-size:0.65rem; color:#f47f5f; flex-basis:100%; padding-left:22px; }
+.mfn-vis-btn {
+  width:22px; height:22px; border-radius:4px;
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--muted); font-size:0.75rem; cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.13s;
+}
+.mfn-vis-btn:hover { border-color:var(--axis); color:var(--text); }
+
+.mfn-expr-wrap {
+  flex:1; min-width:120px; position:relative; display:flex; align-items:center;
+}
+.mfn-expr-blur {
+  filter: blur(5px);
+  user-select: none;
+  pointer-events: none;
+}
+.mfn-reveal-btn {
+  position:absolute; right:4px; top:50%; transform:translateY(-50%);
+  background:var(--border); border:1px solid var(--axis);
+  color:var(--text); border-radius:4px; padding:1px 7px;
+  font-family:'DM Mono',monospace; font-size:0.65rem; cursor:pointer;
+  transition:all 0.15s; white-space:nowrap; z-index:2;
+}
+.mfn-reveal-btn:hover { background:#b482f4; border-color:#b482f4; color:#fff; }
+.mfn-legend-blur { filter:blur(5px); user-select:none; pointer-events:none; display:inline-block; }
+
+.mapper-zoom-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; max-width:760px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:8px 8px 0 0; padding:8px 12px;
+  gap:8px;
+}
+.mapper-3col {
+  display:flex; width:100%; max-width:760px;
+  height:520px;
+  border:1px solid var(--border); border-top:none;
+  border-radius:0 0 8px 8px; overflow:hidden;
+  background:var(--surface);
+}
+.mapper-scale-col {
+  width:110px; flex-shrink:0;
+  touch-action:none; user-select:none; cursor:grab;
+  background:#181c27;
+}
+.mapper-scale-col:active { cursor:grabbing; }
+.mapper-arrow-col {
+  flex:1; position:relative; overflow:hidden;
+  background:#181c27;
+}
+.mapper-error {
+  font-family:'DM Mono',monospace; font-size:0.78rem; color:#f47f5f;
+  text-align:center; min-height:18px; margin-top:-6px;
+}
+.mapper-legend {
+  display:flex; gap:16px; flex-wrap:wrap; justify-content:center;
+  font-family:'DM Mono',monospace; font-size:0.72rem; color:var(--muted);
+}
+.leg-item { display:flex; align-items:center; gap:5px; }
+.leg-dot { width:10px; height:10px; border-radius:50%; }
+
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+<div class="container">
+
+<header>
+  <h1><span class="d">Domain</span> &amp; <span class="r">Range</span> Viewer</h1>
+  <p>Interval notation · bracket types · union · intersection · visual number lines</p>
+</header>
+
+<!-- Tab nav -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('notation')">📐 Notation Builder</button>
+  <button class="tab-btn" onclick="switchTab('mapper')">⟶ Function Mapper</button>
+  <button class="tab-btn" onclick="switchTab('numsets')">∞ Number Sets</button>
+  <button class="tab-btn" onclick="switchTab('setops')">⊕ Set Operations</button>
+</div>
+
+<!-- Tab 1: existing Notation Builder -->
+<div id="tab-notation" class="tab-panel active">
+<div class="layout">
+
+  <!-- ── Builder ── -->
+  <div class="card builder">
+    <div class="sec-label">Interval Notation Builder</div>
+
+    <!-- Domain -->
+    <div id="domainBlock">
+      <div class="set-header">
+        <div class="dot dot-d"></div>
+        <span class="set-name">Domain (x-axis)</span>
+        <button class="add-btn" onclick="addIv('d')">+ interval</button>
+        <button class="add-btn" onclick="addPts('d')" style="margin-left:2px">+ points</button>
+      </div>
+      <div class="preset-row">
+        <span class="preset-lbl">ℝ:</span>
+        <button class="preset-btn preset-d" onclick="presetR('d')" title="All real numbers">ℝ</button>
+        <button class="preset-btn preset-d" onclick="presetRm1('d','open')" title="ℝ minus one open interval">ℝ−()</button>
+        <button class="preset-btn preset-d" onclick="presetRm1('d','pt')" title="ℝ minus a point">ℝ−{c}</button>
+        <button class="preset-btn preset-d" onclick="presetRm1('d','closed')" title="ℝ minus one closed interval">ℝ−[]</button>
+        <button class="preset-btn preset-d" onclick="enterMode('d','Rmopen')" title="ℝ minus many open intervals — add/remove freely">ℝ−{(…)}</button>
+        <button class="preset-btn preset-d" onclick="enterMode('d','Rmclosed')" title="ℝ minus many closed intervals — add/remove freely">ℝ−{[…]}</button>
+      </div>
+      <div class="preset-row">
+        <span class="preset-lbl">only:</span>
+        <button class="preset-btn preset-d" onclick="enterMode('d','onlyOpen')" title="Union of open intervals — add/remove freely">∪(…)</button>
+        <button class="preset-btn preset-d" onclick="enterMode('d','onlyClosed')" title="Union of closed intervals — add/remove freely">∪[…]</button>
+      </div>
+      <!-- dynamic exclusion/inclusion list for special modes -->
+      <div id="dModeBlock" style="display:none"></div>
+      <div class="intervals-list" id="dList"></div>
+      <div class="op-row" id="dOpRow" style="display:none">
+        <span class="op-lbl">combine:</span>
+        <button class="op-btn" id="dUBtn" onclick="setOp('d','union')">∪ Union</button>
+        <button class="op-btn" id="dIBtn" onclick="setOp('d','inter')">∩ Intersect</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Range -->
+    <div id="rangeBlock">
+      <div class="set-header">
+        <div class="dot dot-r"></div>
+        <span class="set-name">Range (y-axis)</span>
+        <button class="add-btn" onclick="addIv('r')">+ interval</button>
+        <button class="add-btn" onclick="addPts('r')" style="margin-left:2px">+ points</button>
+      </div>
+      <div class="preset-row">
+        <span class="preset-lbl">ℝ:</span>
+        <button class="preset-btn preset-r" onclick="presetR('r')" title="All real numbers">ℝ</button>
+        <button class="preset-btn preset-r" onclick="presetRm1('r','open')" title="ℝ minus one open interval">ℝ−()</button>
+        <button class="preset-btn preset-r" onclick="presetRm1('r','pt')" title="ℝ minus a point">ℝ−{c}</button>
+        <button class="preset-btn preset-r" onclick="presetRm1('r','closed')" title="ℝ minus one closed interval">ℝ−[]</button>
+        <button class="preset-btn preset-r" onclick="enterMode('r','Rmopen')" title="ℝ minus many open intervals — add/remove freely">ℝ−{(…)}</button>
+        <button class="preset-btn preset-r" onclick="enterMode('r','Rmclosed')" title="ℝ minus many closed intervals — add/remove freely">ℝ−{[…]}</button>
+      </div>
+      <div class="preset-row">
+        <span class="preset-lbl">only:</span>
+        <button class="preset-btn preset-r" onclick="enterMode('r','onlyOpen')" title="Union of open intervals — add/remove freely">∪(…)</button>
+        <button class="preset-btn preset-r" onclick="enterMode('r','onlyClosed')" title="Union of closed intervals — add/remove freely">∪[…]</button>
+      </div>
+      <!-- dynamic exclusion/inclusion list for special modes -->
+      <div id="rModeBlock" style="display:none"></div>
+      <div class="intervals-list" id="rList"></div>
+      <div class="op-row" id="rOpRow" style="display:none">
+        <span class="op-lbl">combine:</span>
+        <button class="op-btn" id="rUBtn" onclick="setOp('r','union')">∪ Union</button>
+        <button class="op-btn" id="rIBtn" onclick="setOp('r','inter')">∩ Intersect</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Codomain -->
+    <div id="codomainBlock">
+      <div class="set-header">
+        <div class="dot dot-c"></div>
+        <span class="set-name">Codomain (y-axis)</span>
+        <button class="add-btn" onclick="addIv('c')">+ interval</button>
+        <button class="add-btn" onclick="addPts('c')" style="margin-left:2px">+ points</button>
+      </div>
+      <div class="preset-row">
+        <span class="preset-lbl">ℝ:</span>
+        <button class="preset-btn preset-c" onclick="presetR('c')" title="All real numbers">ℝ</button>
+        <button class="preset-btn preset-c" onclick="presetRm1('c','open')" title="ℝ minus one open interval">ℝ−()</button>
+        <button class="preset-btn preset-c" onclick="presetRm1('c','pt')" title="ℝ minus a point">ℝ−{c}</button>
+        <button class="preset-btn preset-c" onclick="presetRm1('c','closed')" title="ℝ minus one closed interval">ℝ−[]</button>
+        <button class="preset-btn preset-c" onclick="enterMode('c','Rmopen')" title="ℝ minus many open intervals">ℝ−{(…)}</button>
+        <button class="preset-btn preset-c" onclick="enterMode('c','Rmclosed')" title="ℝ minus many closed intervals">ℝ−{[…]}</button>
+      </div>
+      <div class="preset-row">
+        <span class="preset-lbl">only:</span>
+        <button class="preset-btn preset-c" onclick="enterMode('c','onlyOpen')" title="Union of open intervals">∪(…)</button>
+        <button class="preset-btn preset-c" onclick="enterMode('c','onlyClosed')" title="Union of closed intervals">∪[…]</button>
+      </div>
+      <div id="cModeBlock" style="display:none"></div>
+      <div class="intervals-list" id="cList"></div>
+      <div class="op-row" id="cOpRow" style="display:none">
+        <span class="op-lbl">combine:</span>
+        <button class="op-btn" id="cUBtn" onclick="setOp('c','union')">∪ Union</button>
+        <button class="op-btn" id="cIBtn" onclick="setOp('c','inter')">∩ Intersect</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+  </div>
+
+  <!-- ── Scales ── -->
+  <div class="card scales-card">
+    <div class="sec-label">Number Line Viewer</div>
+
+    <!-- zoom / pan controls — same style as builder buttons -->
+    <div class="scale-toolbar">
+      <div class="scale-axis-label" style="color:#f4845f">
+        <span class="dot dot-d" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>Domain
+      </div>
+      <div class="scale-axis-label" style="color:#5fc4f4">
+        <span class="dot dot-r" style="display:inline-block;vertical-align:middle;margin-right:4px"></span>Range
+        <span style="color:var(--muted);margin:0 4px">/</span>
+        <span class="dot dot-c" style="display:inline-block;vertical-align:middle;margin:0 4px"></span><span style="color:#f4d45f">Codomain</span>
+      </div>
+      <div class="scale-zoom-group">
+        <button class="scale-zbtn" onclick="scaleZoom(1.6)" title="Zoom in">＋</button>
+        <button class="scale-zbtn" onclick="scaleZoom(0.625)" title="Zoom out">－</button>
+        <button class="scale-zbtn scale-zbtn-reset" onclick="scaleReset()" title="Reset">↺</button>
+      </div>
+    </div>
+
+    <div class="scale-hint-row">
+      <span>🖱 scroll to zoom</span><span>↕ drag to pan</span><span>∞ infinite range</span>
+    </div>
+
+    <!-- canvases -->
+    <div id="scalesWrap" class="scales-canvas-wrap">
+      <div class="scales-inner">
+        <div class="scale-col">
+          <canvas id="cvD" width="100" height="520" class="scale-cv"></canvas>
+        </div>
+        <div class="scale-col">
+          <canvas id="cvRC" width="100" height="520" class="scale-cv"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Info ── -->
+  <div class="card info-card" id="infoCard"></div>
+
+</div>
+
+<!-- ── 2D Coordinate Grid ── -->
+<div class="card grid2d-card">
+  <div class="grid2d-header">
+    <div class="grid2d-title">📐 2D Coordinate Grid — Domain × Range</div>
+    <div class="grid2d-legend">
+      <span><span class="swatch" style="background:rgba(180,130,244,0.45);border:1px solid #b482f4;border-radius:2px;width:12px;height:12px;display:inline-block"></span>D∩Range</span>
+      <span><span class="swatch" style="background:rgba(244,212,95,0.4);border:1.5px dashed #f4d45f;border-radius:2px;width:12px;height:12px;display:inline-block"></span>D∩Codomain</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <span style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted)">Intersection:</span>
+      <button id="grid2dBandsBtn" onclick="toggleGrid2dBands()"
+        style="padding:3px 11px;border-radius:5px;border:1.5px solid #b482f4;background:rgba(180,130,244,0.1);
+               color:#b482f4;font-family:'DM Mono',monospace;font-size:0.76rem;cursor:pointer;transition:all 0.15s;">
+        ON
+      </button>
+    </div>
+  </div>
+  <div class="grid2d-wrap">
+    <canvas id="grid2dCanvas" height="420"></canvas>
+  </div>
+</div>
+
+</div><!-- end tab-notation -->
+
+<!-- Tab 2: Function Mapper -->
+<div id="tab-mapper" class="tab-panel">
+  <div class="mapper-wrap">
+
+    <!-- Function list -->
+    <div class="mfn-card card" style="width:100%;max-width:760px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="sec-label" style="margin-bottom:0">Functions</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted)">sample pts:</span>
+          <input class="pts-count-in" id="ptCount" type="number" value="9" min="2" max="30" step="1" oninput="mapperRedraw()" style="width:48px;height:26px;font-size:0.8rem;">
+          <button class="add-btn" onclick="addFn()" style="padding:4px 12px;font-size:0.75rem;">+ function</button>
+        </div>
+      </div>
+
+      <!-- Function presets -->
+      <div class="fn-presets" style="margin-bottom:10px;">
+        <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);align-self:center">quick add:</span>
+        <button class="fn-pre-btn" onclick="addFnPreset('x^2',-3,3)">x²</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('x^3',-2,2)">x³</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('sqrt(x)',0,9)">√x</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('abs(x)',-4,4)">|x|</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('1/x',-4,4)">1/x</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('sin(x)',-3.14159,3.14159)">sin x</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('cos(x)',-3.14159,3.14159)">cos x</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('tan(x)',-1.5,1.5)">tan x</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('log(x)',0.1,10)">ln x</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('exp(x)',-3,3)">eˣ</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('2*x+1',-3,3)">2x+1</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('floor(x)',-3,3)">⌊x⌋</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('x^2-4',-4,4)">x²−4</button>
+        <button class="fn-pre-btn" onclick="addFnPreset('1/(1+exp(-x))',-6,6)">sigmoid</button>
+      </div>
+
+      <div id="fnList" class="mfn-list"></div>
+      <div id="mapperErr" class="mapper-error"></div>
+    </div>
+
+    <!-- Zoom toolbar -->
+    <div class="mapper-zoom-bar">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)">Domain</span>
+        <button class="scale-zbtn" onclick="mZoom('d',1.6)">＋</button>
+        <button class="scale-zbtn" onclick="mZoom('d',0.625)">－</button>
+        <button class="scale-zbtn scale-zbtn-reset" onclick="mReset('d')">↺</button>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.59rem;color:var(--muted)">🖱 scroll · drag · pinch</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="scale-zbtn scale-zbtn-reset" onclick="mReset('r')">↺</button>
+        <button class="scale-zbtn" onclick="mZoom('r',0.625)">－</button>
+        <button class="scale-zbtn" onclick="mZoom('r',1.6)">＋</button>
+        <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)">Co domain</span>
+      </div>
+    </div>
+
+    <!-- Three-panel layout -->
+    <div class="mapper-3col" id="mapperWrap">
+      <div class="mapper-scale-col" id="mDomWrap">
+        <canvas id="mCvD" class="scale-cv" style="border-radius:8px 0 0 8px"></canvas>
+      </div>
+      <div class="mapper-arrow-col">
+        <canvas id="mapperCanvas" style="width:100%;height:100%;display:block"></canvas>
+      </div>
+      <div class="mapper-scale-col" id="mRanWrap">
+        <canvas id="mCvR" class="scale-cv" style="border-radius:0 8px 8px 0"></canvas>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="mapper-legend" id="mapperLegend"></div>
+
+  </div>
+</div><!-- end tab-mapper -->
+
+<!-- Tab 3: Number Sets -->
+<div id="tab-numsets" class="tab-panel">
+<div style="max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:18px;">
+
+  <!-- Header card -->
+  <div class="card" style="padding:20px 22px;">
+    <div class="sec-label" style="margin-bottom:10px">Number Sets Explorer</div>
+    <p style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);line-height:1.7;margin-bottom:14px;">
+      Explore how <span style="color:#f4845f">ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ</span>. Perform <b style="color:var(--text)">Union ∪</b>, <b style="color:var(--text)">Subtraction ∖</b>, and <b style="color:var(--text)">Multiplication ×</b> on any two number sets and see what you get.
+    </p>
+
+    <!-- Set legend pills -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+      <div class="ns-pill" style="background:rgba(244,132,95,0.18);border:1.5px solid #f4845f;color:#f4845f;">ℕ Natural (1,2,3…)</div>
+      <div class="ns-pill" style="background:rgba(255,200,80,0.18);border:1.5px solid #ffc850;color:#ffc850;">𝕎 Whole (0,1,2,3…)</div>
+      <div class="ns-pill" style="background:rgba(95,196,244,0.18);border:1.5px solid #5fc4f4;color:#5fc4f4;">ℤ Integers</div>
+      <div class="ns-pill" style="background:rgba(180,130,244,0.18);border:1.5px solid #b482f4;color:#b482f4;">ℚ Rational</div>
+      <div class="ns-pill" style="background:rgba(244,212,95,0.18);border:1.5px solid #f4d45f;color:#f4d45f;">ℝ Real</div>
+      <div class="ns-pill" style="background:rgba(244,212,95,0.18);border:1.5px solid #f4d45f;color:#f4d45f;">ℝ∖ℚ Irrational</div>
+      <div class="ns-pill" style="background:rgba(244,95,138,0.18);border:1.5px solid #f45f8a;color:#f45f8a;">ℚ∖ℤ Fractions</div>
+      <div class="ns-pill" style="background:rgba(95,142,244,0.18);border:1.5px solid #5f8ef4;color:#5f8ef4;">ℤ∖𝕎 Neg. Integers</div>
+      <div class="ns-pill" style="background:rgba(244,164,95,0.18);border:1.5px solid #f4a45f;color:#f4a45f;">{0} Zero</div>
+    </div>
+  </div>
+
+  <!-- Two columns: Venn + Operation Calculator -->
+  <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;justify-content:center;">
+
+    <!-- Venn / Nesting Diagram -->
+    <div class="card" style="flex:1;min-width:260px;max-width:420px;">
+      <div class="sec-label" style="margin-bottom:12px">Nesting Diagram  <span style="color:var(--muted);font-size:0.6rem;font-style:italic">ℕ ⊂ 𝕎 ⊂ ℤ ⊂ ℚ ⊂ ℝ</span></div>
+      <canvas id="nsVenn" width="380" height="380" style="width:100%;border-radius:7px;"></canvas>
+      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);margin-top:8px;line-height:1.9;">
+        <div><span style="color:#f4845f">ℕ</span> = {1, 2, 3, …} &nbsp;— counting numbers (no zero)</div>
+        <div><span style="color:#ffc850">𝕎</span> = {0, 1, 2, 3, …} &nbsp;— whole numbers (ℕ + zero)</div>
+        <div><span style="color:#5fc4f4">ℤ</span> = {…,−2,−1, 0, 1, 2,…} &nbsp;— integers (𝕎 + negatives)</div>
+        <div><span style="color:#b482f4">ℚ</span> &nbsp;— rationals (ℤ + fractions p/q)</div>
+        <div><span style="color:#f4d45f">ℝ</span> &nbsp;— reals (ℚ + irrationals like √2, π)</div>
+      </div>
+    </div>
+
+    <!-- Operation Calculator -->
+    <div class="card" style="flex:1;min-width:280px;max-width:520px;">
+      <div class="sec-label" style="margin-bottom:12px">Set Operation Calculator</div>
+
+      <!-- Selectors -->
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span class="ctrl-lbl">Set A</span>
+          <select id="nsSetA" class="ns-select" onchange="nsCompute()">
+            <option value="N">ℕ — Natural (1,2,3…)</option>
+            <option value="W">𝕎 — Whole (0,1,2,3…)</option>
+            <option value="Z">ℤ — Integers</option>
+            <option value="Q">ℚ — Rational</option>
+            <option value="R" selected>ℝ — Real</option>
+            <option value="I">ℝ∖ℚ — Irrational</option>
+            <option value="F">ℚ∖ℤ — Fractions only</option>
+            <option value="NegZ">ℤ∖𝕎 — Negative Integers</option>
+            <option value="Zero">{0} — Zero only</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span class="ctrl-lbl">Operation</span>
+          <select id="nsOp" class="ns-select" onchange="nsCompute()">
+            <option value="union">∪ Union</option>
+            <option value="sub">∖ Subtraction (A∖B)</option>
+            <option value="mul">× Closed under multiplication?</option>
+            <option value="inter">∩ Intersection</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span class="ctrl-lbl">Set B</span>
+          <select id="nsSetB" class="ns-select" onchange="nsCompute()">
+            <option value="N" selected>ℕ — Natural (1,2,3…)</option>
+            <option value="W">𝕎 — Whole (0,1,2,3…)</option>
+            <option value="Z">ℤ — Integers</option>
+            <option value="Q">ℚ — Rational</option>
+            <option value="R">ℝ — Real</option>
+            <option value="I">ℝ∖ℚ — Irrational</option>
+            <option value="F">ℚ∖ℤ — Fractions only</option>
+            <option value="NegZ">ℤ∖𝕎 — Negative Integers</option>
+            <option value="Zero">{0} — Zero only</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Result box -->
+      <div id="nsResult" style="
+        background:var(--surface);border:1.5px solid var(--border);border-radius:8px;
+        padding:16px;font-family:'DM Mono',monospace;min-height:100px;
+      ">
+        <div style="color:var(--muted);font-size:0.75rem;">Select sets and an operation above…</div>
+      </div>
+
+      <!-- Example numbers panel -->
+      <div id="nsExamples" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Operations reference table -->
+  <div class="card">
+    <div class="sec-label" style="margin-bottom:14px">Closure Reference — Is the set closed under this operation?</div>
+    <div style="overflow-x:auto;">
+      <table id="nsClosureTable" style="width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:0.73rem;"></table>
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.61rem;color:var(--muted);margin-top:10px;line-height:1.9;">
+      <span style="color:#f4d45f">✓ closed</span> — the result always stays in that set &nbsp;|&nbsp;
+      <span style="color:#f45f5f">✗ not closed</span> — result may fall outside &nbsp;|&nbsp;
+      <span style="color:#f4d45f">~ partial</span> — depends on inputs
+    </div>
+  </div>
+
+  <!-- Member-of quick checker -->
+  <div class="card">
+    <div class="sec-label" style="margin-bottom:12px">Member-Of Checker</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <input id="nsMemberInput" class="fn-input" style="max-width:200px;height:34px" placeholder="e.g.  3.14159  or  1/3" oninput="nsMemberCheck()">
+      <span style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted)">∈ ?</span>
+    </div>
+    <div id="nsMemberResult" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+  </div>
+
+</div>
+</div><!-- end tab-numsets -->
+
+<!-- Tab 4: Set Operations Visual -->
+<div id="tab-setops" class="tab-panel">
+<div id="setops-root" style="max-width:980px;margin:0 auto;"></div>
+</div><!-- end tab-setops -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   SET OPERATIONS VISUAL TAB
+═══════════════════════════════════════════════════════════ */
+(function(){
+
+// ── inject styles ────────────────────────────────────────
+const sty = document.createElement('style');
+sty.textContent = `
+#setops-root {
+  display:flex; flex-direction:column; gap:18px; padding-bottom:32px;
+}
+.sop-header-card {
+  background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:18px 22px;
+}
+.sop-header-card h2 {
+  font-family:'DM Serif Display',serif; font-size:1.35rem; color:var(--text); margin-bottom:6px;
+}
+.sop-header-card p {
+  font-family:'DM Mono',monospace; font-size:0.75rem; color:var(--muted); line-height:1.7;
+}
+.sop-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap:14px;
+}
+.sop-card {
+  background:var(--card); border:1.5px solid var(--border); border-radius:10px;
+  padding:16px; display:flex; flex-direction:column; align-items:center; gap:10px;
+  transition: border-color 0.2s;
+  cursor:pointer;
+}
+.sop-card:hover { border-color:#b482f4; }
+.sop-card.sop-active { border-color:#b482f4; box-shadow:0 0 0 2px rgba(180,130,244,0.15); }
+.sop-card-title {
+  font-family:'DM Serif Display',serif; font-size:1rem; color:var(--text); text-align:center;
+}
+.sop-card-sym {
+  font-family:'DM Mono',monospace; font-size:1.4rem; color:#b482f4; text-align:center;
+  letter-spacing:0.05em;
+}
+.sop-card-desc {
+  font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--muted);
+  text-align:center; line-height:1.7;
+}
+.sop-canvas { border-radius:7px; display:block; }
+.sop-detail {
+  background:var(--card); border:1.5px solid #b482f4; border-radius:10px;
+  padding:22px 24px; display:none; flex-direction:column; gap:16px;
+}
+.sop-detail.sop-detail-open { display:flex; }
+.sop-detail-title {
+  font-family:'DM Serif Display',serif; font-size:1.3rem; color:#b482f4;
+}
+.sop-detail-sym {
+  font-family:'DM Mono',monospace; font-size:1.1rem; color:var(--text);
+}
+.sop-detail-body {
+  display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start;
+}
+.sop-detail-canvas-wrap { flex-shrink:0; }
+.sop-detail-text {
+  flex:1; min-width:200px;
+  font-family:'DM Mono',monospace; font-size:0.76rem; color:var(--muted); line-height:1.9;
+}
+.sop-detail-text b { color:var(--text); }
+.sop-detail-text .sop-ex {
+  display:inline-block; background:var(--surface); border:1px solid var(--border);
+  border-radius:4px; padding:1px 8px; margin:2px 1px; color:var(--text); font-size:0.78rem;
+}
+.sop-props {
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;
+}
+.sop-prop {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:5px; padding:3px 10px;
+  font-family:'DM Mono',monospace; font-size:0.69rem; color:var(--muted);
+}
+.sop-prop b { color:#f4d45f; }
+.sop-prop.neg b { color:#f45f5f; }
+.sop-steps {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:7px; padding:12px 14px;
+  font-family:'DM Mono',monospace; font-size:0.73rem; color:var(--muted); line-height:2;
+}
+.sop-step-num { color:#b482f4; margin-right:6px; }
+.sop-anim-btn {
+  padding:5px 16px; border-radius:6px;
+  border:1.5px solid #b482f4; background:rgba(180,130,244,0.12);
+  color:#b482f4; font-family:'DM Mono',monospace; font-size:0.75rem;
+  cursor:pointer; transition:all 0.15s; width:fit-content;
+}
+.sop-anim-btn:hover { background:rgba(180,130,244,0.25); }
+.sop-num-example {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:7px; padding:12px 14px; margin-top:4px;
+}
+.sop-num-title { font-family:'DM Mono',monospace; font-size:0.62rem; color:var(--muted); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px; }
+.sop-num-line { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.sop-el {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border-radius:5px;
+  font-family:'DM Mono',monospace; font-size:0.82rem; font-weight:500;
+  border:1.5px solid; transition:all 0.3s;
+}
+`;
+document.head.appendChild(sty);
+
+// ── Venn drawing helpers ─────────────────────────────────
+const CA = '#f4845f', CB = '#5fc4f4', CR = '#b482f4', CG = '#f4d45f', CY = '#f4d45f';
+
+function makeCanvas(w,h,dpr){ const c=document.createElement('canvas'); c.width=w*dpr; c.height=h*dpr; c.style.width=w+'px'; c.style.height=h+'px'; c.className='sop-canvas'; const ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return {c,ctx}; }
+
+function drawVennBase(ctx,W,H,aFill,bFill,overlapFill,outFill,opts={}){
+  const cx=W/2, cy=H/2;
+  const r=Math.min(W,H)*0.28;
+  const off=r*0.55;
+  const ax=cx-off, bx=cx+off;
+  // background
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#181c27'; ctx.fillRect(0,0,W,H);
+  // universe rect
+  if(outFill){
+    ctx.save();
+    ctx.fillStyle=outFill;
+    ctx.fillRect(4,4,W-8,H-8);
+    // clip out circles
+    ctx.globalCompositeOperation='destination-out';
+    ctx.beginPath(); ctx.arc(ax,cy,r,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bx,cy,r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  // A only
+  if(aFill){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(ax,cy,r,0,Math.PI*2); ctx.clip();
+    ctx.fillStyle=aFill; ctx.fillRect(0,0,W,H);
+    // punch out B from A-only
+    ctx.globalCompositeOperation='destination-out';
+    ctx.beginPath(); ctx.arc(bx,cy,r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  // B only
+  if(bFill){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(bx,cy,r,0,Math.PI*2); ctx.clip();
+    ctx.fillStyle=bFill; ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation='destination-out';
+    ctx.beginPath(); ctx.arc(ax,cy,r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  // Overlap
+  if(overlapFill){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(ax,cy,r,0,Math.PI*2); ctx.clip();
+    ctx.beginPath(); ctx.arc(bx,cy,r,0,Math.PI*2); ctx.clip();
+    ctx.fillStyle=overlapFill; ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
+  // Circle outlines
+  ctx.strokeStyle=opts.aStroke||CA+'cc'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(ax,cy,r,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle=opts.bStroke||CB+'cc'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(bx,cy,r,0,Math.PI*2); ctx.stroke();
+  // Labels
+  ctx.font="bold 13px 'DM Mono',monospace";
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=CA; ctx.fillText('A', ax-r*0.55, cy);
+  ctx.fillStyle=CB; ctx.fillText('B', bx+r*0.55, cy);
+  // Universe box
+  ctx.strokeStyle='#2e3450'; ctx.lineWidth=1;
+  ctx.strokeRect(4,4,W-8,H-8);
+  ctx.font="10px 'DM Mono',monospace"; ctx.fillStyle='#3a4060';
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText('𝕌',8,8);
+}
+
+// ── Operation definitions ────────────────────────────────
+const OPS = [
+  {
+    id:'union', title:'Union', sym:'A ∪ B',
+    shortDesc:'All elements in A or B (or both)',
+    color: CG,
+    drawSmall(ctx,W,H){ drawVennBase(ctx,W,H,CG+'55',CG+'55',CG+'99',null); },
+    drawLarge(ctx,W,H){ drawVennBase(ctx,W,H,CG+'66',CG+'66',CG+'aa',null); },
+    text:`<b>A ∪ B</b> contains every element that belongs to <b>A</b>, to <b>B</b>, or to <b>both</b>.<br><br>
+An element x is in A ∪ B if:<br>
+<span class="sop-ex">x ∈ A</span> <b>OR</b> <span class="sop-ex">x ∈ B</span><br><br>
+Think of it as <b>combining</b> two sets — you keep everything.`,
+    props:[
+      {t:'A ∪ B = B ∪ A', pos:true, label:'Commutative'},
+      {t:'(A∪B)∪C = A∪(B∪C)', pos:true, label:'Associative'},
+      {t:'A ∪ A = A', pos:true, label:'Idempotent'},
+      {t:'A ∪ ∅ = A', pos:true, label:'Identity'},
+      {t:'A ∪ 𝕌 = 𝕌', pos:true, label:'Universal'},
+    ],
+    steps:[
+      'Write down all elements of A',
+      'Add all elements of B (skip duplicates)',
+      'Result = A ∪ B',
+    ],
+    numEx:{ U:[1,2,3,4,5,6,7,8], A:[1,2,3,4], B:[3,4,5,6], result:[1,2,3,4,5,6] },
+    numExLabel:'A={1,2,3,4}  B={3,4,5,6}  →  A∪B={1,2,3,4,5,6}',
+  },
+  {
+    id:'inter', title:'Intersection', sym:'A ∩ B',
+    shortDesc:'Only elements in BOTH A and B',
+    color: CR,
+    drawSmall(ctx,W,H){ drawVennBase(ctx,W,H,null,null,CR+'bb',null); },
+    drawLarge(ctx,W,H){ drawVennBase(ctx,W,H,null,null,CR+'cc',null); },
+    text:`<b>A ∩ B</b> contains only elements that are in <b>both</b> A and B simultaneously.<br><br>
+An element x is in A ∩ B if:<br>
+<span class="sop-ex">x ∈ A</span> <b>AND</b> <span class="sop-ex">x ∈ B</span><br><br>
+If no elements are shared, A ∩ B = <b>∅</b> (empty set) — sets are <b>disjoint</b>.`,
+    props:[
+      {t:'A ∩ B = B ∩ A', pos:true, label:'Commutative'},
+      {t:'A ∩ A = A', pos:true, label:'Idempotent'},
+      {t:'A ∩ ∅ = ∅', pos:true, label:'Null'},
+      {t:'A ∩ 𝕌 = A', pos:true, label:'Identity'},
+      {t:'A ∩ (B∪C) = (A∩B)∪(A∩C)', pos:true, label:'Distributive'},
+    ],
+    steps:[
+      'List all elements of A',
+      'Keep only elements that also appear in B',
+      'Result = A ∩ B',
+    ],
+    numEx:{ U:[1,2,3,4,5,6,7,8], A:[1,2,3,4], B:[3,4,5,6], result:[3,4] },
+    numExLabel:'A={1,2,3,4}  B={3,4,5,6}  →  A∩B={3,4}',
+  },
+  {
+    id:'subAB', title:'Set Difference (A∖B)', sym:'A ∖ B',
+    shortDesc:'Elements in A but NOT in B',
+    color: CA,
+    drawSmall(ctx,W,H){ drawVennBase(ctx,W,H,CA+'99',null,null,null); },
+    drawLarge(ctx,W,H){ drawVennBase(ctx,W,H,CA+'bb',null,null,null); },
+    text:`<b>A ∖ B</b> (also written A − B) contains elements that are in A but <b>not</b> in B.<br><br>
+An element x is in A ∖ B if:<br>
+<span class="sop-ex">x ∈ A</span> <b>AND</b> <span class="sop-ex">x ∉ B</span><br><br>
+The overlap is <b>removed</b>. Only the A-exclusive part remains.`,
+    props:[
+      {t:'A ∖ B ≠ B ∖ A (generally)', pos:false, label:'NOT commutative'},
+      {t:'A ∖ A = ∅', pos:true, label:'Self-subtraction = empty'},
+      {t:'A ∖ ∅ = A', pos:true, label:'Remove nothing = A'},
+      {t:'A ∖ 𝕌 = ∅', pos:false, label:'Remove all = empty'},
+      {t:'(A∖B)∖C = A∖(B∪C)', pos:true, label:'Associativity rule'},
+    ],
+    steps:[
+      'Start with all elements of A',
+      'Remove any element that also appears in B',
+      'Result = A ∖ B',
+    ],
+    numEx:{ U:[1,2,3,4,5,6,7,8], A:[1,2,3,4], B:[3,4,5,6], result:[1,2] },
+    numExLabel:'A={1,2,3,4}  B={3,4,5,6}  →  A∖B={1,2}',
+  },
+  {
+    id:'subBA', title:'Set Difference (B∖A)', sym:'B ∖ A',
+    shortDesc:'Elements in B but NOT in A',
+    color: CB,
+    drawSmall(ctx,W,H){ drawVennBase(ctx,W,H,null,CB+'99',null,null); },
+    drawLarge(ctx,W,H){ drawVennBase(ctx,W,H,null,CB+'bb',null,null); },
+    text:`<b>B ∖ A</b> is the mirror of A ∖ B — elements in B that are <b>not</b> in A.<br><br>
+An element x is in B ∖ A if:<br>
+<span class="sop-ex">x ∈ B</span> <b>AND</b> <span class="sop-ex">x ∉ A</span><br><br>
+This demonstrates that set subtraction is <b>not commutative</b>: A∖B ≠ B∖A.`,
+    props:[
+      {t:'B ∖ A ≠ A ∖ B (generally)', pos:false, label:'NOT commutative'},
+      {t:'B ∖ B = ∅', pos:true, label:'Self-subtraction = empty'},
+      {t:'B ∖ ∅ = B', pos:true, label:'Remove nothing = B'},
+      {t:'(A∖B)∪(B∖A) = A△B', pos:true, label:'Together = sym. diff.'},
+    ],
+    steps:[
+      'Start with all elements of B',
+      'Remove any element that also appears in A',
+      'Result = B ∖ A',
+    ],
+    numEx:{ U:[1,2,3,4,5,6,7,8], A:[1,2,3,4], B:[3,4,5,6], result:[5,6] },
+    numExLabel:'A={1,2,3,4}  B={3,4,5,6}  →  B∖A={5,6}',
+  },
+  {
+    id:'symdiff', title:'Symmetric Difference', sym:'A △ B',
+    shortDesc:'Elements in A or B but NOT both',
+    color: CY,
+    drawSmall(ctx,W,H){ drawVennBase(ctx,W,H,CY+'99',CY+'99',null,null); },
+    drawLarge(ctx,W,H){ drawVennBase(ctx,W,H,CY+'bb',CY+'bb',null,null); },
+    text:`<b>A △ B</b> contains elements in <b>exactly one</b> of the sets — in A or B, but not both.<br><br>
+x ∈ A △ B if: <span class="sop-ex">x ∈ A ∖ B</span> <b>OR</b> <span class="sop-ex">x ∈ B ∖ A</span><br><br>
+Equivalently: A△B = (A∪B) ∖ (A∩B)<br><br>
+Also called the <b>exclusive OR</b> (XOR) of sets.`,
+    props:[
+      {t:'A △ B = B △ A', pos:true, label:'Commutative'},
+      {t:'A △ A = ∅', pos:true, label:'Self = empty'},
+      {t:'A △ ∅ = A', pos:true, label:'Identity'},
+      {t:'(A△B)△C = A△(B△C)', pos:true, label:'Associative'},
+    ],
+    steps:[
+      'Compute A ∖ B (A only)',
+      'Compute B ∖ A (B only)',
+      'Union those two results',
+    ],
+    numEx:{ U:[1,2,3,4,5,6,7,8], A:[1,2,3,4], B:[3,4,5,6], result:[1,2,5,6] },
+    numExLabel:'A={1,2,3,4}  B={3,4,5,6}  →  A△B={1,2,5,6}',
+  },
+  {
+    id:'compA', title:"Complement of A", sym:"Aᶜ (or Ā)",
+    shortDesc:'Everything in universe 𝕌 that is NOT in A',
+    color:'#f45f8a',
+    drawSmall(ctx,W,H){
+      const c='#f45f8a';
+      drawVennBase(ctx,W,H,null,null,null,c+'66');
+      // draw B normally (not highlighted)
+      const cx=W/2,cy=H/2,r=Math.min(W,H)*0.28,off=r*0.55,bx=cx+off;
+      ctx.beginPath(); ctx.arc(bx,cy,r,0,Math.PI*2);
+      ctx.fillStyle='#181c2788'; ctx.fill();
+    },
+    drawLarge(ctx,W,H){
+      const c='#f45f8a';
+      drawVennBase(ctx,W,H,null,null,null,c+'77');
+    },
+    text:`<b>Aᶜ</b> (the complement of A) contains every element of the universe <b>𝕌</b> that does <b>not</b> belong to A.<br><br>
+x ∈ Aᶜ if: <span class="sop-ex">x ∈ 𝕌</span> <b>AND</b> <span class="sop-ex">x ∉ A</span><br><br>
+The complement <b>depends on 𝕌</b>. If 𝕌 = ℝ and A = ℚ, then Aᶜ = ℝ∖ℚ (irrationals).`,
+    props:[
+      {t:'A ∪ Aᶜ = 𝕌', pos:true, label:'Covers universe'},
+      {t:'A ∩ Aᶜ = ∅', pos:true, label:'No overlap'},
+      {t:'(Aᶜ)ᶜ = A', pos:true, label:'Double complement'},
+      {t:'∅ᶜ = 𝕌', pos:true, label:'Complement of empty'},
+      {t:'𝕌ᶜ = ∅', pos:true, label:'Complement of universe'},
+    ],
+    steps:[
+      'Define the universal set 𝕌',
+      'Start with 𝕌',
+      'Remove all elements that are in A',
+      'Result = Aᶜ = 𝕌 ∖ A',
+    ],
+    numEx:{ U:[1,2,3,4,5,6,7,8], A:[1,2,3,4], B:[], result:[5,6,7,8] },
+    numExLabel:'𝕌={1..8}  A={1,2,3,4}  →  Aᶜ={5,6,7,8}',
+  },
+  {
+    id:'demorg1', title:"De Morgan's Law I", sym:'(A∪B)ᶜ = Aᶜ∩Bᶜ',
+    shortDesc:'Complement of union = intersection of complements',
+    color:'#4dd4b0',
+    drawSmall(ctx,W,H){
+      const c='#4dd4b0';
+      // shade everything OUTSIDE both circles
+      drawVennBase(ctx,W,H,null,null,null,c+'88');
+    },
+    drawLarge(ctx,W,H){
+      const c='#4dd4b0';
+      drawVennBase(ctx,W,H,null,null,null,c+'99');
+    },
+    text:`<b>De Morgan's First Law</b>: The complement of a union equals the intersection of complements.<br><br>
+<span class="sop-ex">(A ∪ B)ᶜ</span> = <span class="sop-ex">Aᶜ ∩ Bᶜ</span><br><br>
+Meaning: "NOT (A or B)" = "NOT A AND NOT B"<br><br>
+This is fundamental in logic, boolean algebra, and programming.`,
+    props:[
+      {t:'(A∪B)ᶜ = Aᶜ∩Bᶜ', pos:true, label:"De Morgan I"},
+      {t:'(A∩B)ᶜ = Aᶜ∪Bᶜ', pos:true, label:"De Morgan II"},
+      {t:'Used in boolean circuits', pos:true, label:'Application'},
+      {t:'Used in SQL WHERE NOT', pos:true, label:'Application'},
+    ],
+    steps:[
+      'Compute A ∪ B',
+      'Take its complement with respect to 𝕌',
+      'Verify: also equals Aᶜ ∩ Bᶜ',
+    ],
+    numEx:{ U:[1,2,3,4,5,6,7,8], A:[1,2,3,4], B:[3,4,5,6], result:[7,8] },
+    numExLabel:'𝕌={1..8} A={1..4} B={3..6} → (A∪B)ᶜ={7,8}',
+  },
+  {
+    id:'cartesian', title:'Cartesian Product', sym:'A × B',
+    shortDesc:'All ordered pairs (a, b) with a∈A and b∈B',
+    color:'#f4a45f',
+    drawSmall(ctx,W,H){
+      // Draw as a grid visualization instead of venn
+      ctx.clearRect(0,0,W,H);
+      ctx.fillStyle='#181c27'; ctx.fillRect(0,0,W,H);
+      const A=[1,2,3], B=[1,2,3];
+      const cw=W/(B.length+1.5), rh=H/(A.length+1.5);
+      ctx.font="9px 'DM Mono',monospace"; ctx.textAlign='center'; ctx.textBaseline='middle';
+      for(let i=0;i<A.length;i++){
+        ctx.fillStyle=CA+'cc';
+        ctx.fillText(A[i], cw*0.7, rh*(i+1.5));
+      }
+      for(let j=0;j<B.length;j++){
+        ctx.fillStyle=CB+'cc';
+        ctx.fillText(B[j], cw*(j+1.5), rh*0.8);
+      }
+      for(let i=0;i<A.length;i++){
+        for(let j=0;j<B.length;j++){
+          ctx.beginPath();
+          ctx.roundRect(cw*(j+1)+2, rh*(i+1)+2, cw-4, rh-4, 3);
+          ctx.fillStyle='#f4a45f22'; ctx.fill();
+          ctx.strokeStyle='#f4a45f55'; ctx.lineWidth=1; ctx.stroke();
+          ctx.fillStyle='#f4a45fcc';
+          ctx.fillText(`${A[i]},${B[j]}`, cw*(j+1.5), rh*(i+1.5));
+        }
+      }
+    },
+    drawLarge(ctx,W,H){
+      ctx.clearRect(0,0,W,H);
+      ctx.fillStyle='#181c27'; ctx.fillRect(0,0,W,H);
+      const A=[1,2,3,4], B=[1,2,3];
+      const cw=W/(B.length+1.4), rh=H/(A.length+1.4);
+      ctx.font="10px 'DM Mono',monospace"; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle=CA; for(let i=0;i<A.length;i++) ctx.fillText(A[i], cw*0.65, rh*(i+1.5));
+      ctx.fillStyle=CB; for(let j=0;j<B.length;j++) ctx.fillText(B[j], cw*(j+1.5), rh*0.75);
+      for(let i=0;i<A.length;i++){
+        for(let j=0;j<B.length;j++){
+          ctx.beginPath();
+          ctx.roundRect(cw*(j+1)+2, rh*(i+1)+2, cw-4, rh-4, 3);
+          ctx.fillStyle='#f4a45f22'; ctx.fill();
+          ctx.strokeStyle='#f4a45f66'; ctx.lineWidth=1; ctx.stroke();
+          ctx.fillStyle='#f4a45fdd';
+          ctx.fillText(`(${A[i]},${B[j]})`, cw*(j+1.5), rh*(i+1.5));
+        }
+      }
+    },
+    text:`<b>A × B</b> is the set of all <b>ordered pairs</b> (a, b) where a∈A and b∈B.<br><br>
+|A × B| = |A| × |B| &nbsp;(size = product of sizes)<br><br>
+The grid shows every combination. Each cell is one ordered pair.`,
+    props:[
+      {t:'A × B ≠ B × A (generally)', pos:false, label:'NOT commutative'},
+      {t:'|A×B| = |A|·|B|', pos:true, label:'Cardinality'},
+      {t:'A × ∅ = ∅', pos:true, label:'Empty product'},
+      {t:'A×(B∪C) = (A×B)∪(A×C)', pos:true, label:'Distributive'},
+    ],
+    steps:[
+      'Take every element a from A',
+      'Pair it with every element b from B',
+      'Collect all pairs (a,b)',
+    ],
+    numEx:{ U:[1,2,3,4,5,6,7,8], A:[1,2], B:[3,4], result:['(1,3)','(1,4)','(2,3)','(2,4)'] },
+    numExLabel:'A={1,2}  B={3,4}  →  A×B={(1,3),(1,4),(2,3),(2,4)}',
+  },
+];
+
+// ── Build DOM ────────────────────────────────────────────
+function buildSetOpsTab(){
+  const root = document.getElementById('setops-root');
+  if(!root || root.dataset.built) return;
+  root.dataset.built='1';
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.className='sop-header-card';
+  hdr.innerHTML=`<h2>Set Operations — Visual Guide</h2>
+    <p>Click any operation card to expand a detailed visual explanation with properties, step-by-step walkthrough, and numeric examples. All diagrams use sets <b style="color:${CA}">A</b> and <b style="color:${CB}">B</b> inside universe <b style="color:#3a4060">𝕌</b>. Highlighted (shaded) region = the <b>result</b> of the operation.</p>`;
+  root.appendChild(hdr);
+
+  // Detail panel (shared, moves content)
+  const detail = document.createElement('div');
+  detail.className='sop-detail'; detail.id='sop-detail';
+  root.appendChild(detail);
+
+  // Grid
+  const grid = document.createElement('div');
+  grid.className='sop-grid';
+  root.appendChild(grid);
+
+  const DPR = Math.min(window.devicePixelRatio||1, 2);
+  const SW=160, SH=110;
+
+  OPS.forEach(op => {
+    const card = document.createElement('div');
+    card.className='sop-card'; card.id='sopcard_'+op.id;
+    card.onclick = ()=>toggleDetail(op);
+
+    const {c:cv, ctx} = makeCanvas(SW,SH,DPR);
+    op.drawSmall(ctx,SW,SH);
+
+    const titleEl = document.createElement('div');
+    titleEl.className='sop-card-title'; titleEl.textContent=op.title;
+    const symEl = document.createElement('div');
+    symEl.className='sop-card-sym'; symEl.style.color=op.color; symEl.textContent=op.sym;
+    const descEl = document.createElement('div');
+    descEl.className='sop-card-desc'; descEl.textContent=op.shortDesc;
+
+    card.appendChild(cv);
+    card.appendChild(titleEl);
+    card.appendChild(symEl);
+    card.appendChild(descEl);
+    grid.appendChild(card);
+  });
+}
+
+let activeOp = null;
+
+function toggleDetail(op){
+  const detail = document.getElementById('sop-detail');
+  if(!detail) return;
+
+  // Deactivate all cards
+  document.querySelectorAll('.sop-card').forEach(c=>c.classList.remove('sop-active'));
+
+  if(activeOp && activeOp.id === op.id){
+    detail.classList.remove('sop-detail-open');
+    detail.innerHTML='';
+    activeOp = null;
+    return;
+  }
+
+  activeOp = op;
+  document.getElementById('sopcard_'+op.id).classList.add('sop-active');
+
+  const DPR = Math.min(window.devicePixelRatio||1,2);
+  const LW=300, LH=210;
+  const {c:cv,ctx} = makeCanvas(LW,LH,DPR);
+  op.drawLarge(ctx,LW,LH);
+
+  // Properties HTML
+  const propsHTML = op.props.map(p=>`
+    <div class="sop-prop${p.pos?'':' neg'}"><b>${p.pos?'✓':'✗'}</b> ${p.t} <span style="color:var(--muted);font-size:0.6rem"> — ${p.label}</span></div>
+  `).join('');
+
+  // Steps HTML
+  const stepsHTML = op.steps.map((s,i)=>`<div><span class="sop-step-num">${i+1}.</span>${s}</div>`).join('');
+
+  // Numeric example
+  const ex = op.numEx;
+  const inA = new Set(ex.A.map(String));
+  const inB = new Set(ex.B.map(String));
+  const inResult = new Set(ex.result.map(String));
+
+  // For result row, handle string pairs too
+  const resultNums = ex.result;
+
+  let numHtml = '';
+  if(ex.U.length){
+    // Universe row
+    numHtml += `<div class="sop-num-title">Universe 𝕌</div><div class="sop-num-line">`;
+    ex.U.forEach(n=>{
+      const s=String(n);
+      numHtml+=`<span class="sop-el" style="border-color:#3a4060;color:#4a5070;background:#1e233388">${s}</span>`;
+    });
+    numHtml+='</div>';
+  }
+  // Set A row
+  if(ex.A.length){
+    numHtml+=`<div class="sop-num-title" style="margin-top:8px">Set A</div><div class="sop-num-line">`;
+    ex.A.forEach(n=>{
+      numHtml+=`<span class="sop-el" style="border-color:${CA}55;color:${CA};background:${CA}22">${n}</span>`;
+    });
+    numHtml+='</div>';
+  }
+  // Set B row
+  if(ex.B.length){
+    numHtml+=`<div class="sop-num-title" style="margin-top:8px">Set B</div><div class="sop-num-line">`;
+    ex.B.forEach(n=>{
+      numHtml+=`<span class="sop-el" style="border-color:${CB}55;color:${CB};background:${CB}22">${n}</span>`;
+    });
+    numHtml+='</div>';
+  }
+  // Result row
+  numHtml+=`<div class="sop-num-title" style="margin-top:8px;color:${op.color}">Result: ${op.sym}</div><div class="sop-num-line">`;
+  if(resultNums.length){
+    resultNums.forEach(n=>{
+      numHtml+=`<span class="sop-el" style="border-color:${op.color}99;color:${op.color};background:${op.color}33;font-weight:bold">${n}</span>`;
+    });
+  } else {
+    numHtml+=`<span class="sop-el" style="border-color:#b482f499;color:#b482f4;background:#b482f433;font-weight:bold">∅</span>`;
+  }
+  numHtml+='</div>';
+
+  detail.innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div class="sop-detail-title" style="color:${op.color}">${op.title}</div>
+        <div class="sop-detail-sym">${op.sym}</div>
+      </div>
+      <button class="sop-anim-btn" onclick="document.getElementById('sop-detail').classList.remove('sop-detail-open');document.querySelectorAll('.sop-card').forEach(c=>c.classList.remove('sop-active'));window.activeOp=null;">✕ Close</button>
+    </div>
+    <div class="sop-detail-body">
+      <div class="sop-detail-canvas-wrap" id="sopdetail_canvas"></div>
+      <div class="sop-detail-text">${op.text}<div class="sop-props">${propsHTML}</div></div>
+    </div>
+    <div class="sop-steps"><b style="color:var(--text);display:block;margin-bottom:4px">Step-by-step:</b>${stepsHTML}</div>
+    <div class="sop-num-example">${numHtml}</div>
+  `;
+
+  detail.querySelector('#sopdetail_canvas').appendChild(cv);
+  detail.classList.add('sop-detail-open');
+
+  // Scroll detail into view
+  detail.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+window.buildSetOpsTab = buildSetOpsTab;
+
+})();
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════
+   NUMBER SETS TAB
+═══════════════════════════════════════════════ */
+
+// ── Styles injected once ────────────────────────
+(function(){
+  const s = document.createElement('style');
+  s.textContent = `
+    .ns-pill {
+      display:inline-flex;align-items:center;gap:5px;
+      padding:3px 10px;border-radius:20px;
+      font-family:'DM Mono',monospace;font-size:0.72rem;font-weight:500;
+    }
+    .ns-select {
+      height:34px;padding:0 10px;
+      background:var(--surface);border:1.5px solid var(--border);
+      border-radius:6px;color:var(--text);
+      font-family:'DM Mono',monospace;font-size:0.82rem;
+      outline:none;cursor:pointer;
+      transition:border-color 0.15s;
+    }
+    .ns-select:focus { border-color:#b482f4; }
+    .ns-badge {
+      display:inline-block;padding:2px 9px;border-radius:4px;
+      font-family:'DM Mono',monospace;font-size:0.72rem;
+      margin:2px 3px;
+    }
+    .ns-yes { background:rgba(244,212,95,0.18);color:#f4d45f;border:1px solid #f4d45f40; }
+    .ns-no  { background:rgba(244,95,95,0.18); color:#f45f5f;border:1px solid #f45f5f40; }
+    .ns-partial { background:rgba(244,212,95,0.18);color:#f4d45f;border:1px solid #f4d45f40; }
+    .ns-tbl-hdr { background:var(--surface);color:var(--muted);padding:7px 10px;text-align:center;border-bottom:1px solid var(--border); }
+    .ns-tbl-row { border-bottom:1px solid var(--border)22; }
+    .ns-tbl-row:hover { background:rgba(255,255,255,0.02); }
+    .ns-tbl-cell { padding:7px 10px;text-align:center;border-right:1px solid var(--border)22; }
+    .ns-tbl-label { padding:7px 12px;text-align:left;color:var(--text);border-right:1px solid var(--border); }
+    .ns-result-title { font-size:0.95rem;color:var(--text);margin-bottom:8px; }
+    .ns-result-body  { font-size:0.76rem;color:var(--muted);line-height:1.9; }
+    .ns-hl { color:var(--text); }
+    .ns-ex-num {
+      display:inline-block;padding:2px 8px;border-radius:4px;
+      font-family:'DM Mono',monospace;font-size:0.8rem;margin:2px;
+      background:var(--surface);border:1px solid var(--border);color:var(--text);
+    }
+    .ns-member-chip {
+      display:inline-flex;align-items:center;gap:5px;padding:4px 11px;
+      border-radius:6px;font-family:'DM Mono',monospace;font-size:0.75rem;
+      border:1px solid;
+    }
+  `;
+  document.head.appendChild(s);
+})();
+
+// ── Set definitions ───────────────────────────
+const NS_SETS = {
+  N:    { sym:'ℕ', name:'Natural numbers',       color:'#f4845f', desc:'1, 2, 3, 4 … (counting numbers — does NOT include 0 in most modern definitions)' },
+  W:    { sym:'𝕎', name:'Whole numbers',         color:'#ffc850', desc:'0, 1, 2, 3, 4 … (Natural numbers plus zero)' },
+  Z:    { sym:'ℤ', name:'Integers',              color:'#5fc4f4', desc:'… −3, −2, −1, 0, 1, 2, 3 …' },
+  Q:    { sym:'ℚ', name:'Rational numbers',      color:'#b482f4', desc:'All fractions p/q where p,q∈ℤ, q≠0. Includes ½, −⅔, 0.333…, 7' },
+  R:    { sym:'ℝ', name:'Real numbers',          color:'#f4d45f', desc:'All points on the number line: rationals + irrationals' },
+  I:    { sym:'ℝ∖ℚ', name:'Irrational numbers', color:'#f4d45f', desc:'√2, π, e, φ … — cannot be expressed as p/q' },
+  F:    { sym:'ℚ∖ℤ', name:'Non-integer rationals (fractions)', color:'#f45f8a', desc:'½, ¼, −⅔, 0.1, … — rational but not integer' },
+  NegZ: { sym:'ℤ∖𝕎', name:'Negative integers',  color:'#5f8ef4', desc:'−1, −2, −3, −4 … (integers that are not whole numbers)' },
+  Zero: { sym:'{0}', name:'The set containing only zero', color:'#f4a45f', desc:'{0}' },
+};
+
+// Hierarchy levels (higher = larger set)
+const NS_LEVEL = { Zero:0, N:1, W:1.5, NegZ:1.8, Z:2, F:2.5, Q:3, I:3.5, R:4 };
+
+// Subset relationships: NS_SUBSET[A][B] = true means A ⊂ B (A is subset of B)
+const NS_SUBSET = {
+  Zero: { N:false, W:true, Z:true, Q:true, R:true },
+  N:    { W:true, Z:true, Q:true, R:true },
+  W:    { Z:true, Q:true, R:true },
+  NegZ: { Z:true, Q:true, R:true },
+  Z:    { Q:true, R:true },
+  F:    { Q:true, R:true },
+  Q:    { R:true },
+  I:    { R:true },
+  R:    {},
+};
+
+// Intersection lookup: what is A ∩ B?
+function nsIntersect(a, b) {
+  if (a === b) return { result: a, desc: `${NS_SETS[a].sym} ∩ ${NS_SETS[a].sym} = ${NS_SETS[a].sym}`, examples: nsExampleNums(a) };
+
+  const sets = [a, b];
+  // If one is subset of the other
+  if (NS_SUBSET[a] && NS_SUBSET[a][b]) return fmtInter(a, b, a);
+  if (NS_SUBSET[b] && NS_SUBSET[b][a]) return fmtInter(a, b, b);
+
+  // Disjoint pairs
+  const disjoint = [
+    ['NegZ','N'], ['NegZ','Zero'], ['I','Q'], ['I','N'], ['I','Z'], ['I','F'], ['I','NegZ'], ['I','Zero'],
+    ['F','N'], ['F','Z'], ['F','NegZ'], ['F','Zero'],
+    ['NegZ','F'],
+  ];
+  for (const [x,y] of disjoint) {
+    if ((a===x&&b===y)||(a===y&&b===x)) return { result:'∅', desc:`${NS_SETS[a].sym} ∩ ${NS_SETS[b].sym} = ∅ (empty set — no element belongs to both)`, examples:[] };
+  }
+  // NegZ ∩ N = {} (0 depends on convention; we say disjoint for clarity)
+  // Z ∩ I = ∅ already handled
+  // Default: smaller set
+  return { result:'?', desc:`${NS_SETS[a].sym} ∩ ${NS_SETS[b].sym} — complex; depends on convention`, examples:[] };
+}
+function fmtInter(a,b,res) {
+  const s = NS_SETS[res];
+  return { result: res, desc:`${NS_SETS[a].sym} ∩ ${NS_SETS[b].sym} = ${s.sym} (${s.name})`, examples: nsExampleNums(res) };
+}
+
+// Union lookup
+function nsUnion(a, b) {
+  if (a === b) return { result: a, desc: `${NS_SETS[a].sym} ∪ ${NS_SETS[a].sym} = ${NS_SETS[a].sym}`, examples: nsExampleNums(a) };
+
+  if (NS_SUBSET[a] && NS_SUBSET[a][b]) return { result: b, desc:`${NS_SETS[a].sym} ∪ ${NS_SETS[b].sym} = ${NS_SETS[b].sym} — since ${NS_SETS[a].sym} ⊂ ${NS_SETS[b].sym}`, examples: nsExampleNums(b) };
+  if (NS_SUBSET[b] && NS_SUBSET[b][a]) return { result: a, desc:`${NS_SETS[a].sym} ∪ ${NS_SETS[b].sym} = ${NS_SETS[a].sym} — since ${NS_SETS[b].sym} ⊂ ${NS_SETS[a].sym}`, examples: nsExampleNums(a) };
+
+  // Special unions
+  const key = [a,b].sort().join('|');
+  const specialUnions = {
+    'N|NegZ':   { result:'Z_minus0', sym:'ℤ∖{0}', desc:'ℕ ∪ (ℤ∖𝕎) = ℤ∖{0} — all non-zero integers', note:true },
+    'N|Zero':   { result:'W', sym:'𝕎', desc:'ℕ ∪ {0} = 𝕎 — natural numbers plus zero = whole numbers!', note:false },
+    'NegZ|W':   { result:'Z', sym:'ℤ', desc:'(ℤ∖𝕎) ∪ 𝕎 = ℤ — negative integers + whole numbers = all integers!', note:false },
+    'NegZ|Zero':{ result:'NegZ+0', sym:'ℤ≤0', desc:'(ℤ∖𝕎) ∪ {0} = non-positive integers {…,−2,−1,0}', note:true },
+    'NegZ|N':   { result:'Z_minus0', sym:'ℤ∖{0}', desc:'ℕ ∪ (ℤ∖𝕎) = ℤ∖{0} — all non-zero integers', note:true },
+    'I|Q':      { result:'R', sym:'ℝ', desc:'ℚ ∪ (ℝ∖ℚ) = ℝ — rationals and irrationals together make all reals!', note:false },
+    'F|Z':      { result:'Q', sym:'ℚ', desc:'ℤ ∪ (ℚ∖ℤ) = ℚ — integers and non-integer rationals together make all rationals!', note:false },
+    'I|Z':      { result:'I|Z', sym:'ℤ ∪ (ℝ∖ℚ)', desc:'ℤ ∪ (ℝ∖ℚ) — a proper subset of ℝ; still missing non-integer rationals like ½', note:true },
+    'F|I':      { result:'R_noZ', sym:'ℝ∖ℤ', desc:'(ℚ∖ℤ) ∪ (ℝ∖ℚ) = ℝ∖ℤ — all reals except integers', note:true },
+    'NegZ|Q':   { result:'Q', sym:'ℚ', desc:'(ℤ∖𝕎) ∪ ℚ = ℚ — since ℤ∖𝕎 ⊂ ℚ', note:false },
+    'F|W':      { result:'Q', sym:'ℚ', desc:'𝕎 ∪ (ℚ∖ℤ) — contains whole numbers and fractions, still missing negatives; ⊂ ℚ', note:true },
+  };
+  if (specialUnions[key]) {
+    const r = specialUnions[key];
+    return { result: r.result, sym: r.sym, desc: r.desc, examples: [], note: r.note };
+  }
+  return { result:'?', desc:`${NS_SETS[a].sym} ∪ ${NS_SETS[b].sym}`, examples:[] };
+}
+
+// Subtraction: A ∖ B
+function nsSub(a, b) {
+  if (a === b) return { result:'∅', desc:`${NS_SETS[a].sym} ∖ ${NS_SETS[a].sym} = ∅`, examples:[] };
+  if (NS_SUBSET[a] && NS_SUBSET[a][b]) return { result:'∅', desc:`${NS_SETS[a].sym} ∖ ${NS_SETS[b].sym} = ∅ — because ${NS_SETS[a].sym} ⊂ ${NS_SETS[b].sym}, so every element of A is in B`, examples:[] };
+  if (NS_SUBSET[b] && NS_SUBSET[b][a]) {
+    // A is bigger: A \ B = some subset
+    const key = `${a}\\${b}`;
+    const known = {
+      'R\\Q':    { sym:'ℝ∖ℚ',     name:'Irrational numbers',              examples:['√2','π','e','φ','∛3'] },
+      'R\\Z':    { sym:'ℝ∖ℤ',     name:'Non-integer reals',               examples:['½','−⅔','√2','π','0.1'] },
+      'R\\W':    { sym:'ℝ∖𝕎',     name:'Reals minus whole numbers',       examples:['−1','½','−π','√2','0.1'] },
+      'R\\N':    { sym:'ℝ∖ℕ',     name:'Reals minus naturals (incl. 0,negatives)', examples:['0','−1','½','−π','√2'] },
+      'R\\I':    { sym:'ℚ',       name:'Rational numbers',                examples:['0','1','−3','½','0.25'] },
+      'R\\F':    { sym:'ℤ ∪ (ℝ∖ℚ)', name:'Integers ∪ Irrationals',      examples:['0','-1','2','√2','π'] },
+      'R\\NegZ': { sym:'ℝ∖(ℤ∖𝕎)', name:'Reals minus negative integers',  examples:['0','1','½','√2','π'] },
+      'R\\Zero': { sym:'ℝ∖{0}',   name:'All reals except zero',           examples:['−1','½','√2','-π','0.01'] },
+      'Q\\Z':    { sym:'ℚ∖ℤ',     name:'Non-integer rationals',           examples:['½','−⅔','0.1','¾','−1/7'] },
+      'Q\\W':    { sym:'ℚ∖𝕎',     name:'Rationals minus whole numbers',   examples:['−1','½','−⅔','−3','0.1'] },
+      'Q\\N':    { sym:'ℚ∖ℕ',     name:'Rationals minus naturals (incl. 0,neg)', examples:['0','−1','½','−⅔','0.1'] },
+      'Q\\F':    { sym:'ℤ',       name:'Integers',                        examples:['…','−2','−1','0','1','2','…'] },
+      'Q\\NegZ': { sym:'ℚ∖(ℤ∖𝕎)', name:'Rationals minus neg. integers', examples:['0','½','¾','1','2'] },
+      'Q\\Zero': { sym:'ℚ∖{0}',   name:'Non-zero rationals',              examples:['½','−1','¾','−⅔','2'] },
+      'Z\\W':    { sym:'ℤ∖𝕎',     name:'Negative integers',               examples:['−1','−2','−3','−4','…'] },
+      'Z\\N':    { sym:'ℤ∖ℕ',     name:'Non-positive integers (neg + 0)', examples:['0','−1','−2','−3','…'] },
+      'Z\\NegZ': { sym:'𝕎',       name:'Whole numbers',                   examples:['0','1','2','3','…'] },
+      'Z\\Zero': { sym:'ℤ∖{0}',   name:'Non-zero integers',               examples:['…','−2','−1','1','2','…'] },
+      'Z\\F':    { sym:'ℤ',       name:'Integers (F∩Z=∅, so Z∖F=Z)',     examples:['…','−2','−1','0','1','2'] },
+      'W\\N':    { sym:'{0}',     name:'Just zero — whole numbers minus naturals = {0}', examples:['0'] },
+      'W\\Zero': { sym:'ℕ',       name:'Natural numbers',                 examples:['1','2','3','4','5','…'] },
+      'W\\NegZ': { sym:'𝕎',       name:'Whole numbers (NegZ∩𝕎=∅)',       examples:['0','1','2','3','…'] },
+      'N\\Zero': { sym:'ℕ',       name:'Natural numbers (0∉ℕ in this def)', examples:['1','2','3','4','5','…'] },
+    };
+    if (known[key]) {
+      const r = known[key];
+      return { result: r.sym, desc:`${NS_SETS[a].sym} ∖ ${NS_SETS[b].sym} = ${r.sym}  (${r.name})`, examples: r.examples };
+    }
+  }
+  // Disjoint: A \ B = A
+  const disjointPairs = [
+    ['N','I'],['N','F'],['N','NegZ'],
+    ['Z','I'],['NegZ','I'],['NegZ','F'],
+    ['Q','I'],['F','I'],['I','Q'],['I','F'],
+    ['Zero','I'],['Zero','F'],['Zero','NegZ'],
+  ];
+  for (const [x,y] of disjointPairs) {
+    if (a===x && b===y) {
+      return { result: a, desc:`${NS_SETS[a].sym} ∖ ${NS_SETS[b].sym} = ${NS_SETS[a].sym} — the sets are disjoint, so removing B removes nothing from A`, examples: nsExampleNums(a) };
+    }
+    if (a===y && b===x) {
+      return { result: a, desc:`${NS_SETS[a].sym} ∖ ${NS_SETS[b].sym} = ${NS_SETS[a].sym} — the sets are disjoint`, examples: nsExampleNums(a) };
+    }
+  }
+  return { result:'?', desc:`${NS_SETS[a].sym} ∖ ${NS_SETS[b].sym}`, examples:[] };
+}
+
+// Closure under multiplication check
+function nsMulClosure(a) {
+  const closedSets = { N:true, Z:true, Q:true, R:true, Zero:true };
+  // Irrational not closed: √2 × √2 = 2 ∈ ℚ
+  // Fractions only (ℚ∖ℤ): ½ × 2 — but 2 not in set; ½ × ½ = ¼ ∈ set, but ½ × 4 = 2 ∉ set — not closed as 4∉set. Actually within the set: ½ × ½ = ¼ ✓, but ½ × 4 involves integers. Closed under multiplication within itself? ½ × ⅔ = ⅓ ∈ ℚ∖ℤ ✓, but ½ × 2 = 1 ∈ ℤ. Since we multiply two elements both in ℚ∖ℤ: ½ × 2... 2 is not in ℚ∖ℤ. So pick ½ × ½ = ¼ ✓; but ½ × (-½) = -¼ ✓; 3/2 × 2/3 = 1 ∉ ℚ∖ℤ. NOT closed.
+  // NegZ (negative integers): −2 × −3 = 6 ∉ ℤ∖ℕ. NOT closed.
+  const info = {
+    N:    { closed:true,  sym:'✓', note:'ℕ is closed under ×: a,b∈ℕ ⟹ a×b∈ℕ', ex:'2 × 3 = 6 ∈ ℕ' },
+    W:    { closed:true,  sym:'✓', note:'𝕎 is closed under ×: a,b∈𝕎 ⟹ a×b∈𝕎', ex:'0 × 5 = 0 ∈ 𝕎' },
+    Z:    { closed:true,  sym:'✓', note:'ℤ is closed under ×: a,b∈ℤ ⟹ a×b∈ℤ', ex:'−3 × 4 = −12 ∈ ℤ' },
+    Q:    { closed:true,  sym:'✓', note:'ℚ is closed under ×: (p/q)×(r/s) = pr/qs ∈ ℚ', ex:'½ × ⅔ = ⅓ ∈ ℚ' },
+    R:    { closed:true,  sym:'✓', note:'ℝ is closed under ×', ex:'π × √2 ∈ ℝ' },
+    I:    { closed:false, sym:'✗', note:'ℝ∖ℚ is NOT closed under ×', ex:'√2 × √2 = 2 ∈ ℚ ∉ ℝ∖ℚ' },
+    F:    { closed:false, sym:'✗', note:'ℚ∖ℤ is NOT closed under ×', ex:'3/2 × 2/3 = 1 ∈ ℤ ∉ ℚ∖ℤ' },
+    NegZ: { closed:false, sym:'✗', note:'ℤ∖𝕎 is NOT closed under ×', ex:'(−2) × (−3) = 6 ∈ 𝕎 ∉ ℤ∖𝕎' },
+    Zero: { closed:true,  sym:'✓', note:'{0} is closed under ×: 0 × 0 = 0', ex:'0 × 0 = 0 ∈ {0}' },
+  };
+  return info[a] || { closed:null, sym:'?', note:'Unknown', ex:'' };
+}
+
+// Sample numbers for a set
+function nsExampleNums(setKey) {
+  const ex = {
+    N:    ['1','2','3','4','10','100'],
+    W:    ['0','1','2','3','10','100'],
+    Z:    ['−3','−2','−1','0','1','2','3'],
+    Q:    ['−⅔','−1','0','½','1','¾','2'],
+    R:    ['−π','−1','0','½','√2','π','e'],
+    I:    ['√2','−√3','π','−π','e','φ','∛5'],
+    F:    ['−⅔','−½','¼','⅓','½','¾','0.1'],
+    NegZ: ['−1','−2','−3','−4','−10','−100'],
+    Zero: ['0'],
+  };
+  return ex[setKey] || [];
+}
+
+// ── Main compute function ─────────────────────
+function nsCompute() {
+  const a = document.getElementById('nsSetA').value;
+  const b = document.getElementById('nsSetB').value;
+  const op = document.getElementById('nsOp').value;
+  const el = document.getElementById('nsResult');
+  const exEl = document.getElementById('nsExamples');
+
+  let res, title, body, examples = [], color = '#b482f4';
+
+  if (op === 'union') {
+    const u = nsUnion(a, b);
+    title = `${NS_SETS[a].sym} ∪ ${NS_SETS[b].sym}`;
+    body  = u.desc;
+    // try to get color of result set
+    if (NS_SETS[u.result]) color = NS_SETS[u.result].color;
+    examples = u.examples || nsExampleNums(u.result);
+    // add extra info about union
+    body += u.result === 'R' ? '<br><span style="color:#f4d45f">▶ ℝ is the complete real number line!</span>' : '';
+  } else if (op === 'inter') {
+    const i = nsIntersect(a, b);
+    title = `${NS_SETS[a].sym} ∩ ${NS_SETS[b].sym}`;
+    body = i.desc;
+    if (NS_SETS[i.result]) color = NS_SETS[i.result].color;
+    examples = i.examples;
+  } else if (op === 'sub') {
+    const s = nsSub(a, b);
+    title = `${NS_SETS[a].sym} ∖ ${NS_SETS[b].sym}`;
+    body = s.desc;
+    examples = s.examples;
+    color = NS_SETS[a].color;
+  } else if (op === 'mul') {
+    const m = nsMulClosure(a);
+    title = `Is ${NS_SETS[a].sym} closed under × ?`;
+    body = `<span style="font-size:1.1rem;margin-right:6px">${m.closed ? '✓' : '✗'}</span>${m.note}<br><span style="color:var(--text)">${m.ex}</span>`;
+    color = m.closed ? '#f4d45f' : '#f45f5f';
+    examples = nsExampleNums(a);
+    exEl.innerHTML = '';
+  }
+
+  el.innerHTML = `
+    <div class="ns-result-title" style="color:${color}">${title}</div>
+    <div class="ns-result-body">${body}</div>
+  `;
+
+  if (examples.length) {
+    exEl.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.1em">Sample elements:</div>
+      <div>${examples.map(e=>`<span class="ns-ex-num">${e}</span>`).join('')}${examples.length>=5?'<span class="ns-ex-num" style="color:var(--muted)">…</span>':''}</div>`;
+  } else {
+    exEl.innerHTML = '';
+  }
+
+  // Highlight venn
+  nsDrawVenn(a, b, op);
+}
+
+// ── Venn/Nesting Canvas ───────────────────────
+function nsDrawVenn(highlightA, highlightB, op) {
+  const cv = document.getElementById('nsVenn');
+  if (!cv) return;
+  const W = cv.offsetWidth || 380, H = 380;
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = W * DPR; cv.height = H * DPR;
+  cv.style.height = H + 'px';
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+
+  ctx.fillStyle = '#181c27';
+  ctx.fillRect(0,0,W,H);
+
+  const cx = W/2, cy = H/2 - 10;
+
+  // 5 nested rings: ℝ > ℚ > ℤ > 𝕎 > ℕ
+  // Each layer: key, rx, ry, cx offset, color
+  const layers = [
+    { key:'R', rx:W*0.44, ry:H*0.41, ox:0,       oy:0,       color:'#f4d45f' },
+    { key:'Q', rx:W*0.34, ry:H*0.32, ox:0,       oy:0,       color:'#b482f4' },
+    { key:'Z', rx:W*0.24, ry:H*0.23, ox:0,       oy:H*0.01,  color:'#5fc4f4' },
+    { key:'W', rx:W*0.155,ry:H*0.155,ox:W*0.01,  oy:H*0.025, color:'#ffc850' },
+    { key:'N', rx:W*0.085,ry:H*0.09, ox:W*0.015, oy:H*0.04,  color:'#f4845f' },
+  ];
+
+  // Side labels for regions between rings
+  const regionLabels = [
+    { x:W*0.82, y:H*0.20, sym:'ℝ∖ℚ',  sub:'Irrational',    color:'#f4d45f',  ex:'√2, π, e' },
+    { x:W*0.74, y:H*0.42, sym:'ℚ∖ℤ',  sub:'Fractions',     color:'#f45f8a',  ex:'½, ¾, −⅔' },
+    { x:W*0.38, y:H*0.72, sym:'ℤ∖𝕎',  sub:'Neg. Integers', color:'#5f8ef4',  ex:'−1,−2,−3' },
+    { x:W*0.62, y:H*0.68, sym:'𝕎∖ℕ',  sub:'Zero only',     color:'#f4a45f',  ex:'{0}' },
+  ];
+
+  // Draw rings from outside in
+  for (const l of layers) {
+    const lx = cx + l.ox, ly = cy + l.oy;
+    const isA = l.key === highlightA;
+    const isB = l.key === highlightB;
+    const active = isA || isB;
+    ctx.beginPath();
+    ctx.ellipse(lx, ly, l.rx, l.ry, 0, 0, Math.PI*2);
+    ctx.fillStyle = active ? l.color + '28' : l.color + '0c';
+    ctx.fill();
+    ctx.strokeStyle = active ? l.color : l.color + '60';
+    ctx.lineWidth = active ? 2.8 : 1.4;
+    ctx.setLineDash(active ? [] : []);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Draw ring labels inside each ellipse (near top edge)
+  for (const l of layers) {
+    const lx = cx + l.ox, ly = cy + l.oy;
+    const isA = l.key === highlightA;
+    const isB = l.key === highlightB;
+    const active = isA || isB;
+    const fontSize = active ? 13 : 11;
+    ctx.font = `bold ${fontSize}px 'DM Mono',monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = active ? l.color : l.color + 'bb';
+    // Position label at top of this ellipse
+    const labelY = ly - l.ry + (l.ry < 30 ? 10 : 14);
+    ctx.fillText(NS_SETS[l.key].sym, lx, labelY);
+    // Small example numbers below the sym for active
+    if (active) {
+      const exs = nsExampleNums(l.key).slice(0,3).join(', ');
+      ctx.font = `9px 'DM Mono',monospace`;
+      ctx.fillStyle = l.color + '88';
+      ctx.fillText(exs + '…', lx, labelY + 14);
+    }
+  }
+
+  // Region labels (between rings)
+  for (const lbl of regionLabels) {
+    const isA = (lbl.sym.startsWith(highlightA+'∖') || lbl.sym === highlightA);
+    ctx.font = "bold 10px 'DM Mono',monospace";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = lbl.color + 'cc';
+    ctx.fillText(lbl.sym, lbl.x, lbl.y);
+    ctx.font = "9px 'DM Mono',monospace";
+    ctx.fillStyle = lbl.color + '88';
+    ctx.fillText(lbl.sub, lbl.x, lbl.y + 13);
+    ctx.font = "8px 'DM Mono',monospace";
+    ctx.fillStyle = lbl.color + '66';
+    ctx.fillText(lbl.ex, lbl.x, lbl.y + 24);
+  }
+
+  // Bottom legend
+  const legend = [
+    {sym:'ℕ',c:'#f4845f'},{sym:'𝕎',c:'#ffc850'},
+    {sym:'ℤ',c:'#5fc4f4'},{sym:'ℚ',c:'#b482f4'},{sym:'ℝ',c:'#f4d45f'}
+  ];
+  const legW = legend.length * 46;
+  let lx2 = W/2 - legW/2 + 10;
+  const legY = H - 14;
+  ctx.font = "10px 'DM Mono',monospace";
+  ctx.textBaseline = 'middle';
+  for (const l of legend) {
+    ctx.beginPath(); ctx.arc(lx2, legY, 5, 0, Math.PI*2);
+    ctx.fillStyle = l.c; ctx.fill();
+    ctx.fillStyle = '#7a80a0'; ctx.textAlign='left';
+    ctx.fillText(l.sym, lx2+8, legY);
+    lx2 += 46;
+  }
+}
+
+// ── Closure Table ─────────────────────────────
+function nsDrawClosureTable() {
+  const tbl = document.getElementById('nsClosureTable');
+  if (!tbl) return;
+
+  const ops = ['+', '−', '×', '÷'];
+  const sets = ['N','W','Z','Q','R','I','F','NegZ','Zero'];
+
+  // closed[set][op]
+  const closed = {
+    N:    { '+':'yes', '−':'no',  '×':'yes', '÷':'no'  },
+    W:    { '+':'yes', '−':'no',  '×':'yes', '÷':'no'  },
+    Z:    { '+':'yes', '−':'yes', '×':'yes', '÷':'no'  },
+    Q:    { '+':'yes', '−':'yes', '×':'yes', '÷':'partial' },
+    R:    { '+':'yes', '−':'yes', '×':'yes', '÷':'partial' },
+    I:    { '+':'no',  '−':'no',  '×':'no',  '÷':'no'  },
+    F:    { '+':'no',  '−':'no',  '×':'no',  '÷':'no'  },
+    NegZ: { '+':'yes', '−':'no',  '×':'no',  '÷':'no'  },
+    Zero: { '+':'yes', '−':'yes', '×':'yes', '÷':'no'  },
+  };
+
+  const notes = {
+    'N+':   '3+5=8 ✓',          'N-':    '3−5=−2 ✗',      'N×':   '3×5=15 ✓',      'N÷':   '3÷2∉ℕ ✗',
+    'W+':   '0+5=5 ✓',          'W-':    '2−5=−3 ✗',      'W×':   '0×5=0 ✓',       'W÷':   '3÷2∉𝕎 ✗',
+    'Z+':   '−1+2=1 ✓',         'Z-':    '1−3=−2 ✓',      'Z×':   '−2×3=−6 ✓',     'Z÷':   '1÷2∉ℤ ✗',
+    'Q+':   '½+⅓=⅚ ✓',          'Q-':    '½−⅓=⅙ ✓',      'Q×':   '½×⅓=⅙ ✓',      'Q÷':   '÷0 undef ~',
+    'R+':   'π+1 ✓',             'R-':    'π−e ✓',          'R×':   'π×√2 ✓',         'R÷':   '÷0 undef ~',
+    'I+':   'π+(−π)=0∉ℝ∖ℚ ✗',  'I-':    'π−π=0 ✗',       'I×':   '√2×√2=2 ✗',     'I÷':   'π÷π=1 ✗',
+    'F+':   '½+½=1∉ℚ∖ℤ ✗',     'F-':    '¾−¼=½ ✓?',     'F×':   '3/2×2/3=1 ✗',   'F÷':   '½÷¼=2∉ℚ∖ℤ ✗',
+    'NegZ+':'−1+(−2)=−3 ✓',    'NegZ-': '−1−(−3)=2 ✗',   'NegZ×':'(−2)(−3)=6 ✗',  'NegZ÷':'−2÷(−4)∉ℤ ✗',
+    'Zero+':'0+0=0 ✓',           'Zero-': '0−0=0 ✓',        'Zero×':'0×0=0 ✓',        'Zero÷':'0÷0 undef ✗',
+  };
+
+  let html = '<thead><tr><th class="ns-tbl-hdr" style="text-align:left;min-width:120px">Set</th>';
+  for (const op of ops) html += `<th class="ns-tbl-hdr">${op}</th>`;
+  html += '</tr></thead><tbody>';
+
+  for (const s of sets) {
+    const S = NS_SETS[s];
+    html += `<tr class="ns-tbl-row"><td class="ns-tbl-label" style="color:${S.color}">${S.sym} <span style="color:var(--muted);font-size:0.65rem">${S.name.split(' ').slice(0,2).join(' ')}</span></td>`;
+    for (const op of ops) {
+      const c = closed[s][op];
+      const note = notes[s+op] || '';
+      const cls = c==='yes' ? 'ns-yes' : c==='no' ? 'ns-no' : 'ns-partial';
+      const sym = c==='yes' ? '✓' : c==='no' ? '✗' : '~';
+      html += `<td class="ns-tbl-cell" title="${note}"><span class="ns-badge ${cls}">${sym}</span><div style="font-size:0.58rem;color:var(--muted);margin-top:2px">${note}</div></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+
+// ── Member-of checker ─────────────────────────
+function nsMemberCheck() {
+  const raw = document.getElementById('nsMemberInput').value.trim();
+  const el  = document.getElementById('nsMemberResult');
+  if (!raw) { el.innerHTML = ''; return; }
+
+  // Try to identify the number
+  let num = null, isKnownIrrational = false, desc = raw;
+
+  const irrationals = { 'pi':Math.PI, 'π':Math.PI, 'e':Math.E, 'sqrt2':Math.SQRT2, '√2':Math.SQRT2,
+    'phi':1.6180339887, 'φ':1.6180339887, 'sqrt3':Math.sqrt(3), '√3':Math.sqrt(3) };
+  if (irrationals[raw.toLowerCase()] !== undefined) {
+    num = irrationals[raw.toLowerCase()];
+    isKnownIrrational = true;
+  } else if (raw.includes('/')) {
+    const [p,q] = raw.split('/').map(s=>parseFloat(s.trim()));
+    if (!isNaN(p) && !isNaN(q) && q!==0) num = p/q;
+  } else {
+    num = parseFloat(raw);
+  }
+
+  if (num === null || isNaN(num)) { el.innerHTML = `<span style="font-family:'DM Mono',monospace;font-size:0.76rem;color:#f45f5f">Cannot parse "${raw}"</span>`; return; }
+
+  const isInt   = Number.isInteger(num) || (!isKnownIrrational && Math.abs(num - Math.round(num)) < 1e-10);
+  const isWhole = isInt && num >= 0;
+  const isNat   = isInt && num >= 1;
+  const isNegZ  = isInt && num < 0;
+  const isRat   = !isKnownIrrational;
+  const isIrr   = isKnownIrrational;
+  const isFrac  = isRat && !isInt;
+
+  const memberships = [
+    { key:'N',    label:'ℕ Natural (≥1)',     yes: isNat,   color:'#f4845f' },
+    { key:'W',    label:'𝕎 Whole (≥0)',       yes: isWhole, color:'#ffc850' },
+    { key:'Z',    label:'ℤ Integer',          yes: isInt,   color:'#5fc4f4' },
+    { key:'Q',    label:'ℚ Rational',         yes: isRat,   color:'#b482f4' },
+    { key:'R',    label:'ℝ Real',             yes: true,    color:'#f4d45f' },
+    { key:'I',    label:'ℝ∖ℚ Irrational',    yes: isIrr,   color:'#f4d45f' },
+    { key:'F',    label:'ℚ∖ℤ Fraction',      yes: isFrac,  color:'#f45f8a' },
+    { key:'NegZ', label:'ℤ∖𝕎 Neg. Int.',    yes: isNegZ,  color:'#5f8ef4' },
+    { key:'Zero', label:'{0} Zero',           yes: num===0, color:'#f4a45f' },
+  ];
+
+  el.innerHTML = memberships.map(m => {
+    const bg  = m.yes ? m.color+'28' : 'transparent';
+    const bc  = m.yes ? m.color+'88' : 'var(--border)';
+    const tc  = m.yes ? m.color : 'var(--muted)';
+    const sym = m.yes ? '✓' : '✗';
+    return `<span class="ns-member-chip" style="background:${bg};border-color:${bc};color:${tc}">${sym} ${m.label}</span>`;
+  }).join('');
+}
+
+// ── Init ──────────────────────────────────────
+window.addEventListener('load', () => {
+  nsDrawClosureTable();
+  nsDrawVenn('R','N','union');
+  nsCompute();
+});
+window.addEventListener('resize', () => {
+  if (document.getElementById('tab-numsets') && document.getElementById('tab-numsets').classList.contains('active')) {
+    nsDrawVenn(document.getElementById('nsSetA').value, document.getElementById('nsSetB').value, document.getElementById('nsOp').value);
+  }
+});
+</script>
+
+<script>
+// ── State ──────────────────────────────────────
+let dIvs = [], rIvs = [], cIvs = [];
+let dPts = [], rPts = [], cPts = [];
+let dOp = 'union', rOp = 'union', cOp = 'union';
+let uid = 0;
+
+// View state: center value and pixels-per-unit
+let viewCenter = 0;
+let pxPerUnit = 20; // zoom level, infinite in both directions
+
+const INF = Infinity;
+
+function freshIv(set) {
+  return { id: uid++, lo: set==='d'?-3:1, hi: set==='d'?5:7, lb:'[', rb:']', loInf:false, hiInf:false };
+}
+function freshPts() { return { id: uid++, vals: [] }; }
+
+function getIvs(set) { return set==='d'?dIvs:set==='r'?rIvs:cIvs; }
+function getPts(set) { return set==='d'?dPts:set==='r'?rPts:cPts; }
+function setIvs(set,a){ if(set==='d')dIvs=a; else if(set==='r')rIvs=a; else cIvs=a; }
+function setPts(set,a){ if(set==='d')dPts=a; else if(set==='r')rPts=a; else cPts=a; }
+function getOp(set)   { return set==='d'?dOp:set==='r'?rOp:cOp; }
+
+function addIv(set)  { getIvs(set).push(freshIv(set)); rebuildList(set); render(); }
+function addPts(set) { getPts(set).push(freshPts()); rebuildList(set); render(); }
+function removeIv(set, id) {
+  setIvs(set, getIvs(set).filter(i=>i.id!==id));
+  rebuildList(set); render();
+}
+function removePts(set, id) {
+  setPts(set, getPts(set).filter(p=>p.id!==id));
+  rebuildList(set); render();
+}
+function setOp(set, op) {
+  if(set==='d') dOp=op; else if(set==='r') rOp=op; else cOp=op;
+  updateOpBtns(set); render();
+}
+function updateOpBtns(set) {
+  const op = getOp(set);
+  document.getElementById(set+'UBtn').classList.toggle('active', op==='union');
+  document.getElementById(set+'IBtn').classList.toggle('active', op==='inter');
+}
+function cycleBrk(set, id, side) {
+  const iv = getIvs(set).find(i=>i.id===id);
+  if (!iv) return;
+  if (side==='lo') {
+    if (iv.loInf) return;
+    iv.lb = iv.lb==='('?'[':'(';
+    const brkBtn = document.getElementById(`b_${set}_${id}_lo`);
+    if (brkBtn) brkBtn.textContent = iv.lb;
+  } else {
+    if (iv.hiInf) return;
+    iv.rb = iv.rb===')'?']':')';
+    const brkBtn = document.getElementById(`b_${set}_${id}_hi`);
+    if (brkBtn) brkBtn.textContent = iv.rb;
+  }
+  render();
+}
+function updVal(set, id, side, v) {
+  const iv = getIvs(set).find(i=>i.id===id);
+  if (!iv) return;
+  const n = parseFloat(v);
+  if (!isNaN(n)) {
+    if(side==='lo') { iv.lo=n; iv.loInf=false; }
+    else { iv.hi=n; iv.hiInf=false; }
+    render();
+  }
+}
+function toggleInf(set, id, side) {
+  const iv = getIvs(set).find(i=>i.id===id);
+  if (!iv) return;
+  if (side==='lo') {
+    iv.loInf = !iv.loInf;
+    if (iv.loInf) iv.lb = '(';
+    const infBtn = document.getElementById(`inf_${set}_${id}_lo`);
+    const brkBtn = document.getElementById(`b_${set}_${id}_lo`);
+    const numIn  = document.getElementById(`n_${set}_${id}_lo`);
+    if (infBtn) infBtn.classList.toggle('inf-active', iv.loInf);
+    if (numIn)  numIn.style.opacity = iv.loInf ? '0.3' : '1';
+    if (brkBtn) {
+      brkBtn.textContent = iv.lb;
+      brkBtn.classList.toggle('brk-locked', iv.loInf);
+      brkBtn.title = iv.loInf ? 'Must be ( with −∞' : '';
+    }
+  } else {
+    iv.hiInf = !iv.hiInf;
+    if (iv.hiInf) iv.rb = ')';
+    const infBtn = document.getElementById(`inf_${set}_${id}_hi`);
+    const brkBtn = document.getElementById(`b_${set}_${id}_hi`);
+    const numIn  = document.getElementById(`n_${set}_${id}_hi`);
+    if (infBtn) infBtn.classList.toggle('inf-active', iv.hiInf);
+    if (numIn)  numIn.style.opacity = iv.hiInf ? '0.3' : '1';
+    if (brkBtn) {
+      brkBtn.textContent = iv.rb;
+      brkBtn.classList.toggle('brk-locked', iv.hiInf);
+      brkBtn.title = iv.hiInf ? 'Must be ) with +∞' : '';
+    }
+  }
+  render();
+}
+// ── ℝ Mode state (per set) ────────────────────
+let dMode = null, rMode = null, cMode = null;
+let dModeIvs = [], rModeIvs = [], cModeIvs = [];
+
+function getMode(set)     { return set==='d' ? dMode    : set==='r' ? rMode    : cMode; }
+function getModeIvs(set)  { return set==='d' ? dModeIvs : set==='r' ? rModeIvs : cModeIvs; }
+function setMode(set, m)  { if(set==='d') dMode=m;    else if(set==='r') rMode=m;    else cMode=m; }
+function setModeIvs(set,a){ if(set==='d') dModeIvs=a; else if(set==='r') rModeIvs=a; else cModeIvs=a; }
+
+function makeInfIv(lo, hi, lb, rb, loInf, hiInf) {
+  return { id: uid++, lo, hi, lb, rb, loInf, hiInf };
+}
+function freshModeIv(i) {
+  // stagger defaults: -4,-1 / 2,5 / 8,11 ...
+  const base = -4 + i * 6;
+  return { id: uid++, lo: base, hi: base + 3 };
+}
+
+// ── Simple single-exclusion presets ───────────
+function presetR(set) {
+  setMode(set, null); setModeIvs(set, []);
+  setIvs(set,[]); setPts(set,[]);
+  const iv = makeInfIv(-10, 10, '(', ')', true, true);
+  getIvs(set).push(iv);
+  rebuildModeBlock(set); rebuildList(set); render();
+}
+
+function presetRm1(set, kind) {
+  setMode(set, null); setModeIvs(set, []);
+  setIvs(set,[]); setPts(set,[]);
+  if(set==='d') dOp='union'; else if(set==='r') rOp='union'; else cOp='union';
+  if (kind==='open') {
+    getIvs(set).push(
+      makeInfIv(-10,-2,'(', ']',true,false),
+      makeInfIv( 2, 10,'[', ')',false,true)
+    );
+  } else if (kind==='closed') {
+    getIvs(set).push(
+      makeInfIv(-10,-2,'(', ')',true,false),
+      makeInfIv( 2, 10,'(', ')',false,true)
+    );
+  } else {
+    getIvs(set).push(
+      makeInfIv(-10, 0,'(', ')',true,false),
+      makeInfIv(  0,10,'(', ')',false,true)
+    );
+  }
+  rebuildModeBlock(set); rebuildList(set); render();
+}
+
+// ── Dynamic mode entry ────────────────────────
+function enterMode(set, mode) {
+  setMode(set, mode);
+  setModeIvs(set, [freshModeIv(0)]);
+  setIvs(set,[]); setPts(set,[]);
+  rebuildModeBlock(set);
+  rebuildList(set);
+  render();
+}
+
+function addModeIv(set) {
+  const ivs = getModeIvs(set);
+  ivs.push(freshModeIv(ivs.length));
+  rebuildModeBlock(set); render();
+}
+
+function removeModeIv(set, id) {
+  setModeIvs(set, getModeIvs(set).filter(i=>i.id!==id));
+  rebuildModeBlock(set); render();
+}
+
+function updModeVal(set, id, side, v) {
+  const iv = getModeIvs(set).find(i=>i.id===id);
+  if (!iv) return;
+  const n = parseFloat(v);
+  if (!isNaN(n)) { iv[side==='lo'?'lo':'hi'] = n; render(); }
+}
+
+function rebuildModeBlock(set) {
+  const block = document.getElementById(set+'ModeBlock');
+  const mode  = getMode(set);
+  const ivs   = getModeIvs(set);
+  const color = set==='d' ? 'preset-d' : set==='r' ? 'preset-r' : 'preset-c';
+  const ncls  = set==='d' ? 'brk-d'   : set==='r' ? 'brk-r'   : 'brk-c';
+
+  if (!mode) { block.style.display='none'; block.innerHTML=''; return; }
+  block.style.display='block';
+
+  const isRm     = mode==='Rmopen' || mode==='Rmclosed';
+  const isOpen   = mode==='Rmopen' || mode==='onlyOpen';
+  const lb = isOpen ? '(' : '[';
+  const rb = isOpen ? ')' : ']';
+  const modeLabel = {
+    Rmopen:    'ℝ − { open intervals }',
+    Rmclosed:  'ℝ − { closed intervals }',
+    onlyOpen:  'union of open intervals',
+    onlyClosed:'union of closed intervals',
+  }[mode];
+
+  let html = `
+    <div class="mode-header">
+      <span class="mode-label">${modeLabel}</span>
+      <button class="mode-add-btn ${color}" onclick="addModeIv('${set}')">+ interval</button>
+      <button class="mode-exit-btn" onclick="exitMode('${set}')" title="Back to normal">✕</button>
+    </div>
+    <div class="mode-iv-list">
+  `;
+
+  ivs.forEach((iv, i) => {
+    html += `
+      <div class="mode-iv-row">
+        <span class="mode-brk ${ncls}">${lb}</span>
+        <input class="num-in" type="number" value="${iv.lo}" step="0.5"
+          id="mi_${set}_${iv.id}_lo"
+          oninput="updModeVal('${set}',${iv.id},'lo',this.value)">
+        <span class="comma">,</span>
+        <input class="num-in" type="number" value="${iv.hi}" step="0.5"
+          id="mi_${set}_${iv.id}_hi"
+          oninput="updModeVal('${set}',${iv.id},'hi',this.value)">
+        <span class="mode-brk ${ncls}">${rb}</span>
+        ${ivs.length > 1 ? `<button class="rm-btn" onclick="removeModeIv('${set}',${iv.id})">×</button>` : ''}
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  block.innerHTML = html;
+}
+
+function exitMode(set) {
+  setMode(set, null); setModeIvs(set, []);
+  rebuildModeBlock(set);
+  setIvs(set, [freshIv(set)]); setPts(set, []);
+  rebuildList(set); render();
+}
+
+// ── Compute mode segs (for canvas + notation) ─
+function getModeSegs(set) {
+  const mode = getMode(set);
+  const ivs  = getModeIvs(set);
+  if (!mode || !ivs.length) return [];
+
+  const isOpen   = mode==='Rmopen' || mode==='onlyOpen';
+  const isRm     = mode==='Rmopen' || mode==='Rmclosed';
+  const lb = isOpen ? '(' : '[';
+  const rb = isOpen ? ')' : ']';
+
+  // sort exclusion intervals by lo
+  const sorted = [...ivs].map(iv=>({...iv})).sort((a,b)=>a.lo-b.lo);
+
+  if (!isRm) {
+    // just the intervals themselves
+    return sorted.map(iv=>({ lo:iv.lo, hi:iv.hi, lb, rb }));
+  }
+
+  // ℝ minus: build complement segments
+  // gaps between sorted exclusion intervals + outer rays
+  const segs = [];
+  // left ray: (−∞, first.lo)
+  segs.push({ lo:-INF, hi:sorted[0].lo, lb:'(', rb: isOpen?']':'(' });
+  // middle gaps: between consecutive exclusions
+  for (let i=0; i<sorted.length-1; i++) {
+    segs.push({
+      lo: sorted[i].hi,
+      hi: sorted[i+1].lo,
+      lb: isOpen ? '[' : '(',
+      rb: isOpen ? ']' : '('
+    });
+  }
+  // right ray: (last.hi, +∞)
+  segs.push({ lo:sorted[sorted.length-1].hi, hi:+INF, lb: isOpen?'[':'(', rb:')' });
+  return segs;
+}
+
+// ── Notation for mode ─────────────────────────
+function fmtModeNote(set, cls) {
+  const mode = getMode(set);
+  const ivs  = getModeIvs(set);
+  if (!mode || !ivs.length) return null;
+
+  const isOpen = mode==='Rmopen' || mode==='onlyOpen';
+  const isRm   = mode==='Rmopen' || mode==='Rmclosed';
+  const lb = isOpen ? '(' : '[';
+  const rb = isOpen ? ')' : ']';
+  const m  = v => fmtN(v);
+
+  const sorted = [...ivs].sort((a,b)=>a.lo-b.lo);
+  const ivStrs = sorted.map(iv=>`${lb}${m(iv.lo)}, ${m(iv.hi)}${rb}`).join(', ');
+
+  const R = `<span class="${cls}" style="font-style:italic">ℝ</span>`;
+  if (isRm) {
+    return `${R}<span style="color:var(--muted)"> − </span><span class="${cls}">{${ivStrs}}</span>`;
+  } else {
+    return sorted.map(iv=>`<span class="${cls}">${lb}${m(iv.lo)}, ${m(iv.hi)}${rb}</span>`)
+                 .join(`<span class="usym"> ∪ </span>`);
+  }
+}
+
+function updPts(set, id, raw) {
+  const pt = getPts(set).find(p=>p.id===id);
+  if (!pt) return;
+  pt.vals = raw.split(',').map(s=>parseFloat(s.trim())).filter(n=>!isNaN(n));
+  render();
+}
+
+function rebuildList(set) {
+  const arr  = getIvs(set);
+  const pts  = getPts(set);
+  const el   = document.getElementById(set+'List');
+  const opEl = document.getElementById(set+'OpRow');
+  const cls  = set==='d'?'brk-d':set==='r'?'brk-r':'brk-c';
+  const pcls = set==='d'?'pts-d':set==='r'?'pts-r':'pts-c';
+  el.innerHTML='';
+
+  arr.forEach(iv => {
+    const r = document.createElement('div');
+    r.className='iv-row';
+    r.style.flexWrap='wrap';
+    r.style.gap='3px';
+    r.innerHTML=`
+      <button class="brk-btn ${cls} ${iv.loInf?'brk-locked':''}" id="b_${set}_${iv.id}_lo"
+        title="${iv.loInf?'Must be ( with −∞':''}"
+        onclick="cycleBrk('${set}',${iv.id},'lo')">${iv.lb}</button>
+      <button class="inf-btn ${iv.loInf?'inf-active':''}" id="inf_${set}_${iv.id}_lo"
+        onclick="toggleInf('${set}',${iv.id},'lo')" title="-∞">-∞</button>
+      <input class="num-in" type="number" value="${iv.lo}" step="0.5" id="n_${set}_${iv.id}_lo"
+        style="opacity:${iv.loInf?'0.3':'1'}"
+        oninput="updVal('${set}',${iv.id},'lo',this.value)">
+      <span class="comma">,</span>
+      <input class="num-in" type="number" value="${iv.hi}" step="0.5" id="n_${set}_${iv.id}_hi"
+        style="opacity:${iv.hiInf?'0.3':'1'}"
+        oninput="updVal('${set}',${iv.id},'hi',this.value)">
+      <button class="inf-btn ${iv.hiInf?'inf-active':''}" id="inf_${set}_${iv.id}_hi"
+        onclick="toggleInf('${set}',${iv.id},'hi')" title="+∞">+∞</button>
+      <button class="brk-btn ${cls} ${iv.hiInf?'brk-locked':''}" id="b_${set}_${iv.id}_hi"
+        title="${iv.hiInf?'Must be ) with +∞':''}"
+        onclick="cycleBrk('${set}',${iv.id},'hi')">${iv.rb}</button>
+      <button class="rm-btn" onclick="removeIv('${set}',${iv.id})">×</button>
+    `;
+    el.appendChild(r);
+  });
+
+  pts.forEach(pt => {
+    const r = document.createElement('div');
+    r.className='pts-row';
+    r.innerHTML=`
+      <span class="pts-label ${pcls}">{</span>
+      <input class="pts-input" type="text" placeholder="e.g. 1, 2.5, -3"
+        value="${pt.vals.join(', ')}"
+        oninput="updPts('${set}',${pt.id},this.value)">
+      <span class="pts-label ${pcls}">}</span>
+      <button class="rm-btn" onclick="removePts('${set}',${pt.id})">×</button>
+    `;
+    el.appendChild(r);
+  });
+
+  opEl.style.display = (arr.length + pts.length) > 1 ? 'flex' : 'none';
+  updateOpBtns(set);
+}
+
+// ── Math ──────────────────────────────────────
+function getEffLo(iv) { return iv.loInf ? -INF : iv.lo; }
+function getEffHi(iv) { return iv.hiInf ? +INF : iv.hi; }
+
+function resolveSegs(ivs, op) {
+  if (!ivs.length) return [];
+  const mapped = ivs.map(iv=>({...iv, lo:getEffLo(iv), hi:getEffHi(iv)}));
+  if (mapped.length===1) return [mapped[0]];
+  if (op==='union') return mergeUnion(mapped);
+  let res = {...mapped[0]};
+  for (let i=1;i<mapped.length;i++) { res=intersectTwo(res,mapped[i]); if(!res) return []; }
+  return [res];
+}
+
+function mergeUnion(ivs) {
+  const sorted=[...ivs].sort((a,b)=>{
+    if(a.lo!==b.lo) return a.lo-b.lo; return a.lb==='['?-1:1;
+  });
+  const out=[{...sorted[0]}];
+  for(let i=1;i<sorted.length;i++){
+    const cur=sorted[i], last=out[out.length-1];
+    const touch=last.hi>cur.lo||(last.hi===cur.lo&&(last.rb===']'||cur.lb==='['));
+    if(touch){
+      if(cur.hi>last.hi||(cur.hi===last.hi&&cur.rb===']')){last.hi=cur.hi;last.rb=cur.rb;}
+    } else { out.push({...cur}); }
+  }
+  return out;
+}
+
+function intersectTwo(a,b){
+  let lo,lb,hi,rb;
+  if(a.lo>b.lo){lo=a.lo;lb=a.lb;}else if(b.lo>a.lo){lo=b.lo;lb=b.lb;}
+  else{lo=a.lo;lb=(a.lb==='('||b.lb==='(')?'(':'[';}
+  if(a.hi<b.hi){hi=a.hi;rb=a.rb;}else if(b.hi<a.hi){hi=b.hi;rb=b.rb;}
+  else{hi=a.hi;rb=(a.rb===')'||b.rb===')')?')':']';}
+  if(lo>hi) return null;
+  if(lo===hi&&(lb==='('||rb===')')) return null;
+  return {lo,hi,lb,rb};
+}
+
+function inSeg(seg,v){
+  const L=seg.lb==='['?v>=seg.lo:v>seg.lo;
+  const R=seg.rb===']'?v<=seg.hi:v<seg.hi;
+  return L&&R;
+}
+
+// ── Canvas Number Line ────────────────────────
+const CVH = 520, CVW = 100, AX = 54, BW = 14;
+
+function fmtN(v) {
+  if (!isFinite(v)) return v > 0 ? '+∞' : '-∞';
+  const r = Math.round(v * 10000) / 10000;
+  if (Number.isInteger(r)) return String(r);
+  return r.toPrecision(4).replace(/\.?0+$/, '');
+}
+
+function drawScale(canvasId, segs, ptsVals, color, fillColor, label) {
+  const cv = document.getElementById(canvasId);
+  const DPR = window.devicePixelRatio || 1;
+  // size canvas to its CSS width
+  const cssW = cv.parentElement.clientWidth || CVW;
+  cv.width  = cssW * DPR;
+  cv.height = CVH  * DPR;
+  cv.style.height = CVH + 'px';
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const W = cssW;
+  const H = CVH;
+  const ax = W / 2; // axis x center
+  ctx.clearRect(0, 0, W, H);
+
+  // coordinate conversion: value → y pixel
+  const LABEL_H = 22;
+  function yv(val) { return H/2 - (val - viewCenter) * pxPerUnit; }
+  function vy(y)   { return viewCenter + (H/2 - y) / pxPerUnit; }
+
+  const visMin = vy(H + 20);
+  const visMax = vy(-20);
+
+  // ── Background ──
+  ctx.fillStyle = '#181c27';
+  ctx.fillRect(0, 0, W, H);
+
+  // (label bar is drawn after fills to prevent bleed-through)
+
+  // ── Segment fills ──
+  segs.forEach(sg => {
+    const effLo = sg.lo === -INF ? visMin - 10 : sg.lo;
+    const effHi = sg.hi === +INF ? visMax + 10 : sg.hi;
+    const clo = Math.max(effLo, visMin), chi = Math.min(effHi, visMax);
+    if (chi <= clo) return;
+    const yT = Math.max(yv(chi), LABEL_H + 1); // never draw over label bar
+    const yB = yv(clo);
+    if (yB <= yT) return;
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(ax - BW/2, yT, BW, yB - yT, 3);
+    ctx.fill();
+    ctx.stroke();
+  });
+
+  // ── Redraw label bar on top (so fills never bleed over it) ──
+  ctx.fillStyle = '#1e2333';
+  ctx.fillRect(0, 0, W, LABEL_H);
+  ctx.strokeStyle = '#2e3450';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, LABEL_H); ctx.lineTo(W, LABEL_H); ctx.stroke();
+  ctx.font = "bold 11px 'DM Serif Display', serif";
+  ctx.fillStyle = '#e8eaf2'; ctx.textAlign = 'center';
+  ctx.fillText(label, W/2, 15);
+
+  // ── Axis line ──
+  ctx.strokeStyle = '#3a4060';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(ax, LABEL_H); ctx.lineTo(ax, H); ctx.stroke();
+
+  // ── Ticks & labels ──
+  const range = visMax - visMin;
+  const maxTicks = Math.floor(H / 16);
+  const rawStep = range / maxTicks;
+  const steps = [0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.25,0.5,1,2,2.5,5,10,20,25,50,100,200,500,1000];
+  const step = steps.find(s => s >= rawStep) || 1000;
+
+  const ft = Math.ceil(visMin / step) * step;
+  ctx.font = "10px 'DM Mono', monospace";
+  for (let v = ft; v <= visMax + 1e-9; v += step) {
+    const y = yv(v);
+    if (y < LABEL_H + 2) continue;
+    const isZ = Math.abs(v) < 1e-9;
+    ctx.strokeStyle = isZ ? '#7a80a0' : '#3a4060';
+    ctx.lineWidth = isZ ? 2 : 1;
+    ctx.beginPath(); ctx.moveTo(ax - 8, y); ctx.lineTo(ax + 8, y); ctx.stroke();
+
+    const vr = Math.round(v / step) * step;
+    ctx.fillStyle = '#7a80a0';
+    ctx.textAlign = 'end';
+    ctx.fillText(fmtN(vr), ax - 11, y + 3.5);
+  }
+
+  // ── Infinity gradient bands ──
+  const gradTop = ctx.createLinearGradient(0, LABEL_H, 0, LABEL_H + 40);
+  gradTop.addColorStop(0, '#181c27'); gradTop.addColorStop(1, 'transparent');
+  ctx.fillStyle = gradTop; ctx.fillRect(0, LABEL_H, W, 40);
+  ctx.fillStyle = '#7a80a0'; ctx.font = "11px 'DM Mono',monospace"; ctx.textAlign = 'center';
+  ctx.fillText('+∞', ax, LABEL_H + 14);
+
+  const gradBot = ctx.createLinearGradient(0, H-40, 0, H);
+  gradBot.addColorStop(0, 'transparent'); gradBot.addColorStop(1, '#181c27');
+  ctx.fillStyle = gradBot; ctx.fillRect(0, H-40, W, 40);
+  ctx.fillText('-∞', ax, H - 4);
+
+  // ── Endpoint dots & infinity arrows ──
+  segs.forEach(sg => {
+    if (sg.lo === -INF) {
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.moveTo(ax,H-4); ctx.lineTo(ax-5,H-14); ctx.lineTo(ax+5,H-14); ctx.closePath(); ctx.fill();
+    } else {
+      const y = yv(sg.lo);
+      if (y >= LABEL_H - 10 && y <= H+10) {
+        const filled = sg.lb === '[';
+        ctx.beginPath(); ctx.arc(ax, y, 5.5, 0, Math.PI*2);
+        ctx.fillStyle = filled ? color : '#181c27';
+        ctx.fill();
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
+    if (sg.hi === +INF) {
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.moveTo(ax,LABEL_H+4); ctx.lineTo(ax-5,LABEL_H+14); ctx.lineTo(ax+5,LABEL_H+14); ctx.closePath(); ctx.fill();
+    } else {
+      const y = yv(sg.hi);
+      if (y >= LABEL_H - 10 && y <= H+10) {
+        const filled = sg.rb === ']';
+        ctx.beginPath(); ctx.arc(ax, y, 5.5, 0, Math.PI*2);
+        ctx.fillStyle = filled ? color : '#181c27';
+        ctx.fill();
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
+  });
+
+  // ── Discrete point diamonds ──
+  const allPts = [...new Set(ptsVals)].sort((a,b)=>a-b);
+  allPts.forEach(v => {
+    const y = yv(v);
+    if (y < LABEL_H - 10 || y > H+10) return;
+    const sz = 6;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#181c27'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(ax, y-sz); ctx.lineTo(ax+sz, y); ctx.lineTo(ax, y+sz); ctx.lineTo(ax-sz, y);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  });
+
+  // ── Arrow tips ──
+  ctx.fillStyle = '#3a4060';
+  ctx.beginPath(); ctx.moveTo(ax, LABEL_H+2); ctx.lineTo(ax-5, LABEL_H+12); ctx.lineTo(ax+5, LABEL_H+12); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(ax, H+2); ctx.lineTo(ax-5, H-10); ctx.lineTo(ax+5, H-10); ctx.closePath(); ctx.fill();
+}
+
+// ── Combined Range + Codomain scale (shared axis, side-by-side bars) ──
+function drawCombinedYScale(canvasId, rSegs, rPtsVals, cSegs, cPtsVals) {
+  const cv = document.getElementById(canvasId);
+  if (!cv) return;
+  const DPR = window.devicePixelRatio || 1;
+  const cssW = cv.parentElement.clientWidth || CVW;
+  cv.width  = cssW * DPR;
+  cv.height = CVH  * DPR;
+  cv.style.height = CVH + 'px';
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const W = cssW, H = CVH;
+  const ax = W / 2;
+  const LABEL_H = 22;
+
+  function yv(val) { return H/2 - (val - viewCenter) * pxPerUnit; }
+  function vy(y)   { return viewCenter + (H/2 - y) / pxPerUnit; }
+  const visMin = vy(H + 20);
+  const visMax = vy(-20);
+
+  // Background
+  ctx.fillStyle = '#181c27';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw segments for one set — offset bar left or right of axis
+  function drawSegs(segs, color, fillColor) {
+    segs.forEach(sg => {
+      const effLo = sg.lo === -INF ? visMin - 10 : sg.lo;
+      const effHi = sg.hi === +INF ? visMax + 10 : sg.hi;
+      const clo = Math.max(effLo, visMin), chi = Math.min(effHi, visMax);
+      if (chi <= clo) return;
+      const yT = Math.max(yv(chi), LABEL_H + 1);
+      const yB = yv(clo);
+      if (yB <= yT) return;
+      ctx.fillStyle = fillColor;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(ax - BW/2, yT, BW, yB - yT, 3);
+      ctx.fill(); ctx.stroke();
+    });
+  }
+
+  // Range and Codomain bars drawn on same axis — fully overlapping, different colours
+  drawSegs(rSegs, '#5fc4f4', 'rgba(95,196,244,0.35)');
+  drawSegs(cSegs, '#f4d45f', 'rgba(244,212,95,0.35)');
+
+  // Label bar on top
+  ctx.fillStyle = '#1e2333';
+  ctx.fillRect(0, 0, W, LABEL_H);
+  ctx.strokeStyle = '#2e3450'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, LABEL_H); ctx.lineTo(W, LABEL_H); ctx.stroke();
+  ctx.font = "bold 10px 'DM Serif Display', serif";
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#f4d45f'; ctx.fillText('Codomain', ax - 18, 15);
+  ctx.fillStyle = '#e8eaf2'; ctx.fillText('⊇', ax + 14, 15);
+  ctx.fillStyle = '#5fc4f4'; ctx.fillText('Co domain', ax + 34, 15);
+
+  // Axis line
+  ctx.strokeStyle = '#3a4060'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(ax, LABEL_H); ctx.lineTo(ax, H); ctx.stroke();
+
+  // Ticks & labels
+  const range = visMax - visMin;
+  const maxTicks = Math.floor(H / 16);
+  const rawStep = range / maxTicks;
+  const steps = [0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.25,0.5,1,2,2.5,5,10,20,25,50,100,200,500,1000];
+  const step = steps.find(s => s >= rawStep) || 1000;
+  const ft = Math.ceil(visMin / step) * step;
+  ctx.font = "10px 'DM Mono', monospace";
+  for (let v = ft; v <= visMax + 1e-9; v += step) {
+    const y = yv(v);
+    if (y < LABEL_H + 2) continue;
+    const isZ = Math.abs(v) < 1e-9;
+    ctx.strokeStyle = isZ ? '#7a80a0' : '#3a4060';
+    ctx.lineWidth = isZ ? 2 : 1;
+    ctx.beginPath(); ctx.moveTo(ax - 8, y); ctx.lineTo(ax + 8, y); ctx.stroke();
+    const vr = Math.round(v / step) * step;
+    ctx.fillStyle = '#7a80a0'; ctx.textAlign = 'end';
+    ctx.fillText(fmtN(vr), ax - 11, y + 3.5);
+  }
+
+  // Infinity gradients
+  const gradTop = ctx.createLinearGradient(0, LABEL_H, 0, LABEL_H + 40);
+  gradTop.addColorStop(0, '#181c27'); gradTop.addColorStop(1, 'transparent');
+  ctx.fillStyle = gradTop; ctx.fillRect(0, LABEL_H, W, 40);
+  ctx.fillStyle = '#7a80a0'; ctx.font = "11px 'DM Mono',monospace"; ctx.textAlign = 'center';
+  ctx.fillText('+∞', ax, LABEL_H + 14);
+  const gradBot = ctx.createLinearGradient(0, H-40, 0, H);
+  gradBot.addColorStop(0, 'transparent'); gradBot.addColorStop(1, '#181c27');
+  ctx.fillStyle = gradBot; ctx.fillRect(0, H-40, W, 40);
+  ctx.fillText('-∞', ax, H - 4);
+
+  // Collect all endpoints from Range and Codomain
+  const rDots = [];
+  rSegs.forEach(sg => {
+    if (isFinite(sg.lo)) rDots.push({ y: yv(sg.lo), filled: sg.lb === '[' });
+    if (isFinite(sg.hi)) rDots.push({ y: yv(sg.hi), filled: sg.rb === ']' });
+  });
+  const cDots = [];
+  cSegs.forEach(sg => {
+    if (isFinite(sg.lo)) cDots.push({ y: yv(sg.lo), filled: sg.lb === '[' });
+    if (isFinite(sg.hi)) cDots.push({ y: yv(sg.hi), filled: sg.rb === ']' });
+  });
+
+  function drawOneDot(y, color, filled) {
+    if (y < LABEL_H - 10 || y > H + 10) return;
+    ctx.beginPath(); ctx.arc(ax, y, 5.5, 0, Math.PI * 2);
+    ctx.fillStyle = filled ? color : '#181c27';
+    ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+  }
+
+  function drawSplitDot(y, filledR, filledC) {
+    if (y < LABEL_H - 10 || y > H + 10) return;
+    const R = 5.5;
+    // Left half = Range (teal), Right half = Codomain (yellow)
+    ctx.save();
+    ctx.beginPath(); ctx.arc(ax, y, R, Math.PI / 2, -Math.PI / 2, false); ctx.closePath();
+    ctx.fillStyle = filledR ? '#5fc4f4' : '#181c27'; ctx.fill();
+    ctx.strokeStyle = '#5fc4f4'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(ax, y, R, -Math.PI / 2, Math.PI / 2, false); ctx.closePath();
+    ctx.fillStyle = filledC ? '#f4d45f' : '#181c27'; ctx.fill();
+    ctx.strokeStyle = '#f4d45f'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw dots, using split-colour for coinciding endpoints
+  const SNAP = 1.5; // pixel tolerance for "same position"
+  const drawnAsSplit = new Set();
+
+  rDots.forEach((rd, ri) => {
+    const match = cDots.findIndex(cd => Math.abs(cd.y - rd.y) < SNAP);
+    if (match !== -1 && !drawnAsSplit.has('c' + match)) {
+      drawSplitDot(rd.y, rd.filled, cDots[match].filled);
+      drawnAsSplit.add('r' + ri);
+      drawnAsSplit.add('c' + match);
+    }
+  });
+  rDots.forEach((rd, ri) => {
+    if (!drawnAsSplit.has('r' + ri)) drawOneDot(rd.y, '#5fc4f4', rd.filled);
+  });
+  cDots.forEach((cd, ci) => {
+    if (!drawnAsSplit.has('c' + ci)) drawOneDot(cd.y, '#f4d45f', cd.filled);
+  });
+}
+
+// ── Notation ──────────────────────────────────
+function fmtNote(segs, ptsArr, cls, set) {
+  // Mode overrides everything
+  const mn = fmtModeNote(set, cls);
+  if (mn !== null) return mn;
+
+  const parts = [];
+  segs.forEach(sg => {
+    const lo = sg.lo === -INF ? '-∞' : fmtN(sg.lo);
+    const hi = sg.hi === +INF ? '+∞' : fmtN(sg.hi);
+    parts.push(`<span class="${cls}">${sg.lb}${lo}, ${hi}${sg.rb}</span>`);
+  });
+  ptsArr.forEach(pt => {
+    if (!pt.vals.length) return;
+    const sorted = [...pt.vals].sort((a,b)=>a-b);
+    parts.push(`<span class="${cls}">{${sorted.map(fmtN).join(', ')}}</span>`);
+  });
+  if (!parts.length) return `<span style="color:var(--muted)">∅ (empty)</span>`;
+  return parts.join(`<span class="usym"> ∪ </span>`);
+}
+
+// ── Render ────────────────────────────────────
+function render() {
+  const dSegs = getMode('d') ? getModeSegs('d') : resolveSegs(dIvs, dOp);
+  const rSegs = getMode('r') ? getModeSegs('r') : resolveSegs(rIvs, rOp);
+  const cSegs = getMode('c') ? getModeSegs('c') : resolveSegs(cIvs, cOp);
+  const dPtsVals = dPts.flatMap(p=>p.vals);
+  const rPtsVals = rPts.flatMap(p=>p.vals);
+  const cPtsVals = cPts.flatMap(p=>p.vals);
+
+  drawScale('cvD', dSegs, dPtsVals, '#f4845f', 'rgba(244,132,95,0.22)', 'Domain');
+  drawCombinedYScale('cvRC', rSegs, rPtsVals, cSegs, cPtsVals);
+
+  document.getElementById('infoCard').innerHTML=`
+    <div class="sec-label">Notation Summary</div>
+    <div class="info-sec">
+      <div class="info-sec-title"><span class="dn">●</span> Domain</div>
+      <div class="info-note">${fmtNote(dSegs,dPts,'dn','d')}</div>
+    </div>
+    <div class="info-sec">
+      <div class="info-sec-title"><span class="rn">●</span> Co domain</div>
+      <div class="info-note">${fmtNote(rSegs,rPts,'rn','r')}</div>
+    </div>
+    <div class="info-sec">
+      <div class="info-sec-title"><span class="cn">●</span> Codomain</div>
+      <div class="info-note">${fmtNote(cSegs,cPts,'cn','c')}</div>
+    </div>
+    <div class="divider"></div>
+    <div class="info-sec">
+      <div class="info-sec-title">Bracket Guide</div>
+      <div class="guide-line">
+        <div><span>[</span> or <span>]</span> → includes ●</div>
+        <div><span>(</span> or <span>)</span> → excludes ○</div>
+        <div><span style="color:var(--intersect-stroke)">{}</span> discrete ◆</div>
+        <div><span style="color:#b482f4">±∞</span> → always ( )</div>
+        <div><span style="color:var(--intersect-stroke)">∪</span> union</div>
+        <div><span style="color:var(--intersect-stroke)">∩</span> intersect</div>
+        <div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px">
+          <span style="color:#b482f4">ℝ−{(…)}</span> excl. n open<br>
+          <span style="color:#b482f4">ℝ−{[…]}</span> excl. n closed<br>
+          <span style="color:#b482f4">∪(…)</span> n open intervals<br>
+          <span style="color:#b482f4">∪[…]</span> n closed intervals
+        </div>
+      </div>
+    </div>
+  `;
+  // store cSegs globally so draw2DGrid can access them
+  window._cSegs = cSegs;
+  window._cPtsVals = cPtsVals;
+  if (window.draw2DGrid) window.draw2DGrid();
+}
+
+// ── Scale zoom buttons ─────────────────────────
+function scaleZoom(factor) {
+  const pivot = viewCenter; // zoom around current center
+  pxPerUnit = Math.max(0.5, Math.min(8000, pxPerUnit * factor));
+  render();
+}
+function scaleReset() {
+  viewCenter = 0;
+  pxPerUnit = 20;
+  render();
+}
+
+// ── Pan & Zoom (smooth, infinite) ─────────────
+(function(){
+  const wrap = document.getElementById('scalesWrap');
+
+  // --- RAF-throttled render ---
+  let rafPending = false;
+  function scheduleRender() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => { rafPending = false; render(); });
+  }
+
+  // --- Momentum state ---
+  let velY = 0, momentumRaf = null;
+  function stopMomentum() {
+    if (momentumRaf) { cancelAnimationFrame(momentumRaf); momentumRaf = null; }
+    velY = 0;
+  }
+  function startMomentum() {
+    if (momentumRaf) cancelAnimationFrame(momentumRaf);
+    function step() {
+      if (Math.abs(velY) < 0.001) { velY = 0; return; }
+      viewCenter -= velY / pxPerUnit;
+      velY *= 0.92;
+      scheduleRender();
+      momentumRaf = requestAnimationFrame(step);
+    }
+    momentumRaf = requestAnimationFrame(step);
+  }
+
+  // --- Mouse wheel zoom (smooth delta) ---
+  let wheelVel = 0, wheelRaf = null;
+  wrap.addEventListener('wheel', function(e){
+    e.preventDefault();
+    stopMomentum();
+    const rect = wrap.getBoundingClientRect();
+    const localY = e.clientY - rect.top;
+    const pivot = viewCenter + (CVH/2 - localY) / pxPerUnit;
+
+    // normalise delta across trackpad/mouse
+    let delta = e.deltaY;
+    if (e.deltaMode === 1) delta *= 20;
+    if (e.deltaMode === 2) delta *= 300;
+    delta = Math.max(-80, Math.min(80, delta));
+
+    const factor = Math.pow(0.999, delta);
+    pxPerUnit = Math.max(0.5, Math.min(8000, pxPerUnit * factor));
+    viewCenter = pivot - (CVH/2 - localY) / pxPerUnit;
+    scheduleRender();
+  }, {passive:false});
+
+  // --- Mouse drag with momentum ---
+  let dragging = false, prevY = 0, dragStartY = 0, dragStartCenter = 0, lastDragY = 0, lastDragT = 0;
+
+  wrap.addEventListener('mousedown', function(e){
+    stopMomentum();
+    dragging = true;
+    dragStartY = prevY = e.clientY;
+    dragStartCenter = viewCenter;
+    lastDragY = e.clientY; lastDragT = performance.now();
+    wrap.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', function(e){
+    if (!dragging) return;
+    const dy = e.clientY - dragStartY;
+    viewCenter = dragStartCenter - dy / pxPerUnit;
+
+    // track velocity
+    const now = performance.now(), dt = now - lastDragT;
+    if (dt > 0) velY = (e.clientY - lastDragY) / dt * 16;
+    lastDragY = e.clientY; lastDragT = now;
+
+    scheduleRender();
+  });
+  window.addEventListener('mouseup', function(){
+    if (!dragging) return;
+    dragging = false;
+    wrap.style.cursor = 'grab';
+    startMomentum();
+  });
+
+  // --- Touch: pinch zoom + pan with momentum ---
+  let touch1 = null, touch2 = null;
+  let pinchStartDist = 0, pinchStartPx = 0, pinchStartCenter = 0, pinchMidY = 0;
+  let lastTouchY = 0, lastTouchT = 0;
+
+  wrap.addEventListener('touchstart', function(e){
+    e.preventDefault();
+    stopMomentum();
+    if (e.touches.length >= 2) {
+      const t0 = e.touches[0], t1 = e.touches[1];
+      pinchStartDist = Math.abs(t0.clientY - t1.clientY) || 1;
+      pinchStartPx = pxPerUnit;
+      pinchStartCenter = viewCenter;
+      pinchMidY = (t0.clientY + t1.clientY) / 2;
+      touch1 = {y: t0.clientY}; touch2 = {y: t1.clientY};
+      dragging = false;
+    } else {
+      const t = e.touches[0];
+      dragging = true;
+      dragStartY = t.clientY; dragStartCenter = viewCenter;
+      lastTouchY = t.clientY; lastTouchT = performance.now();
+      velY = 0;
+    }
+  },{passive:false});
+
+  wrap.addEventListener('touchmove', function(e){
+    e.preventDefault();
+    if (e.touches.length >= 2) {
+      const t0 = e.touches[0], t1 = e.touches[1];
+      const dist = Math.abs(t0.clientY - t1.clientY) || 1;
+      const midY = (t0.clientY + t1.clientY) / 2;
+
+      // pivot = value at pinch midpoint
+      const rect = wrap.getBoundingClientRect();
+      const localMid = pinchMidY - rect.top - 32;
+      const pivot = pinchStartCenter + (CVH/2 - localMid) / pinchStartPx;
+
+      pxPerUnit = Math.max(0.5, Math.min(8000, pinchStartPx * (dist / pinchStartDist)));
+
+      // pan by midpoint movement
+      const panDy = midY - pinchMidY;
+      viewCenter = pivot - (CVH/2 - localMid) / pxPerUnit - panDy / pxPerUnit;
+      scheduleRender();
+    } else if (dragging && e.touches.length === 1) {
+      const t = e.touches[0];
+      const dy = t.clientY - dragStartY;
+      viewCenter = dragStartCenter - dy / pxPerUnit;
+
+      const now = performance.now(), dt = now - lastTouchT;
+      if (dt > 0) velY = (t.clientY - lastTouchY) / dt * 16;
+      lastTouchY = t.clientY; lastTouchT = now;
+
+      scheduleRender();
+    }
+  },{passive:false});
+
+  wrap.addEventListener('touchend', function(e){
+    if (e.touches.length === 0) {
+      dragging = false;
+      startMomentum();
+    } else if (e.touches.length === 1 && !dragging) {
+      // transition from pinch → pan
+      const t = e.touches[0];
+      dragging = true;
+      dragStartY = t.clientY; dragStartCenter = viewCenter;
+      lastTouchY = t.clientY; lastTouchT = performance.now();
+    }
+  });
+})();
+
+// ── Tab switching ─────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b=>{
+    const t = b.textContent.toLowerCase();
+    if(name==='notation'&&t.includes('notation')) b.classList.add('active');
+    else if(name==='mapper'&&t.includes('mapper')) b.classList.add('active');
+    else if(name==='numsets'&&t.includes('number')) b.classList.add('active');
+    else if(name==='setops'&&t.includes('set')) b.classList.add('active');
+  });
+  if(name==='mapper') { mapperDrawAxes(); setTimeout(()=>{mReset('d');mReset('r');mapperDrawAxes();},50); }
+  if(name==='numsets') {
+    nsDrawClosureTable();
+    const a=document.getElementById('nsSetA'),b=document.getElementById('nsSetB'),op=document.getElementById('nsOp');
+    if(a&&b&&op){nsDrawVenn(a.value,b.value,op.value);nsCompute();}
+  }
+  if(name==='setops') {
+    if(typeof window.buildSetOpsTab==='function') window.buildSetOpsTab();
+  }
+}
+
+// ── Function Mapper ───────────────────────────
+
+// Palette of distinct colors for functions
+const FN_COLORS = [
+  '#f4845f','#5fc4f4','#b482f4','#f4d45f','#f4d45f',
+  '#f45f8a','#5feef4','#c4f45f','#f4a05f','#a05ff4',
+  '#5f8af4','#f45fc4','#4dd4b0','#f4c45f','#8af45f',
+];
+
+// Function list state
+let fnList = []; // [{id, expr, from, to, color, visible, pairs, error}]
+let fnUid = 0;
+
+function freshFn(expr='x^2', from=-3, to=3) {
+  const id = fnUid++;
+  const color = FN_COLORS[id % FN_COLORS.length];
+  return { id, expr, from, to, color, visible:true, revealed:false, pairs:[], error:'' };
+}
+
+function addFn(expr='x^2', from=-3, to=3) {
+  fnList.push(freshFn(expr, from, to));
+  rebuildFnList();
+  mapperRedraw();
+}
+
+function addFnPreset(expr, from, to) {
+  // If first slot is still default empty, replace it
+  if (fnList.length === 1 && fnList[0].expr === 'x^2' && fnList[0].pairs.length === 0 && fnList[0].from === -3) {
+    fnList[0].expr = expr; fnList[0].from = from; fnList[0].to = to;
+  } else {
+    fnList.push(freshFn(expr, from, to));
+  }
+  rebuildFnList();
+  mapperRedraw();
+  setTimeout(()=>{ mReset('d'); mReset('r'); mapperRedraw(); }, 30);
+}
+
+function removeFn(id) {
+  fnList = fnList.filter(f => f.id !== id);
+  if (!fnList.length) fnList.push(freshFn());
+  rebuildFnList();
+  mapperRedraw();
+}
+
+function toggleFnVis(id) {
+  const f = fnList.find(f=>f.id===id);
+  if (f) { f.visible = !f.visible; rebuildFnList(); mapperRedraw(); }
+}
+
+function toggleFnReveal(id) {
+  const f = fnList.find(f=>f.id===id);
+  if (f) { f.revealed = !f.revealed; rebuildFnList(); }
+}
+
+function updFnExpr(id, val) {
+  const f = fnList.find(f=>f.id===id);
+  if (f) { f.expr = val; mapperRedraw(); }
+}
+function updFnFrom(id, val) {
+  const f = fnList.find(f=>f.id===id);
+  if (f) { f.from = parseFloat(val); mapperRedraw(); }
+}
+function updFnTo(id, val) {
+  const f = fnList.find(f=>f.id===id);
+  if (f) { f.to = parseFloat(val); mapperRedraw(); }
+}
+
+function rebuildFnList() {
+  const el = document.getElementById('fnList');
+  if (!el) return;
+  el.innerHTML = '';
+  fnList.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'mfn-row' + (f.error ? ' mfn-err' : '');
+    row.id = 'fnrow_' + f.id;
+    const blurClass = f.revealed ? '' : ' mfn-expr-blur';
+    const revealLabel = f.revealed ? '🔓 hide' : '🔍 reveal';
+    row.innerHTML = `
+      <div class="mfn-swatch" style="background:${f.color}" title="Function color"></div>
+      <button class="mfn-vis-btn" onclick="toggleFnVis(${f.id})" title="${f.visible?'Hide':'Show'}">${f.visible?'👁':'🚫'}</button>
+      <div class="mfn-expr-wrap">
+        <input class="mfn-expr${f.error?' err':''}${blurClass}" value="${f.expr}" placeholder="e.g. x^2, sin(x)"
+          oninput="updFnExpr(${f.id},this.value)" spellcheck="false"
+          ${f.revealed ? '' : 'tabindex="-1"'}>
+        ${!f.revealed ? `<button class="mfn-reveal-btn" onclick="toggleFnReveal(${f.id})">${revealLabel}</button>` : ''}
+      </div>
+      ${f.revealed ? `<button class="mfn-reveal-btn" style="position:static;transform:none;" onclick="toggleFnReveal(${f.id})">${revealLabel}</button>` : ''}
+      <span class="mfn-sep">x∈[</span>
+      <input class="mfn-num" type="number" value="${f.from}" step="0.5" oninput="updFnFrom(${f.id},this.value)">
+      <span class="mfn-sep">,</span>
+      <input class="mfn-num" type="number" value="${f.to}" step="0.5" oninput="updFnTo(${f.id},this.value)">
+      <span class="mfn-sep">]</span>
+      ${fnList.length > 1 ? `<button class="rm-btn" onclick="removeFn(${f.id})" title="Remove">×</button>` : ''}
+      ${f.error ? `<div class="mfn-err-msg">⚠ ${f.error}</div>` : ''}
+    `;
+    el.appendChild(row);
+  });
+
+  // Legend
+  const leg = document.getElementById('mapperLegend');
+  if (leg) {
+    leg.innerHTML = fnList.filter(f=>f.visible&&!f.error).map(f=>`
+      <div class="leg-item">
+        <div class="leg-dot" style="background:${f.color}"></div>
+        <span class="${f.revealed?'':'mfn-legend-blur'}" style="color:${f.color};font-family:'DM Mono',monospace;font-size:0.72rem">f(x)=${f.expr}</span>
+      </div>
+    `).join('') + `
+      <div class="leg-item" style="align-items:center;gap:5px">
+        <svg width="28" height="8"><line x1="0" y1="4" x2="28" y2="4" stroke="#b482f4" stroke-width="1.5" stroke-dasharray="4,3"/></svg>
+        <span>1→1</span>
+      </div>
+      <div class="leg-item" style="align-items:center;gap:5px">
+        <svg width="28" height="8"><line x1="0" y1="4" x2="28" y2="4" stroke="#f4c430" stroke-width="1.5" stroke-dasharray="4,3"/></svg>
+        <span style="color:#f4c430">2→1</span>
+      </div>
+      <div class="leg-item" style="align-items:center;gap:5px">
+        <svg width="28" height="8"><line x1="0" y1="4" x2="28" y2="4" stroke="#f4595f" stroke-width="1.5" stroke-dasharray="4,3"/></svg>
+        <span style="color:#f4595f">3+→1</span>
+      </div>
+    `;
+  }
+}
+
+function parseFn(expr) {
+  const safe = expr
+    .replace(/\^/g,'**')
+    .replace(/\bsin\b/g,'Math.sin').replace(/\bcos\b/g,'Math.cos')
+    .replace(/\btan\b/g,'Math.tan').replace(/\bsqrt\b/g,'Math.sqrt')
+    .replace(/\babs\b/g,'Math.abs').replace(/\bfloor\b/g,'Math.floor')
+    .replace(/\bceil\b/g,'Math.ceil').replace(/\bround\b/g,'Math.round')
+    .replace(/\blog\b/g,'Math.log').replace(/\bexp\b/g,'Math.exp')
+    .replace(/\bln\b/g,'Math.log')
+    .replace(/\bpi\b/gi,'Math.PI').replace(/\be\b/g,'Math.E');
+  return new Function('x','"use strict";return ('+safe+');');
+}
+
+// Per-axis view state
+let mView = { d:{center:0,pxPerUnit:30}, r:{center:0,pxPerUnit:30} };
+
+function mZoom(axis, factor) {
+  mView[axis].pxPerUnit = Math.max(0.5, Math.min(8000, mView[axis].pxPerUnit*factor));
+  mapperDrawAxes();
+}
+function mReset(axis) {
+  const allPairs = fnList.flatMap(f=>f.pairs);
+  if (axis==='d') {
+    const xs = allPairs.map(p=>p.x);
+    if (!xs.length) { mView.d.center=0; mView.d.pxPerUnit=30; return; }
+    const lo=Math.min(...xs), hi=Math.max(...xs);
+    mView.d.center=(lo+hi)/2;
+    mView.d.pxPerUnit=Math.max(1,420/Math.max(0.001,hi-lo)*0.85);
+  } else {
+    const ys = allPairs.map(p=>p.y);
+    if (!ys.length) { mView.r.center=0; mView.r.pxPerUnit=30; return; }
+    const lo=Math.min(...ys), hi=Math.max(...ys);
+    mView.r.center=(lo+hi)/2;
+    mView.r.pxPerUnit=Math.max(1,420/Math.max(0.001,hi-lo)*0.85);
+  }
+  mapperDrawAxes();
+}
+
+function mapperRedraw() {
+  const nPts = Math.max(2, Math.min(30, parseInt(document.getElementById('ptCount').value)||9));
+  let hasErr = false;
+
+  fnList.forEach(f => {
+    f.pairs = []; f.error = '';
+    if (!f.visible) return;
+    if (isNaN(f.from)||isNaN(f.to)||f.from>=f.to) {
+      f.error='Domain: from must be < to'; hasErr=true; return;
+    }
+    let fn;
+    try { fn=parseFn(f.expr); fn(1); }
+    catch(e) { f.error='Invalid: '+e.message; hasErr=true; return; }
+    const xs=[];
+    for(let i=0;i<nPts;i++) xs.push(f.from+(f.to-f.from)*i/(nPts-1));
+    f.pairs=xs.map(x=>{
+      try{const y=fn(x);return isFinite(y)?{x,y,color:f.color}:null;}
+      catch(e){return null;}
+    }).filter(Boolean);
+    if(!f.pairs.length) { f.error='No valid outputs in this domain'; hasErr=true; }
+  });
+
+  rebuildFnList();
+  mapperDrawAxes();
+}
+
+function mapperDrawAxes() {
+  const H=520, LABEL_H=22, BW=14;
+  const DPR=window.devicePixelRatio||1;
+
+  const cvD=document.getElementById('mCvD');
+  const wD=cvD.parentElement.clientWidth||110;
+  cvD.width=wD*DPR; cvD.height=H*DPR; cvD.style.height=H+'px';
+  const ctxD=cvD.getContext('2d');
+  ctxD.setTransform(DPR,0,0,DPR,0,0);
+  drawMapperScale(ctxD,wD,H,LABEL_H,BW,'d','#f4845f','rgba(244,132,95,0.15)','Domain');
+
+  const cvR=document.getElementById('mCvR');
+  const wR=cvR.parentElement.clientWidth||110;
+  cvR.width=wR*DPR; cvR.height=H*DPR; cvR.style.height=H+'px';
+  const ctxR=cvR.getContext('2d');
+  ctxR.setTransform(DPR,0,0,DPR,0,0);
+  drawMapperScale(ctxR,wR,H,LABEL_H,BW,'r','#5fc4f4','rgba(95,196,244,0.15)','Co domain');
+
+  const cvA=document.getElementById('mapperCanvas');
+  const wA=cvA.parentElement.clientWidth||200;
+  cvA.width=wA*DPR; cvA.height=H*DPR;
+  const ctxA=cvA.getContext('2d');
+  ctxA.setTransform(DPR,0,0,DPR,0,0);
+  drawMapperArrows(ctxA,wA,H,LABEL_H);
+}
+
+function drawMapperScale(ctx,W,H,LABEL_H,BW,axis,color,fillColor,label) {
+  const v=mView[axis];
+  const ax=W/2;
+  function yv(val){return H/2-(val-v.center)*v.pxPerUnit;}
+  function vy(y){return v.center+(H/2-y)/v.pxPerUnit;}
+  const visMin=vy(H+20),visMax=vy(-20);
+
+  ctx.fillStyle='#181c27'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#1e2333'; ctx.fillRect(0,0,W,LABEL_H);
+  ctx.strokeStyle='#2e3450'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,LABEL_H); ctx.lineTo(W,LABEL_H); ctx.stroke();
+  ctx.font="bold 11px 'DM Serif Display',serif";
+  ctx.fillStyle=color; ctx.textAlign='center';
+  ctx.fillText(label,W/2,15);
+
+  // Per-function shading
+  fnList.filter(f=>f.visible&&f.pairs.length).forEach(f=>{
+    const vals = axis==='d'?f.pairs.map(p=>p.x):f.pairs.map(p=>p.y);
+    const lo=Math.min(...vals), hi=Math.max(...vals);
+    const yT=yv(hi), yB=yv(lo);
+    if(yB>yT+1){
+      ctx.fillStyle=f.color+'22';
+      ctx.strokeStyle=f.color+'66'; ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.roundRect(ax-BW/2,Math.max(yT,LABEL_H+2),BW,Math.min(yB,H)-Math.max(yT,LABEL_H+2),3);
+      ctx.fill(); ctx.stroke();
+    }
+  });
+
+  ctx.strokeStyle='#3a4060'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(ax,LABEL_H); ctx.lineTo(ax,H); ctx.stroke();
+
+  const range=visMax-visMin;
+  const maxTicks=Math.floor(H/16);
+  const rawStep=range/maxTicks;
+  const steps=[0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.25,0.5,1,2,2.5,5,10,20,25,50,100,200,500,1000];
+  const step=steps.find(s=>s>=rawStep)||1000;
+  const ft=Math.ceil(visMin/step)*step;
+  ctx.font="10px 'DM Mono',monospace";
+  for(let val=ft;val<=visMax+1e-9;val+=step){
+    const y=yv(val);
+    if(y<LABEL_H+2)continue;
+    const isZ=Math.abs(val)<1e-9;
+    ctx.strokeStyle=isZ?'#7a80a0':'#3a4060'; ctx.lineWidth=isZ?2:1;
+    ctx.beginPath(); ctx.moveTo(ax-8,y); ctx.lineTo(ax+8,y); ctx.stroke();
+    const vr=Math.round(val/step)*step;
+    ctx.fillStyle='#4a5070'; ctx.textAlign='end';
+    ctx.fillText(fmtN(vr),ax-11,y+3.5);
+  }
+
+  // Fades
+  const gT=ctx.createLinearGradient(0,LABEL_H,0,LABEL_H+40);
+  gT.addColorStop(0,'#181c27');gT.addColorStop(1,'transparent');
+  ctx.fillStyle=gT;ctx.fillRect(0,LABEL_H,W,40);
+  ctx.fillStyle='#7a80a0';ctx.font="11px 'DM Mono',monospace";ctx.textAlign='center';
+  ctx.fillText('+∞',ax,LABEL_H+14);
+  const gB=ctx.createLinearGradient(0,H-40,0,H);
+  gB.addColorStop(0,'transparent');gB.addColorStop(1,'#181c27');
+  ctx.fillStyle=gB;ctx.fillRect(0,H-40,W,40);
+  ctx.fillText('-∞',ax,H-4);
+
+  // Dots — one per function, colored
+  fnList.filter(f=>f.visible&&f.pairs.length).forEach(f=>{
+    const vals=axis==='d'?f.pairs:f.pairs;
+    vals.forEach(p=>{
+      const val=axis==='d'?p.x:p.y;
+      const y=yv(val);
+      if(y<LABEL_H-4||y>H+4)return;
+      ctx.beginPath(); ctx.arc(ax,y,4.5,0,Math.PI*2);
+      ctx.fillStyle=f.color; ctx.fill();
+      ctx.strokeStyle='#181c27'; ctx.lineWidth=1.5; ctx.stroke();
+    });
+  });
+
+  ctx.fillStyle='#3a4060';
+  ctx.beginPath();ctx.moveTo(ax,LABEL_H+2);ctx.lineTo(ax-5,LABEL_H+12);ctx.lineTo(ax+5,LABEL_H+12);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(ax,H+2);ctx.lineTo(ax-5,H-10);ctx.lineTo(ax+5,H-10);ctx.closePath();ctx.fill();
+}
+
+function drawMapperArrows(ctx,W,H,LABEL_H) {
+  const vD=mView.d, vR=mView.r;
+  ctx.fillStyle='#181c27'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#1e2333'; ctx.fillRect(0,0,W,LABEL_H);
+  ctx.strokeStyle='#2e3450'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,LABEL_H); ctx.lineTo(W,LABEL_H); ctx.stroke();
+
+  // Label: all active function expressions
+  const exprs=fnList.filter(f=>f.visible&&!f.error).map(f=>f.expr);
+  ctx.font="italic 10px 'DM Serif Display',serif";
+  ctx.fillStyle='rgba(180,130,244,0.75)'; ctx.textAlign='center';
+  const label = exprs.length<=3 ? exprs.map(e=>'f(x)='+e).join('  ') : exprs.length+' functions';
+  ctx.fillText(label,W/2,15);
+
+  ctx.fillStyle='rgba(58,64,96,0.2)';
+  for(let gx=12;gx<W;gx+=20)for(let gy=LABEL_H+8;gy<H;gy+=20){
+    ctx.beginPath();ctx.arc(gx,gy,1,0,Math.PI*2);ctx.fill();
+  }
+
+  function ydD(x){return H/2-(x-vD.center)*vD.pxPerUnit;}
+  function ydR(y){return H/2-(y-vR.center)*vR.pxPerUnit;}
+
+  fnList.filter(f=>f.visible&&f.pairs.length).forEach(f=>{
+    // Count how many domain values map to each range value (many-to-one detection)
+    const rangeCount = {};
+    f.pairs.forEach(p=>{
+      const key = Math.round(p.y * 1e6) / 1e6; // round to avoid float noise
+      rangeCount[key] = (rangeCount[key] || 0) + 1;
+    });
+
+    // Color scheme: 1-to-1 = function color, 2-to-1 = amber, 3+-to-1 = coral/red
+    function arrowColor(yVal) {
+      const key = Math.round(yVal * 1e6) / 1e6;
+      const n = rangeCount[key] || 1;
+      if (n === 2) return '#f4c430'; // amber — two inputs, one output
+      if (n >= 3)  return '#f4595f'; // coral-red — three+ inputs, one output
+      return f.color;                // normal — one-to-one
+    }
+
+    f.pairs.forEach(p=>{
+      const y1=ydD(p.x), y2=ydR(p.y);
+      const x1=8, x2=W-8;
+      const cx1=x1+(x2-x1)*0.38, cy1=y1;
+      const cx2=x1+(x2-x1)*0.62, cy2=y2;
+      const col = arrowColor(p.y);
+      ctx.beginPath(); ctx.moveTo(x1,y1);
+      ctx.bezierCurveTo(cx1,cy1,cx2,cy2,x2,y2);
+      ctx.strokeStyle=col+'bb'; ctx.lineWidth=1.4;
+      ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
+      const ddx=x2-cx2,ddy=y2-cy2;
+      const ang=Math.atan2(ddy,ddx);
+      ctx.fillStyle=col;
+      ctx.beginPath();
+      ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-7*Math.cos(ang-0.4),y2-7*Math.sin(ang-0.4));
+      ctx.lineTo(x2-7*Math.cos(ang+0.4),y2-7*Math.sin(ang+0.4));
+      ctx.closePath(); ctx.fill();
+    });
+  });
+}
+
+// ── Mapper per-axis pan/zoom/momentum ─────────
+(function(){
+  function setupMapperAxis(wrapId,axis){
+    const wrap=document.getElementById(wrapId);
+    if(!wrap)return;
+    let rafPending=false;
+    function schedRender(){if(rafPending)return;rafPending=true;requestAnimationFrame(()=>{rafPending=false;mapperDrawAxes();});}
+    let velY=0,momRaf=null;
+    function stopMom(){if(momRaf){cancelAnimationFrame(momRaf);momRaf=null;}velY=0;}
+    function startMom(){
+      if(momRaf)cancelAnimationFrame(momRaf);
+      function step(){if(Math.abs(velY)<0.001){velY=0;return;}mView[axis].center-=velY/mView[axis].pxPerUnit;velY*=0.92;schedRender();momRaf=requestAnimationFrame(step);}
+      momRaf=requestAnimationFrame(step);
+    }
+    wrap.addEventListener('wheel',function(e){
+      e.preventDefault();stopMom();
+      const rect=wrap.getBoundingClientRect();
+      const localY=e.clientY-rect.top;
+      const pivot=mView[axis].center+(520/2-localY)/mView[axis].pxPerUnit;
+      let delta=e.deltaY;
+      if(e.deltaMode===1)delta*=20;if(e.deltaMode===2)delta*=300;
+      delta=Math.max(-80,Math.min(80,delta));
+      const factor=Math.pow(0.999,delta);
+      mView[axis].pxPerUnit=Math.max(0.5,Math.min(8000,mView[axis].pxPerUnit*factor));
+      mView[axis].center=pivot-(520/2-localY)/mView[axis].pxPerUnit;
+      schedRender();
+    },{passive:false});
+    let dragging=false,dragStartY=0,dragStartCenter=0,lastDY=0,lastDT=0;
+    wrap.addEventListener('mousedown',function(e){stopMom();dragging=true;dragStartY=e.clientY;dragStartCenter=mView[axis].center;lastDY=e.clientY;lastDT=performance.now();wrap.style.cursor='grabbing';e.preventDefault();});
+    window.addEventListener('mousemove',function(e){if(!dragging)return;mView[axis].center=dragStartCenter-(e.clientY-dragStartY)/mView[axis].pxPerUnit;const now=performance.now(),dt=now-lastDT;if(dt>0)velY=(e.clientY-lastDY)/dt*16;lastDY=e.clientY;lastDT=now;schedRender();});
+    window.addEventListener('mouseup',function(){if(!dragging)return;dragging=false;wrap.style.cursor='grab';startMom();});
+    let pinchStartDist=0,pinchStartPx=0,pinchStartCenter=0,pinchMidY=0,lastTY=0,lastTT=0;
+    wrap.addEventListener('touchstart',function(e){e.preventDefault();stopMom();if(e.touches.length>=2){const t0=e.touches[0],t1=e.touches[1];pinchStartDist=Math.abs(t0.clientY-t1.clientY)||1;pinchStartPx=mView[axis].pxPerUnit;pinchStartCenter=mView[axis].center;pinchMidY=(t0.clientY+t1.clientY)/2;dragging=false;}else{const t=e.touches[0];dragging=true;dragStartY=t.clientY;dragStartCenter=mView[axis].center;lastTY=t.clientY;lastTT=performance.now();velY=0;}},{passive:false});
+    wrap.addEventListener('touchmove',function(e){e.preventDefault();if(e.touches.length>=2){const t0=e.touches[0],t1=e.touches[1];const dist=Math.abs(t0.clientY-t1.clientY)||1;const midY=(t0.clientY+t1.clientY)/2;const rect=wrap.getBoundingClientRect();const localMid=pinchMidY-rect.top;const pivot=pinchStartCenter+(520/2-localMid)/pinchStartPx;mView[axis].pxPerUnit=Math.max(0.5,Math.min(8000,pinchStartPx*(dist/pinchStartDist)));const panDy=midY-pinchMidY;mView[axis].center=pivot-(520/2-localMid)/mView[axis].pxPerUnit-panDy/mView[axis].pxPerUnit;schedRender();}else if(dragging&&e.touches.length===1){const t=e.touches[0];mView[axis].center=dragStartCenter-(t.clientY-dragStartY)/mView[axis].pxPerUnit;const now=performance.now(),dt=now-lastTT;if(dt>0)velY=(t.clientY-lastTY)/dt*16;lastTY=t.clientY;lastTT=now;schedRender();}},{passive:false});
+    wrap.addEventListener('touchend',function(e){if(e.touches.length===0){dragging=false;startMom();}else if(e.touches.length===1&&!dragging){const t=e.touches[0];dragging=true;dragStartY=t.clientY;dragStartCenter=mView[axis].center;lastTY=t.clientY;lastTT=performance.now();}});
+  }
+  window.addEventListener('load',function(){
+    setupMapperAxis('mDomWrap','d');
+    setupMapperAxis('mRanWrap','r');
+  });
+})();
+
+// ── Init mapper on load ──
+window.addEventListener('load', () => {
+  // seed with one function
+  addFn('x^2', -3, 3);
+  setTimeout(()=>{ mReset('d'); mReset('r'); mapperDrawAxes(); }, 60);
+});
+window.addEventListener('resize', () => {
+  if(document.getElementById('tab-mapper').classList.contains('active')) mapperDrawAxes();
+  render();
+});
+
+// ── 2D Coordinate Grid ───────────────────────
+let grid2dShowBands = true;
+function toggleGrid2dBands() {
+  grid2dShowBands = !grid2dShowBands;
+  const btn = document.getElementById('grid2dBandsBtn');
+  if (btn) {
+    btn.textContent = grid2dShowBands ? 'ON' : 'OFF';
+    btn.style.borderColor   = grid2dShowBands ? '#b482f4' : 'var(--border)';
+    btn.style.background    = grid2dShowBands ? 'rgba(180,130,244,0.1)' : 'var(--surface)';
+    btn.style.color         = grid2dShowBands ? '#b482f4' : 'var(--muted)';
+  }
+  draw2DGrid();
+}
+
+(function() {
+  const INF2 = 1e9;
+
+  // Clamp infinite values to a large finite for drawing
+  function clampInf(v, fallback) {
+    if (!isFinite(v)) return fallback;
+    return v;
+  }
+
+  function draw2DGrid() {
+    const cv = document.getElementById('grid2dCanvas');
+    if (!cv) return;
+
+    const DPR = window.devicePixelRatio || 1;
+    const cssW = cv.parentElement.clientWidth || 560;
+    const cssH = 420;
+    cv.width  = cssW * DPR;
+    cv.height = cssH * DPR;
+    cv.style.width  = cssW + 'px';
+    cv.style.height = cssH + 'px';
+
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const W = cssW, H = cssH;
+    ctx.clearRect(0, 0, W, H);
+
+    // ── Gather data ─────────────────────────
+    const dSegs    = (typeof getMode !== 'undefined' && getMode('d')) ? getModeSegs('d') : resolveSegs(dIvs, dOp);
+    const rSegs    = (typeof getMode !== 'undefined' && getMode('r')) ? getModeSegs('r') : resolveSegs(rIvs, rOp);
+    const cSegs    = window._cSegs || [];
+    const dPtsVals = dPts.flatMap(p => p.vals);
+    const rPtsVals = rPts.flatMap(p => p.vals);
+    const cPtsVals = window._cPtsVals || [];
+
+    const hasIntervals = dSegs.length > 0 || rSegs.length > 0;
+    const hasDiscreteD = dPtsVals.length > 0;
+    const hasDiscreteR = rPtsVals.length > 0;
+    const hasBothDiscrete = hasDiscreteD && hasDiscreteR;
+
+    // ── Auto-fit viewport ───────────────────
+    const MARGIN = 48;
+    let allX = [...dPtsVals];
+    let allY = [...rPtsVals, ...cPtsVals];
+
+    dSegs.forEach(s => {
+      if (isFinite(s.lo)) allX.push(s.lo);
+      if (isFinite(s.hi)) allX.push(s.hi);
+    });
+    rSegs.forEach(s => {
+      if (isFinite(s.lo)) allY.push(s.lo);
+      if (isFinite(s.hi)) allY.push(s.hi);
+    });
+    cSegs.forEach(s => {
+      if (isFinite(s.lo)) allY.push(s.lo);
+      if (isFinite(s.hi)) allY.push(s.hi);
+    });
+
+    let xMin = allX.length ? Math.min(...allX) : -10;
+    let xMax = allX.length ? Math.max(...allX) :  10;
+    let yMin = allY.length ? Math.min(...allY) : -10;
+    let yMax = allY.length ? Math.max(...allY) :  10;
+
+    // Expand so nothing sits on edge
+    const xPad = Math.max((xMax - xMin) * 0.2, 2);
+    const yPad = Math.max((yMax - yMin) * 0.2, 2);
+    xMin -= xPad; xMax += xPad;
+    yMin -= yPad; yMax += yPad;
+
+    // Always show 0 if near
+    if (xMin > -0.5 && xMin < 2) xMin = Math.min(xMin, -1);
+    if (xMax <  0.5 && xMax > -2) xMax = Math.max(xMax,  1);
+    if (yMin > -0.5 && yMin < 2) yMin = Math.min(yMin, -1);
+    if (yMax <  0.5 && yMax > -2) yMax = Math.max(yMax,  1);
+
+    const plotW = W - MARGIN * 2;
+    const plotH = H - MARGIN * 2;
+
+    function px(x) { return MARGIN + (x - xMin) / (xMax - xMin) * plotW; }
+    function py(y) { return MARGIN + (1 - (y - yMin) / (yMax - yMin)) * plotH; }
+
+    // ── Grid lines ──────────────────────────
+    // Choose nice tick spacing
+    function niceStep(range, maxTicks) {
+      const raw = range / maxTicks;
+      const exp = Math.floor(Math.log10(raw));
+      const frac = raw / Math.pow(10, exp);
+      let nice = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 5 ? 5 : 10;
+      return nice * Math.pow(10, exp);
+    }
+
+    ctx.save();
+    const stepX = niceStep(xMax - xMin, 10);
+    const stepY = niceStep(yMax - yMin, 8);
+
+    // Minor grid
+    ctx.strokeStyle = 'rgba(46,52,80,0.6)';
+    ctx.lineWidth = 0.5;
+    for (let x = Math.ceil(xMin / stepX) * stepX; x <= xMax + 1e-9; x += stepX) {
+      ctx.beginPath(); ctx.moveTo(px(x), MARGIN); ctx.lineTo(px(x), H - MARGIN); ctx.stroke();
+    }
+    for (let y = Math.ceil(yMin / stepY) * stepY; y <= yMax + 1e-9; y += stepY) {
+      ctx.beginPath(); ctx.moveTo(MARGIN, py(y)); ctx.lineTo(W - MARGIN, py(y)); ctx.stroke();
+    }
+
+    // ── Intersection ON: show only D∩Range and D∩Codomain rectangles ──
+    if (grid2dShowBands) {
+      dSegs.forEach(dSeg => {
+        rSegs.forEach(rSeg => {
+          const x1 = px(isFinite(dSeg.lo) ? dSeg.lo : xMin);
+          const x2 = px(isFinite(dSeg.hi) ? dSeg.hi : xMax);
+          const y1 = py(isFinite(rSeg.hi) ? rSeg.hi : yMax);
+          const y2 = py(isFinite(rSeg.lo) ? rSeg.lo : yMin);
+          ctx.fillStyle = 'rgba(180,130,244,0.30)';
+          ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+          ctx.strokeStyle = '#b482f4';
+          ctx.lineWidth = 1.5; ctx.setLineDash([]);
+          ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        });
+      });
+      dSegs.forEach(dSeg => {
+        cSegs.forEach(cSeg => {
+          const x1 = px(isFinite(dSeg.lo) ? dSeg.lo : xMin);
+          const x2 = px(isFinite(dSeg.hi) ? dSeg.hi : xMax);
+          const y1 = py(isFinite(cSeg.hi) ? cSeg.hi : yMax);
+          const y2 = py(isFinite(cSeg.lo) ? cSeg.lo : yMin);
+          ctx.fillStyle = 'rgba(244,212,95,0.28)';
+          ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+          ctx.strokeStyle = '#f4d45f';
+          ctx.lineWidth = 1.5; ctx.setLineDash([4,3]);
+          ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+          ctx.setLineDash([]);
+        });
+      });
+    }
+
+    // ── Intersection OFF: show only Domain × Range common area (no codomain, no separate bands) ──
+    if (!grid2dShowBands) {
+      dSegs.forEach(dSeg => {
+        rSegs.forEach(rSeg => {
+          const x1 = px(isFinite(dSeg.lo) ? dSeg.lo : xMin);
+          const x2 = px(isFinite(dSeg.hi) ? dSeg.hi : xMax);
+          const y1 = py(isFinite(rSeg.hi) ? rSeg.hi : yMax);
+          const y2 = py(isFinite(rSeg.lo) ? rSeg.lo : yMin);
+          ctx.fillStyle = 'rgba(180,130,244,0.30)';
+          ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+          ctx.strokeStyle = '#b482f4';
+          ctx.lineWidth = 1.5; ctx.setLineDash([]);
+          ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        });
+      });
+    }
+
+    // ── Axes ────────────────────────────────
+    const ox = px(0), oy = py(0);
+    ctx.strokeStyle = '#4a5070';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([]);
+
+    // X axis
+    if (oy >= MARGIN && oy <= H - MARGIN) {
+      ctx.beginPath(); ctx.moveTo(MARGIN - 6, oy); ctx.lineTo(W - MARGIN + 6, oy); ctx.stroke();
+      // arrow
+      ctx.beginPath(); ctx.moveTo(W - MARGIN + 6, oy); ctx.lineTo(W - MARGIN, oy - 4); ctx.lineTo(W - MARGIN, oy + 4); ctx.closePath();
+      ctx.fillStyle = '#4a5070'; ctx.fill();
+    }
+    // Y axis
+    if (ox >= MARGIN && ox <= W - MARGIN) {
+      ctx.beginPath(); ctx.moveTo(ox, H - MARGIN + 6); ctx.lineTo(ox, MARGIN - 6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ox, MARGIN - 6); ctx.lineTo(ox - 4, MARGIN); ctx.lineTo(ox + 4, MARGIN); ctx.closePath();
+      ctx.fill();
+    }
+
+    // ── Tick labels ─────────────────────────
+    ctx.fillStyle = '#7a80a0';
+    ctx.font = '10px DM Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let x = Math.ceil(xMin / stepX) * stepX; x <= xMax + 1e-9; x += stepX) {
+      const lx = px(x);
+      if (Math.abs(x) < 1e-9) continue;
+      const labelY = (oy >= MARGIN && oy <= H - MARGIN) ? oy + 4 : H - MARGIN + 4;
+      ctx.fillText(fmtN(x), lx, labelY);
+      ctx.strokeStyle = '#3a4060'; ctx.lineWidth = 0.5;
+      const tickY = (oy >= MARGIN && oy <= H - MARGIN) ? oy : H - MARGIN;
+      ctx.beginPath(); ctx.moveTo(lx, tickY - 3); ctx.lineTo(lx, tickY + 3); ctx.stroke();
+    }
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let y = Math.ceil(yMin / stepY) * stepY; y <= yMax + 1e-9; y += stepY) {
+      const ly = py(y);
+      if (Math.abs(y) < 1e-9) continue;
+      const labelX = (ox >= MARGIN && ox <= W - MARGIN) ? ox - 5 : MARGIN - 5;
+      ctx.fillText(fmtN(y), labelX, ly);
+      ctx.strokeStyle = '#3a4060'; ctx.lineWidth = 0.5;
+      const tickX = (ox >= MARGIN && ox <= W - MARGIN) ? ox : MARGIN;
+      ctx.beginPath(); ctx.moveTo(tickX - 3, ly); ctx.lineTo(tickX + 3, ly); ctx.stroke();
+    }
+
+    // ── Axis labels ─────────────────────────
+    ctx.fillStyle = '#f4845f';
+    ctx.font = 'bold 11px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('x', W - MARGIN + 18, (oy >= MARGIN && oy <= H - MARGIN) ? oy : H - MARGIN);
+    ctx.fillStyle = '#5fc4f4';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('y', (ox >= MARGIN && ox <= W - MARGIN) ? ox : MARGIN, MARGIN - 8);
+
+    // ── Open/closed endpoint circles on axes ──
+    function openDot(cx2, cy2, color) {
+      ctx.beginPath(); ctx.arc(cx2, cy2, 4, 0, Math.PI*2);
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#1e2333'; ctx.fill();
+    }
+    function closedDot(cx2, cy2, color) {
+      ctx.beginPath(); ctx.arc(cx2, cy2, 4, 0, Math.PI*2);
+      ctx.fillStyle = color; ctx.fill();
+    }
+
+    const axisY = (oy >= MARGIN && oy <= H - MARGIN) ? oy : H - MARGIN;
+    dSegs.forEach(seg => {
+      if (isFinite(seg.lo)) {
+        const x1 = px(seg.lo);
+        seg.lb === '[' ? closedDot(x1, axisY, '#f4845f') : openDot(x1, axisY, '#f4845f');
+      }
+      if (isFinite(seg.hi)) {
+        const x2 = px(seg.hi);
+        seg.rb === ']' ? closedDot(x2, axisY, '#f4845f') : openDot(x2, axisY, '#f4845f');
+      }
+    });
+    const axisX = (ox >= MARGIN && ox <= W - MARGIN) ? ox : MARGIN;
+    rSegs.forEach(seg => {
+      if (isFinite(seg.lo)) {
+        const y2 = py(seg.lo);
+        seg.lb === '[' ? closedDot(axisX, y2, '#5fc4f4') : openDot(axisX, y2, '#5fc4f4');
+      }
+      if (isFinite(seg.hi)) {
+        const y1 = py(seg.hi);
+        seg.rb === ']' ? closedDot(axisX, y1, '#5fc4f4') : openDot(axisX, y1, '#5fc4f4');
+      }
+    });
+
+    // ── Discrete points — all (x,y) combos ──
+    if (hasBothDiscrete) {
+      dPtsVals.forEach(xv => {
+        rPtsVals.forEach(yv => {
+          ctx.beginPath();
+          ctx.arc(px(xv), py(yv), 5.5, 0, Math.PI*2);
+          ctx.fillStyle = '#b482f4';
+          ctx.fill();
+          ctx.strokeStyle = '#1e2333';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        });
+      });
+    }
+
+    // Also plot D-discrete × R-intervals (and vice versa)
+    if (hasDiscreteD && rSegs.length > 0) {
+      dPtsVals.forEach(xv => {
+        rSegs.forEach(rSeg => {
+          const y1 = py(isFinite(rSeg.hi) ? rSeg.hi : yMax);
+          const y2 = py(isFinite(rSeg.lo) ? rSeg.lo : yMin);
+          ctx.strokeStyle = '#b482f490';
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath(); ctx.moveTo(px(xv), y1); ctx.lineTo(px(xv), y2); ctx.stroke();
+          ctx.setLineDash([]);
+          // endpoints
+          if (isFinite(rSeg.lo)) { rSeg.lb === '[' ? closedDot(px(xv), py(rSeg.lo), '#b482f4') : openDot(px(xv), py(rSeg.lo), '#b482f4'); }
+          if (isFinite(rSeg.hi)) { rSeg.rb === ']' ? closedDot(px(xv), py(rSeg.hi), '#b482f4') : openDot(px(xv), py(rSeg.hi), '#b482f4'); }
+        });
+      });
+    }
+    if (hasDiscreteR && dSegs.length > 0) {
+      rPtsVals.forEach(yv => {
+        dSegs.forEach(dSeg => {
+          const x1 = px(isFinite(dSeg.lo) ? dSeg.lo : xMin);
+          const x2 = px(isFinite(dSeg.hi) ? dSeg.hi : xMax);
+          ctx.strokeStyle = '#b482f490';
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath(); ctx.moveTo(x1, py(yv)); ctx.lineTo(x2, py(yv)); ctx.stroke();
+          ctx.setLineDash([]);
+          if (isFinite(dSeg.lo)) { dSeg.lb === '[' ? closedDot(px(dSeg.lo), py(yv), '#b482f4') : openDot(px(dSeg.lo), py(yv), '#b482f4'); }
+          if (isFinite(dSeg.hi)) { dSeg.rb === ']' ? closedDot(px(dSeg.hi), py(yv), '#b482f4') : openDot(px(dSeg.hi), py(yv), '#b482f4'); }
+        });
+      });
+    }
+
+    // Plain discrete D only (no range values)
+    if (hasDiscreteD && !hasDiscreteR && rSegs.length === 0) {
+      dPtsVals.forEach(xv => {
+        closedDot(px(xv), py(0), '#b482f4');
+      });
+    }
+    if (hasDiscreteR && !hasDiscreteD && dSegs.length === 0) {
+      rPtsVals.forEach(yv => {
+        closedDot(px(0), py(yv), '#b482f4');
+      });
+    }
+
+    // ── Border ──────────────────────────────
+    ctx.strokeStyle = 'rgba(46,52,80,0.6)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+    ctx.strokeRect(MARGIN, MARGIN, plotW, plotH);
+
+    ctx.restore();
+  }
+
+  // Hook into the existing render function
+  const _origRender = window._grid2d_origRender;
+  window.draw2DGrid = draw2DGrid; // expose globally for toggleGrid2dBands
+  function patchRender() {
+    const orig = window.render;
+    if (!orig) { setTimeout(patchRender, 50); return; }
+    window.render = function() {
+      orig.apply(this, arguments);
+      draw2DGrid();
+    };
+    // Also draw immediately once everything loads
+    draw2DGrid();
+  }
+  window.addEventListener('load', () => {
+    setTimeout(patchRender, 100);
+    window.addEventListener('resize', draw2DGrid);
+  });
+})();
+
+
+
+// Resize observer: re-render scales when card width changes
+window.addEventListener('load', () => {
+  const wrap = document.getElementById('scalesWrap');
+  if (wrap && window.ResizeObserver) {
+    let roTimer;
+    new ResizeObserver(() => {
+      cancelAnimationFrame(roTimer);
+      roTimer = requestAnimationFrame(() => render());
+    }).observe(wrap);
+  }
+});
+</script>
+</body>
+</html>

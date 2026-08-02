@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Square Halving Paradox</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400&display=swap');
+
+  :root {
+    --ink: #0f0e0c;
+    --paper: #f5f0e8;
+    --cream: #ede6d6;
+    --accent: #c8410a;
+    --accent2: #2a5f8f;
+    --gold: #b8860b;
+    --pale: #f9f6f0;
+    --border: rgba(15,14,12,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    height: 100vh;
+    max-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+  }
+
+  /* Grain overlay */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.6;
+  }
+
+  /* HEADER */
+  header {
+    padding: 2.5rem 3rem 2rem;
+    border-bottom: 1.5px solid var(--ink);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+
+  .header-left { flex: 1; }
+
+  .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+  }
+
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1.05;
+    color: var(--ink);
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .header-eq {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(1rem, 2.5vw, 1.6rem);
+    color: var(--accent2);
+    white-space: nowrap;
+    padding: 0.5rem 1rem;
+    border: 1.5px solid var(--accent2);
+    border-radius: 4px;
+    background: rgba(42,95,143,0.05);
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* CANVAS SECTION */
+  .canvas-section {
+    padding: 2rem 2.5rem;
+    border-right: 1.5px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .canvas-container {
+    position: relative;
+    background: var(--pale);
+    border: 1.5px solid var(--ink);
+    border-radius: 2px;
+    aspect-ratio: 1 / 1;
+    max-height: 50vh;
+    overflow: hidden;
+    flex-shrink: 0;
+    align-self: flex-start;
+    width: 100%;
+  }
+
+  #squareCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Dimension annotations */
+  .canvas-wrapper {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: flex-start;
+    max-width: min(50vh, 100%);
+    width: 100%;
+  }
+
+  .dim-top-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding-left: 28px;
+    margin-bottom: 4px;
+  }
+
+  .dim-bottom-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding-left: 28px;
+    margin-top: 4px;
+  }
+
+  .dim-middle-row {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .dim-arrow-v {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    flex-shrink: 0;
+    gap: 2px;
+  }
+
+  .dim-arrow-h {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 2px;
+  }
+
+  .dim-line-v {
+    flex: 1;
+    width: 1.5px;
+    background: var(--accent2);
+    border-radius: 1px;
+    min-height: 12px;
+  }
+
+  .dim-line-h {
+    flex: 1;
+    height: 1.5px;
+    background: var(--accent2);
+    border-radius: 1px;
+    min-width: 12px;
+  }
+
+  .dim-tick-v {
+    width: 8px;
+    height: 1.5px;
+    background: var(--accent2);
+  }
+
+  .dim-tick-h {
+    height: 8px;
+    width: 1.5px;
+    background: var(--accent2);
+  }
+
+  .dim-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--accent2);
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+    transition: color 0.3s;
+    padding: 0 6px;
+  }
+
+  .dim-label-v {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--accent2);
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+    transition: color 0.3s;
+    padding: 4px 0;
+  }
+
+  /* CONTROLS BAR */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .step-display {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .step-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  .step-counter {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.5rem;
+    line-height: 1;
+    color: var(--ink);
+    min-width: 2.5ch;
+  }
+
+  .btn-group { display: flex; gap: 0.5rem; }
+
+  .btn-step {
+    padding: 0.7rem 1.4rem;
+    font-size: 1rem;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    border-radius: 3px;
+    border: 2px solid;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+    min-width: 110px;
+  }
+
+  .btn-step:active { transform: scale(0.96); }
+
+  .btn-plus {
+    background: #2a5f8f;
+    border-color: #2a5f8f;
+    color: #fff;
+  }
+  .btn-plus:hover { background: #1e4a70; border-color: #1e4a70; }
+  .btn-plus:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-minus {
+    background: #c8410a;
+    border-color: #c8410a;
+    color: #fff;
+  }
+  .btn-minus:hover { background: #9e330a; border-color: #9e330a; }
+  .btn-minus:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  button {
+    padding: 0.55rem 1.1rem;
+    border: 1.5px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  button:hover { background: var(--ink); color: var(--paper); }
+
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  button.primary:hover { background: #9e330a; border-color: #9e330a; }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.2rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--ink);
+    opacity: 0.75;
+  }
+
+  .legend-swatch {
+    width: 14px; height: 14px;
+    border: 1px solid rgba(15,14,12,0.3);
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    padding: 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    background: var(--cream);
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .sidebar-section { display: flex; flex-direction: column; gap: 0.8rem; }
+
+  .sidebar-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Series list */
+  .series-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .series-row {
+    display: grid;
+    grid-template-columns: 20px 1fr 60px 70px;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    transition: opacity 0.3s;
+    opacity: 0.35;
+  }
+
+  .series-row.active { opacity: 1; }
+  .series-row.past { opacity: 0.65; }
+
+  .row-n { color: var(--gold); font-size: 0.65rem; }
+  .row-frac { color: var(--ink); }
+  .row-area { color: var(--accent2); text-align: right; }
+  .row-sum { color: var(--accent); text-align: right; font-weight: 500; }
+
+  /* Sum display */
+  .sum-display {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 3px;
+    padding: 1.2rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .sum-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  .sum-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.8rem;
+    line-height: 1;
+    color: #f4c430;
+  }
+
+  .sum-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    opacity: 0.55;
+    margin-top: 0.2rem;
+  }
+
+  /* Progress bar */
+  .progress-track {
+    height: 6px;
+    background: rgba(15,14,12,0.12);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* Explanation */
+  .explain {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.65;
+    color: var(--ink);
+    opacity: 0.8;
+  }
+
+  .explain strong { color: var(--accent); font-weight: 600; opacity: 1; }
+
+  /* FOOTER */
+  footer {
+    padding: 1rem 3rem;
+    border-top: 1.5px solid var(--ink);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    color: var(--ink);
+    opacity: 0.45;
+    text-transform: uppercase;
+  }
+
+  /* Responsive */
+  @media (max-width: 720px) {
+    header { padding: 1.5rem; flex-direction: column; align-items: flex-start; }
+    main { grid-template-columns: 1fr; }
+    .canvas-section { padding: 1.5rem; border-right: none; border-bottom: 1.5px solid var(--ink); }
+    .canvas-container { max-height: 80vw; max-width: 80vw; }
+    .sidebar { padding: 1.5rem; }
+    footer { padding: 1rem 1.5rem; flex-direction: column; gap: 0.3rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+
+<header>
+  <div class="header-left">
+    <div class="eyebrow">Geometric Series · Visual Proof</div>
+    <h1>The <em>Square</em> Halving<br>Paradox</h1>
+  </div>
+  <div class="header-eq">½ + ¼ + ⅛ + … = 1</div>
+</header>
+
+<main>
+  <div class="canvas-section">
+    <!-- Dimension-annotated canvas wrapper -->
+    <div class="canvas-wrapper">
+      <!-- Top: width annotation -->
+      <div class="dim-top-row">
+        <div class="dim-arrow-h">
+          <div class="dim-tick-v"></div>
+          <div class="dim-line-h"></div>
+          <span class="dim-label" id="dimWidth">Width: 1</span>
+          <div class="dim-line-h"></div>
+          <div class="dim-tick-v"></div>
+        </div>
+      </div>
+
+      <div class="dim-middle-row">
+        <!-- Left: height annotation -->
+        <div class="dim-arrow-v">
+          <div class="dim-tick-h"></div>
+          <div class="dim-line-v"></div>
+          <span class="dim-label-v" id="dimHeight">Height: 1</span>
+          <div class="dim-line-v"></div>
+          <div class="dim-tick-h"></div>
+        </div>
+
+        <!-- Canvas -->
+        <div class="canvas-container" style="flex:1;max-width:100%;max-height:100%;">
+          <canvas id="squareCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Bottom: pixel size info -->
+      <div class="dim-bottom-row">
+        <span class="dim-label" id="dimPx" style="opacity:0.5;font-size:0.6rem;">— px</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="step-display">
+        <span class="step-label">Division</span>
+        <span class="step-counter" id="stepCounter">0</span>
+      </div>
+      <div class="btn-group">
+        <button class="btn-step btn-minus" onclick="removeStep()" id="minusBtn">− 1 Step</button>
+        <button class="btn-step btn-plus" onclick="addStep()" id="plusBtn">+ 1 Step</button>
+      </div>
+      <div class="btn-group">
+        <button class="primary" id="animBtn" onclick="toggleAnim()">▶ Animate</button>
+        <button onclick="resetAll()">Reset</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.6rem;flex:1;min-width:160px;">
+        <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--gold);letter-spacing:0.1em;white-space:nowrap;">JUMP TO</span>
+        <input type="range" id="stepSlider" min="0" max="100" value="0"
+          oninput="jumpTo(this.value)"
+          style="flex:1;accent-color:var(--accent2);cursor:pointer;height:4px;">
+      </div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="sidebar">
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Cumulative Sum</div>
+      <div class="sum-display">
+        <div class="sum-label">∑ (1/2)ⁿ so far</div>
+        <div class="sum-value" id="sumValue">0</div>
+        <div class="sub-label sum-sub" id="sumFrac">Start — click animate</div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Step by Step</div>
+      <div class="series-list" id="seriesList"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Why It Converges</div>
+      <div class="explain">
+        Each half is <strong>divided again</strong> into two equal pieces. The new piece is always
+        exactly half the remaining empty space.<br><br>
+        No matter how many times you halve it, the pieces <strong>always fit perfectly</strong>
+        inside the original square — nothing overflows.<br><br>
+        The infinite sum equals <strong>exactly 1</strong> — the whole square, never more.
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <span>Geometric Series · r = ½</span>
+  <span>Sum = a / (1 − r) = 1 / (1 − ½) = 2 … scaled to unit square → 1</span>
+  <span>∞ steps · 1 square</span>
+</footer>
+
+<script>
+const canvas = document.getElementById('squareCanvas');
+const ctx = canvas.getContext('2d');
+
+// Color palette for each division level
+const BASE_COLORS = [
+  '#c8410a','#2a5f8f','#b8860b','#4a7c59','#7b4ea0',
+  '#c45e8a','#3d7d8a','#8a6d3b','#5a7a3a','#8a3d5a',
+  '#3a5a8a','#7a5a3a','#a0522d','#2e8b57','#8b008b',
+  '#1e90ff','#ff6347','#20b2aa','#daa520','#6a5acd'
+];
+const COLORS = Array.from({length: 100}, (_, i) => BASE_COLORS[i % BASE_COLORS.length]);
+
+let steps = 0;
+let animating = false;
+let animId = null;
+const MAX_STEPS = 100;
+
+function resize() {
+  const container = canvas.parentElement;
+  const size = Math.min(container.clientWidth, container.clientHeight);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  ctx.scale(dpr, dpr);
+  draw();
+}
+
+window.addEventListener('resize', resize);
+setTimeout(resize, 50);
+updateBtns();
+
+// Build legend
+function buildLegend() {
+  const leg = document.getElementById('legend');
+  leg.innerHTML = '';
+  for (let i = 0; i < Math.min(steps, MAX_STEPS); i++) {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<div class="legend-swatch" style="background:${COLORS[i]}40;border-color:${COLORS[i]}"></div>
+      <span>1/${Math.pow(2, i+1)} (n=${i+1})</span>`;
+    leg.appendChild(item);
+  }
+}
+
+// Update sidebar rows — show a window of ±5 rows around current step
+function updateSidebar() {
+  const list = document.getElementById('seriesList');
+  list.innerHTML = '';
+  const windowSize = 5;
+  const start = Math.max(0, steps - windowSize);
+  const end = Math.min(MAX_STEPS, steps + windowSize);
+
+  let cumSum = 0;
+  // precompute cumSum up to start
+  for (let i = 0; i < start; i++) cumSum += 1 / Math.pow(2, i+1);
+
+  for (let i = start; i <= end; i++) {
+    const frac = 1 / Math.pow(2, i+1);
+    cumSum += frac;
+    const row = document.createElement('div');
+    row.className = 'series-row' + (i < steps ? ' past' : i === steps ? ' active' : '');
+
+    const exp = i + 1;
+    const fracStr = exp <= 20 ? `1/${Math.pow(2, exp)}` : `2⁻${exp}`;
+    const areaStr = frac < 1e-6 ? frac.toExponential(2) : frac.toFixed(Math.min(exp + 1, 8));
+    const sumStr = (1 - 1/Math.pow(2, i+1)).toFixed(Math.min(i + 2, 10));
+
+    row.innerHTML = `
+      <span class="row-n">n=${exp}</span>
+      <span class="row-frac">${fracStr}</span>
+      <span class="row-area">${areaStr}</span>
+      <span class="row-sum">Σ≈${sumStr}</span>`;
+    list.appendChild(row);
+  }
+
+  const activeRow = list.querySelector('.active');
+  if (activeRow) activeRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// Update sum display
+function updateSum() {
+  // sum = 1 - 1/2^steps  (exact for geometric series)
+  const sum = steps === 0 ? 0 : 1 - Math.pow(2, -steps);
+
+  let fracStr;
+  if (steps === 0) fracStr = '0';
+  else if (steps <= 20) fracStr = `(2^${steps}−1) / 2^${steps}`;
+  else fracStr = `1 − 2⁻${steps}`;
+
+  document.getElementById('sumValue').textContent = steps === 0 ? '0' : sum.toPrecision(8);
+  document.getElementById('sumFrac').textContent = fracStr;
+  document.getElementById('progressFill').style.width = (sum * 100) + '%';
+  document.getElementById('stepCounter').textContent = steps;
+}
+
+function updateDimensions() {
+  const container = canvas.parentElement;
+  const pxSize = Math.min(container.clientWidth, container.clientHeight);
+
+  let w = 1, h = 1;
+  for (let i = 0; i < steps; i++) {
+    if (i % 2 === 0) w /= 2;
+    else h /= 2;
+  }
+
+  const fmt = (v, axis) => {
+    if (v === 1) return '1';
+    const exp = axis === 'w' ? Math.ceil(steps / 2) : Math.floor(steps / 2);
+    return exp <= 20 ? `1/${Math.pow(2, exp)}` : `2⁻${exp}`;
+  };
+
+  document.getElementById('dimWidth').textContent = `W: ${fmt(w, 'w')}`;
+  document.getElementById('dimHeight').textContent = `H: ${fmt(h, 'h')}`;
+  document.getElementById('dimPx').textContent = `${pxSize}×${pxSize} px  ·  unit square 1×1`;
+}
+
+// Draw the square subdivision
+function draw() {
+  const size = canvas.width / (window.devicePixelRatio || 1);
+  const PAD = 20;
+  const SQ = size - PAD * 2;
+
+  ctx.clearRect(0, 0, size, size);
+
+  // Background square
+  ctx.fillStyle = '#f9f6f0';
+  ctx.fillRect(PAD, PAD, SQ, SQ);
+
+  // Draw each halved region — beyond step ~52 pieces are sub-pixel, skip drawing them
+  const DRAW_LIMIT = Math.min(steps, 52);
+  let rx = PAD, ry = PAD, rw = SQ, rh = SQ;
+
+  for (let i = 0; i < DRAW_LIMIT; i++) {
+    const color = COLORS[i];
+    let nx, ny, nw, nh;
+
+    if (i % 2 === 0) {
+      nw = rw / 2; nh = rh;
+      nx = rx + nw; ny = ry;
+      rw = nw;
+    } else {
+      nw = rw; nh = rh / 2;
+      nx = rx; ny = ry + nh;
+      rh = nh;
+    }
+
+    // Only fill/stroke if visible (> 0.5px)
+    if (nw > 0.5 && nh > 0.5) {
+      ctx.fillStyle = color + '28';
+      ctx.fillRect(nx, ny, nw, nh);
+      if (nw > 2 && nh > 2) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = nw > 10 ? 2 : 1;
+        ctx.strokeRect(nx + 0.5, ny + 0.5, nw - 1, nh - 1);
+      }
+      // Label only if large enough
+      const fontSize = Math.min(nw, nh) * 0.28;
+      if (fontSize > 7) {
+        const label = i === 0 ? '½' : (i + 1 <= 20 ? `1/${Math.pow(2, i+1)}` : `2⁻${i+1}`);
+        ctx.fillStyle = color;
+        ctx.font = `${Math.min(fontSize, 28)}px 'DM Serif Display', serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, nx + nw / 2, ny + nh / 2);
+      }
+    }
+  }
+
+  // Remaining piece dashed outline
+  if (steps > 0 && steps < MAX_STEPS && rw > 1 && rh > 1) {
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(15,14,12,0.2)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(rx + 1, ry + 1, rw - 2, rh - 2);
+    ctx.setLineDash([]);
+    const fontSize2 = Math.min(rw, rh) * 0.18;
+    if (fontSize2 > 6) {
+      const remExp = steps;
+      const remLabel = remExp <= 20 ? `1/${Math.pow(2, remExp)} left` : `2⁻${remExp} left`;
+      ctx.fillStyle = 'rgba(15,14,12,0.25)';
+      ctx.font = `${Math.min(fontSize2, 14)}px 'DM Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(remLabel, rx + rw/2, ry + rh/2);
+    }
+  }
+
+  // Outer border
+  ctx.strokeStyle = '#0f0e0c';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(PAD, PAD, SQ, SQ);
+
+  // At max steps — show = 1 overlay
+  if (steps >= MAX_STEPS) {
+    ctx.fillStyle = 'rgba(15,14,12,0.65)';
+    ctx.fillRect(PAD, PAD, SQ, SQ);
+    ctx.fillStyle = '#f4c430';
+    ctx.font = `bold ${SQ * 0.15}px 'DM Serif Display', serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('= 1', PAD + SQ/2, PAD + SQ/2 - 14);
+    ctx.font = `${SQ * 0.07}px 'DM Mono', monospace`;
+    ctx.fillStyle = 'rgba(245,240,232,0.7)';
+    ctx.fillText('∞ pieces · 1 whole square', PAD + SQ/2, PAD + SQ/2 + SQ * 0.12);
+  }
+
+  buildLegend();
+  updateSidebar();
+  updateSum();
+  updateDimensions();
+}
+
+function addStep() {
+  if (steps < MAX_STEPS) { steps++; draw(); }
+  updateBtns();
+}
+
+function removeStep() {
+  if (steps > 0) { steps--; draw(); }
+  updateBtns();
+}
+
+function updateBtns() {
+  document.getElementById('minusBtn').disabled = steps === 0;
+  document.getElementById('plusBtn').disabled = steps >= MAX_STEPS;
+  const slider = document.getElementById('stepSlider');
+  if (slider) slider.value = steps;
+}
+
+function jumpTo(val) {
+  steps = Math.max(0, Math.min(MAX_STEPS, parseInt(val)));
+  draw();
+  updateBtns();
+}
+
+function resetAll() {
+  stopAnim();
+  steps = 0;
+  draw();
+  updateBtns();
+}
+
+function toggleAnim() {
+  if (animating) stopAnim();
+  else startAnim();
+}
+
+function startAnim() {
+  if (steps >= MAX_STEPS) { steps = 0; draw(); }
+  animating = true;
+  document.getElementById('animBtn').textContent = '⏹ Stop';
+  runAnim();
+}
+
+function runAnim() {
+  if (!animating || steps >= MAX_STEPS) { stopAnim(); return; }
+  steps++;
+  draw();
+  updateBtns();
+  // Faster at higher steps — max speed after step 20
+  const delay = steps < 10 ? 600 : steps < 20 ? 300 : steps < 50 ? 120 : 60;
+  animId = setTimeout(runAnim, delay);
+}
+
+function stopAnim() {
+  animating = false;
+  clearTimeout(animId);
+  document.getElementById('animBtn').textContent = '▶ Animate';
+}
+</script>
+</body>
+</html>

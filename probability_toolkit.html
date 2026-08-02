@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Probability Toolkit — 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  :root{
+    --bg:#05070a;
+    --panel:#12181f;
+    --grid:#1c2530;
+    --text:#e8edf4;
+    --dim:#7c8a9c;
+    --torch:#ffb92e;
+    --pink:#ff3d81;
+    --violet:#7c5cff;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(255,61,129,0.08), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(124,92,255,0.09), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:'JetBrains Mono','Courier New',monospace;
+    display:flex; flex-direction:column; align-items:center;
+    overflow-x:hidden;
+  }
+  h1{
+    font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:3px;
+    color:var(--text); font-weight:400; margin:24px 0 2px; text-align:center;
+  }
+  h1 span{color:var(--torch);}
+  .sub{font-size:11px; color:var(--dim); margin-bottom:16px; text-align:center; max-width:560px; line-height:1.6; padding:0 16px;}
+
+  #toolTabs{
+    display:flex; gap:4px; padding:4px; margin:20px 0 4px;
+    background:#0a0e14; border:1px solid var(--grid); border-radius:11px;
+  }
+  .tool-tab-btn{
+    background:transparent; color:var(--dim); border:none; border-radius:8px;
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; letter-spacing:0.8px; text-transform:uppercase;
+    padding:10px 20px; cursor:pointer; font-weight:600;
+  }
+  .tool-tab-btn.active{background:linear-gradient(135deg,#ff3d81,#7c5cff); color:#0a0e14;}
+  .tab-panel{display:none; width:100%; flex-direction:column; align-items:center;}
+  .tab-panel.active{display:flex;}
+
+  /* ---- controls bar ---- */
+  .controls{
+    display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; justify-content:center;
+    background:rgba(18,24,31,0.72);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px; padding:14px 18px; margin-bottom:12px;
+    width:min(1040px,96vw);
+  }
+  .ctrl-group{display:flex; flex-direction:column; gap:5px;}
+  .ctrl-group label{font-size:10px; letter-spacing:1px; color:var(--dim); text-transform:uppercase;}
+  .ctrl-group input[type=number]{
+    width:84px; background:#0d1319; color:var(--text);
+    border:1px solid var(--grid); border-radius:6px;
+    font-family:inherit; font-size:12px; padding:7px 9px; outline:none;
+  }
+  .ctrl-group input[type=number]:focus{border-color:rgba(255,255,255,0.3);}
+  .btn{
+    background:linear-gradient(135deg,#ff3d81,#7c5cff);
+    color:#fff; border:none; border-radius:8px;
+    font-family:inherit; font-size:11px; letter-spacing:1px; text-transform:uppercase;
+    padding:9px 18px; cursor:pointer; font-weight:600;
+    box-shadow:0 4px 16px rgba(255,61,129,0.25);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{transform:translateY(-1px); box-shadow:0 6px 20px rgba(124,92,255,0.35);}
+  .btn:active{transform:translateY(0);}
+  .btn.amber{background:linear-gradient(135deg,#ffb92e,#ff3d81); color:#0a0e14; box-shadow:0 4px 16px rgba(255,185,46,0.2);}
+  .btn.ghost{background:#141b24; color:var(--text); border:1px solid var(--grid); box-shadow:none;}
+  .ctrl-note{font-size:9.5px; color:var(--dim); max-width:230px; line-height:1.4;}
+
+  .switch{display:inline-block; cursor:pointer; padding:5px 0;}
+  .switch input{display:none;}
+  .switch-track{
+    display:block; width:38px; height:20px; border-radius:10px;
+    background:#1c2530; border:1px solid var(--grid); position:relative;
+    transition:background .15s ease;
+  }
+  .switch-thumb{
+    position:absolute; top:1px; left:1px; width:16px; height:16px; border-radius:50%;
+    background:var(--dim); transition:transform .15s ease, background .15s ease;
+  }
+  .switch input:checked + .switch-track{ background:rgba(255,61,129,0.25); border-color:rgba(255,61,129,0.4); }
+  .switch input:checked + .switch-track .switch-thumb{ transform:translateX(18px); background:#ff3d81; }
+
+  /* ---- compact "math" strip: the only bits that need real typing ---- */
+  .mathstrip{
+    display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:center;
+    width:min(1040px,96vw); margin-bottom:12px;
+    background:rgba(13,19,25,0.6); border:1px solid var(--grid); border-radius:10px;
+    padding:10px 14px;
+  }
+  .mathstrip .grp{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--dim);}
+  .code-input{
+    width:46px; background:#0d1319; color:var(--text);
+    border:1px solid var(--grid); border-radius:6px;
+    font-family:inherit; font-size:12px; padding:6px 4px; outline:none; text-align:center;
+  }
+  .code-input:focus{border-color:rgba(255,255,255,0.3);}
+  .code-input.invalid{border-color:#ff3d81;}
+  .inter-symbol{color:var(--dim); font-size:14px; font-weight:600;}
+  .mini-btn{
+    background:#1c2530; color:var(--text); border:1px solid var(--grid);
+    border-radius:6px; font-family:inherit; font-size:10.5px; letter-spacing:0.5px;
+    padding:6px 10px; cursor:pointer;
+  }
+  .mini-btn:hover{border-color:rgba(255,255,255,0.3);}
+  .inter-remove{background:none; border:none; color:var(--dim); cursor:pointer; font-size:13px; padding:0 3px;}
+  .inter-remove:hover{color:#ff3d81;}
+
+  .dist-select{position:relative;}
+  .dist-select-btn{
+    display:flex; align-items:center; gap:8px;
+    background:#0d1319; color:var(--text); border:1px solid var(--grid); border-radius:6px;
+    font-family:inherit; font-size:11px; padding:7px 10px; cursor:pointer;
+  }
+  .dist-select-btn .caret{color:var(--dim); font-size:9px;}
+  .dist-select-menu{
+    display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:30;
+    width:max-content; min-width:200px;
+    background:#12181f; border:1px solid rgba(255,255,255,0.12); border-radius:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.55); padding:5px;
+  }
+  .dist-select-menu.open{display:block;}
+  .dist-opt{font-size:11px; color:var(--text); padding:8px 9px; border-radius:6px; cursor:pointer;}
+  .dist-opt:hover, .dist-opt.active{background:rgba(255,61,129,0.14); color:#ffb0cd;}
+
+  /* ---- 3D stages ---- */
+  .stage3d{
+    width:min(1040px,96vw); border-radius:16px; overflow:hidden;
+    border:1px solid var(--grid); background:radial-gradient(circle at 50% 30%, #0d1520, #05070a 75%);
+    margin-bottom:14px; position:relative; touch-action:none;
+  }
+  #popStage{height:min(72vh,620px);}
+  #distStage{height:340px;}
+  #corridorStage{height:min(66vh,560px);}
+  .stage3d canvas{display:block; width:100%; height:100%;}
+  .stage-hint{
+    position:absolute; bottom:8px; right:12px; font-size:9px; color:var(--dim);
+    letter-spacing:0.5px; text-transform:uppercase; pointer-events:none; opacity:0.7;
+  }
+  .lock-btn{
+    position:absolute; top:10px; right:10px; z-index:5;
+    display:flex; align-items:center; gap:6px;
+    background:rgba(10,14,20,0.78); border:1px solid var(--grid); border-radius:9px;
+    color:var(--dim); font-family:inherit; font-size:10px; letter-spacing:0.5px; text-transform:uppercase;
+    padding:7px 11px; cursor:pointer; font-weight:600; backdrop-filter:blur(4px);
+  }
+  .lock-btn svg{width:13px; height:13px; display:block;}
+  .lock-btn.locked{background:linear-gradient(135deg,#ff3d81,#7c5cff); color:#0a0e14; border-color:transparent;}
+  .view-toggle{
+    display:inline-flex; gap:2px; padding:3px; margin:4px 0 12px;
+    background:#0a0e14; border:1px solid var(--grid); border-radius:9px;
+  }
+  .vt-btn{
+    background:transparent; color:var(--dim); border:none; border-radius:6px;
+    font-family:inherit; font-size:10.5px; letter-spacing:0.8px; text-transform:uppercase;
+    padding:7px 16px; cursor:pointer; font-weight:600;
+  }
+  .vt-btn.active{background:linear-gradient(135deg,#ffb92e,#ff3d81); color:#0a0e14;}
+  .actions-row{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:14px;}
+
+  /* ---- person editor modal (kept as real HTML — needs typing/checkboxes) ---- */
+  #editOverlay{
+    display:none; position:fixed; inset:0; background:rgba(4,6,10,0.65);
+    backdrop-filter:blur(3px); z-index:40;
+  }
+  #editPanel{
+    display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    z-index:50; width:min(320px,90vw); max-height:82vh; overflow-y:auto;
+    background:rgba(18,24,31,0.92); border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px; padding:16px 18px; box-shadow:0 20px 60px rgba(0,0,0,0.6);
+  }
+  #editPanel .b-title{font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text); font-weight:600; margin-bottom:12px;}
+  #editPanel label.field-label{display:block; color:var(--dim); font-size:10px; letter-spacing:1px; text-transform:uppercase; margin:10px 0 5px;}
+  #editPanel input[type=text]{
+    width:100%; background:#0d1319; color:var(--text);
+    border:1px solid var(--grid); border-radius:6px;
+    font-family:inherit; font-size:12px; padding:8px 9px; outline:none;
+  }
+  #editPanel input[type=text]:focus{border-color:rgba(255,255,255,0.3);}
+  .edit-chk{
+    display:flex; align-items:center; gap:8px; font-size:11.5px;
+    padding:6px 2px; cursor:pointer; color:var(--text);
+  }
+  .edit-chk input{accent-color:#ff3d81; width:14px; height:14px; flex:none;}
+  .edit-chk .swatch{width:9px; height:9px; border-radius:3px; flex:none;}
+  .edit-actions{display:flex; gap:8px; margin-top:14px;}
+  .edit-actions button{
+    flex:1; border:none; border-radius:8px; padding:9px 0; cursor:pointer;
+    font-family:inherit; font-size:11px; letter-spacing:1px; text-transform:uppercase; font-weight:600;
+  }
+  #editSave{background:linear-gradient(135deg,#ff3d81,#7c5cff); color:#fff;}
+  #editCancel{background:#1c2530; color:var(--dim); border:1px solid var(--grid) !important;}
+
+  /* ---- doors per-layer count panel ---- */
+  #doorCountsPanel{
+    width:min(1040px,96vw); margin-bottom:12px;
+    background:rgba(14,19,26,0.72); border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px; padding:14px 18px; display:none;
+  }
+  #doorCountsPanel.show{display:block;}
+  .dcp-title{font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); margin-bottom:10px;}
+  #layerInputs{display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;}
+  .layer-input-group{display:flex; flex-direction:column; gap:5px;}
+  .layer-input-group label{font-size:9.5px; color:var(--dim); display:flex; align-items:center; gap:5px;}
+  .layer-input-group .dot{width:8px; height:8px; border-radius:50%; flex:none;}
+  .layer-input-group input{
+    width:64px; background:#0a0e14; color:var(--text);
+    border:1px solid var(--grid); border-radius:6px;
+    font-family:inherit; font-size:12px; padding:6px 8px; outline:none; text-align:center;
+  }
+
+  footer{color:var(--dim); font-size:10px; margin:6px 0 30px; letter-spacing:1px; text-align:center; padding:0 16px;}
+  .loading{position:fixed; inset:0; background:#05070a; z-index:100; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:12px; letter-spacing:2px; text-transform:uppercase;}
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+
+<div class="loading" id="loadingScreen">Loading 3D engine…</div>
+
+<div id="toolTabs">
+  <button class="tool-tab-btn active" data-tab="tab-population">Symptom Population</button>
+  <button class="tool-tab-btn" data-tab="tab-doors">Probability Corridor</button>
+</div>
+
+<!-- ======================= POPULATION TAB ======================= -->
+<div id="tab-population" class="tab-panel active">
+<h1>Population <span>Symptom</span> Chart</h1>
+<div class="sub">choose how many people and how many diseases — each figure is a high-poly 3D avatar; colored bars floating above each head show that person's conditions. Drag to orbit, scroll to zoom, tap a figure to edit.</div>
+
+<div class="controls">
+  <div class="ctrl-group">
+    <label>Number of People</label>
+    <input type="number" id="numPeople" min="2" max="300" value="10">
+  </div>
+  <div class="ctrl-group">
+    <label>Number of Diseases</label>
+    <input type="number" id="numDiseases" min="1" max="8" value="4">
+  </div>
+  <div class="ctrl-group">
+    <label>Equal Probabilities</label>
+    <label class="switch">
+      <input type="checkbox" id="equalProbToggle" checked>
+      <span class="switch-track"><span class="switch-thumb"></span></span>
+    </label>
+  </div>
+  <button class="btn" id="genBtn">Generate</button>
+  <div class="ctrl-note">Up to 300 people, 8 diseases · toggle on (default) gives every disease an equal chance, toggle off uses realistic weighted prevalence</div>
+</div>
+
+<div class="mathstrip">
+  <div class="grp">Bayes&nbsp;P(<input type="number" id="codeA" class="code-input" min="1" value="1">) &amp; P(<input type="number" id="codeB" class="code-input" min="1" value="2">)</div>
+  <div class="grp" id="interWrap">Intersection <span id="interRow"></span><button id="addInterBtn" class="mini-btn">+ code</button></div>
+  <div class="dist-select" id="distSelectWrap">
+    <button type="button" class="dist-select-btn" id="distSelectBtn">
+      <span id="distSelectLabel">Bar — P(each condition) %</span>
+      <span class="caret">▾</span>
+    </button>
+    <div class="dist-select-menu" id="distSelectMenu">
+      <div class="dist-opt active" data-value="probability">Bar — P(each condition) %</div>
+      <div class="dist-opt" data-value="bar">Bar — disease counts</div>
+      <div class="dist-opt" data-value="pie">Pie — disease share</div>
+      <div class="dist-opt" data-value="conditions">Bar — conditions per person</div>
+      <div class="dist-opt" data-value="weighted">Bar — actual vs expected (weight)</div>
+    </div>
+  </div>
+</div>
+
+<div class="stage3d" id="popStage"><button class="lock-btn" id="popLockBtn" data-target="popStage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Lock</span></button><span class="stage-hint">drag = orbit · scroll = zoom</span></div>
+<div class="stage3d" id="distStage"><button class="lock-btn" id="distLockBtn" data-target="distStage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Lock</span></button><span class="stage-hint">drag = orbit · scroll = zoom</span></div>
+
+<div id="editOverlay"></div>
+<div class="panel" id="editPanel">
+  <div class="b-title">Edit Person</div>
+  <label class="field-label">Name</label>
+  <input type="text" id="editName" placeholder="Person name">
+  <label class="field-label">Diseases</label>
+  <div id="editDiseaseList"></div>
+  <div class="edit-actions">
+    <button id="editCancel">Cancel</button>
+    <button id="editSave">Save</button>
+  </div>
+</div>
+
+<footer>TAP A FIGURE TO EDIT · SET COUNTS ABOVE AND HIT GENERATE · LEGEND &amp; BAYES PANELS FLOAT IN THE SCENE</footer>
+</div>
+
+<!-- ======================= DOORS TAB ======================= -->
+<div id="tab-doors" class="tab-panel">
+<h1>Probability <span>Corridor</span></h1>
+<div class="sub">choose layers and doors per layer, then walk a real 3D corridor — the further you go, the less likely your exact path becomes.</div>
+
+<div class="controls">
+  <div class="ctrl-group">
+    <label>Number of Layers</label>
+    <input type="number" id="numLayers" min="1" max="6" value="3">
+  </div>
+  <button class="btn amber" id="layersBtn">Set Layers</button>
+  <div class="ctrl-note">Up to 6 layers. After setting layers, choose how many doors sit in each one.</div>
+</div>
+
+<div id="doorCountsPanel">
+  <div class="dcp-title">Doors per layer</div>
+  <div id="layerInputs"></div>
+  <div style="margin-top:14px;">
+    <button class="btn amber" id="corridorBtn">Build Corridor</button>
+  </div>
+</div>
+
+<div class="view-toggle" id="viewToggle">
+  <button class="vt-btn active" data-view="corridor">Corridor</button>
+  <button class="vt-btn" data-view="tree">Tree</button>
+</div>
+
+<div class="stage3d" id="corridorStage"><button class="lock-btn" id="corridorLockBtn" data-target="corridorStage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Lock</span></button><span class="stage-hint">drag = orbit · scroll = zoom</span></div>
+
+<div class="actions-row">
+  <button class="btn amber" id="randomWalkBtn">Random Walk</button>
+  <button class="btn ghost" id="resetWalkBtn">Reset Walk</button>
+</div>
+
+<footer>TAP A DOOR (OR TREE NODE) IN THE HIGHLIGHTED LAYER · PROBABILITY = PRODUCT OF EACH LAYER'S 1/DOORS</footer>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+/* ============================================================
+   SHARED HELPERS
+   ============================================================ */
+
+const FONT = "'JetBrains Mono', monospace";
+
+function makeCanvas(w, h){
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  return { canvas: c, ctx: c.getContext('2d') };
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  if (w <= 0 || h <= 0) return;
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr, y);
+  ctx.lineTo(x+w-rr, y);
+  ctx.arcTo(x+w, y, x+w, y+rr, rr);
+  ctx.lineTo(x+w, y+h-rr);
+  ctx.arcTo(x+w, y+h, x+w-rr, y+h, rr);
+  ctx.lineTo(x+rr, y+h);
+  ctx.arcTo(x, y+h, x, y+h-rr, rr);
+  ctx.lineTo(x, y+rr);
+  ctx.arcTo(x, y, x+rr, y, rr);
+  ctx.closePath();
+}
+
+/* A floating "holographic" text/data panel: a plane in 3D space textured
+   from a live 2D canvas. This is how all the readouts, legends, Bayes
+   numbers, and chain text live *inside* the 3D scene instead of as flat
+   HTML overlays. Call .redraw(fn) any time the data changes. */
+/* Recursively disposes geometry/material/textures under an Object3D before it's
+   discarded. Anything tagged .isSharedAsset (our cached figure/bar geometry and
+   materials, reused across every person) is deliberately skipped — only
+   per-instance stuff (door arches, tree tubes, chart bars, billboard textures)
+   actually gets freed. Without this, every corridor rebuild / random-walk step /
+   chart redraw leaked geometry, materials, and canvas textures indefinitely. */
+function disposeObject3D(root){
+  root.traverse(node => {
+    if (node.material){
+      const mats = Array.isArray(node.material) ? node.material : [node.material];
+      mats.forEach(m => {
+        if (m.isSharedAsset) return;
+        if (m.map) m.map.dispose();
+        m.dispose();
+      });
+    }
+    if (node.geometry && !node.geometry.isSharedAsset) node.geometry.dispose();
+  });
+}
+
+class HoloPanel {
+  constructor(pxW, pxH, worldW, worldH){
+    const { canvas, ctx } = makeCanvas(pxW, pxH);
+    this.canvas = canvas; this.ctx = ctx;
+    this.texture = new THREE.CanvasTexture(canvas);
+    this.texture.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.MeshBasicMaterial({
+      map: this.texture, transparent: true, side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const geo = new THREE.PlaneGeometry(worldW, worldH, 1, 1);
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.pxW = pxW; this.pxH = pxH;
+  }
+  clear(){
+    const { ctx, canvas } = this;
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(10,14,20,0.55)';
+    roundRect(ctx, 0, 0, canvas.width, canvas.height, 22);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = 2;
+    roundRect(ctx, 1, 1, canvas.width-2, canvas.height-2, 22);
+    ctx.stroke();
+  }
+  redraw(fn){
+    this.clear();
+    fn(this.ctx, this.canvas.width, this.canvas.height);
+    this.texture.needsUpdate = true;
+  }
+}
+
+/* Small billboard sprite label — used for per-object tags (names, door %,
+   tree node numbers) where a full panel would be overkill. Always faces
+   the camera. */
+class Billboard {
+  constructor(text, opts = {}){
+    this.opts = Object.assign({
+      fontsize: 40, color: '#e8edf4', weight: 600, bg: null,
+      padX: 14, padY: 8, scale: 0.011
+    }, opts);
+    const { canvas, ctx } = makeCanvas(8,8);
+    this.canvas = canvas; this.ctx = ctx;
+    this.texture = new THREE.CanvasTexture(canvas);
+    this.texture.colorSpace = THREE.SRGBColorSpace;
+    this.material = new THREE.SpriteMaterial({ map: this.texture, transparent: true, depthWrite: false });
+    this.sprite = new THREE.Sprite(this.material);
+    this.setText(text);
+  }
+  setText(text, colorOverride){
+    const o = this.opts;
+    const ctx = this.ctx;
+    ctx.font = `${o.weight} ${o.fontsize}px ${FONT}`;
+    const metrics = ctx.measureText(text);
+    const w = Math.ceil(metrics.width) + o.padX*2;
+    const h = Math.ceil(o.fontsize*1.35) + o.padY*2;
+    this.canvas.width = Math.max(4,w);
+    this.canvas.height = Math.max(4,h);
+    ctx.font = `${o.weight} ${o.fontsize}px ${FONT}`;
+    if (o.bg){
+      ctx.fillStyle = o.bg;
+      roundRect(ctx, 0, 0, w, h, 10);
+      ctx.fill();
+    }
+    ctx.fillStyle = colorOverride || o.color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, w/2, h/2 + 1);
+    this.texture.needsUpdate = true;
+    this.sprite.scale.set(w*o.scale, h*o.scale, 1);
+  }
+}
+
+/* ============================================================
+   DISEASE DATA MODEL (shared logic, unchanged math from the 2D version)
+   ============================================================ */
+
+const DISEASE_POOL = [
+  { code:1, key:'fever',        label:'Fever',              color:'#ffb92e', weight:30 },
+  { code:2, key:'loose',        label:'Loose Motion',       color:'#7c5cff', weight:14 },
+  { code:3, key:'corona',       label:'Corona (COVID-19)',  color:'#ff3d81', weight:6  },
+  { code:4, key:'constipation', label:'Constipation',       color:'#33d9c4', weight:10 },
+  { code:5, key:'cough',        label:'Cough',              color:'#43e97b', weight:24 },
+  { code:6, key:'headache',     label:'Headache',           color:'#ff6b4a', weight:26 },
+  { code:7, key:'nausea',       label:'Nausea',             color:'#4facfe', weight:12 },
+  { code:8, key:'fatigue',      label:'Fatigue',            color:'#f5d76e', weight:20 }
+];
+
+const PALETTE = ['#ff3d81','#7c5cff','#33d9c4','#ffb92e','#43e97b','#4facfe'];
+
+function fmtPct(x){ return (x*100).toFixed(x*100 < 1 && x > 0 ? 3 : 1) + '%'; }
+function fmtFrac(x){ return x.toFixed(3); }
+
+// wires a lock button to an OrbitControls instance: locked = zoom still works, rotate/pan disabled
+function setupLockToggle(btnId, controls){
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const willLock = controls.enableRotate !== false;
+    controls.enableRotate = !willLock;
+    controls.enablePan = !willLock;
+    controls.enableZoom = true;
+    btn.classList.toggle('locked', willLock);
+    const label = btn.querySelector('span');
+    if (label) label.textContent = willLock ? 'Locked' : 'Lock';
+  });
+}
+
+/* ============================================================
+   HIGH-POLY HUMANOID FIGURE
+   every figure looks identical, so all geometry/material is built ONCE
+   here and reused (as shared references) by every instance — with up to
+   300 people on screen, recreating this per-figure was 300x redundant
+   allocation of spheres/lathes/rounded-boxes.
+   ============================================================ */
+
+const FIGURE_ASSETS = (() => {
+  const bodyMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff, roughness: 0.28, metalness: 0.05,
+    clearcoat: 0.7, clearcoatRoughness: 0.2
+  });
+  const headMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff, roughness: 0.22, metalness: 0.05,
+    clearcoat: 0.8, clearcoatRoughness: 0.15
+  });
+
+  // blobby rounded feet
+  const footGeo = new THREE.SphereGeometry(0.15, 32, 32);
+  footGeo.scale(1, 0.55, 1.3);
+
+  // long legs, lathe-turned so they bulge in the middle and pinch in narrow at the ankle and hip
+  const legProfile = [
+    new THREE.Vector2(0.045, 0.0),
+    new THREE.Vector2(0.075, 0.06),
+    new THREE.Vector2(0.115, 0.16),
+    new THREE.Vector2(0.125, 0.30),
+    new THREE.Vector2(0.105, 0.45),
+    new THREE.Vector2(0.075, 0.58),
+    new THREE.Vector2(0.05, 0.66)
+  ];
+  const legGeo = new THREE.LatheGeometry(legProfile, 48);
+
+  // round, chubby belly-torso (rounded, mime-like, no arms/limbs)
+  const bodyGeo = new THREE.SphereGeometry(0.36, 48, 48);
+  bodyGeo.scale(1, 1.05, 0.92);
+
+  // large, round ball-shaped head — smooth white, with simple minimal face
+  const headGeo = new THREE.SphereGeometry(0.3, 64, 64);
+  {
+    // stretch the lower half (chin/jaw) further than the upper half (forehead) for a longer chin
+    const pos = headGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++){
+      const y = pos.getY(i);
+      pos.setY(i, y < 0 ? y * 1.55 : y * 1.05);
+    }
+    pos.needsUpdate = true;
+    headGeo.computeVertexNormals();
+  }
+
+  // simple face — dot eyes, small nose bump, curved lips
+  const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4, metalness: 0.1 });
+  const eyeGeo = new THREE.SphereGeometry(0.032, 24, 24);
+
+  const noseMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.05, clearcoat: 0.8 });
+  const noseGeo = new THREE.SphereGeometry(0.045, 24, 24);
+  noseGeo.scale(0.75, 1, 1.1);
+
+  const lipMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5, metalness: 0.05 });
+  const lipGeo = new RoundedBoxGeometry(0.11, 0.03, 0.03, 4, 0.013);
+
+  [bodyMat, headMat, eyeMat, noseMat, lipMat].forEach(m => m.isSharedAsset = true);
+  [footGeo, legGeo, bodyGeo, headGeo, eyeGeo, noseGeo, lipGeo].forEach(g => g.isSharedAsset = true);
+
+  return { bodyMat, headMat, footGeo, legGeo, bodyGeo, headGeo, eyeMat, eyeGeo, noseMat, noseGeo, lipMat, lipGeo };
+})();
+
+function makeHumanFigure(){
+  const g = new THREE.Group();
+  const a = FIGURE_ASSETS;
+
+  const footL = new THREE.Mesh(a.footGeo, a.bodyMat);
+  footL.position.set(-0.14, 0.09, 0.02);
+  g.add(footL);
+  const footR = new THREE.Mesh(a.footGeo, a.bodyMat);
+  footR.position.set(0.14, 0.09, 0.02);
+  g.add(footR);
+
+  const legL = new THREE.Mesh(a.legGeo, a.bodyMat);
+  legL.position.set(-0.14, 0.14, 0);
+  g.add(legL);
+  const legR = new THREE.Mesh(a.legGeo, a.bodyMat);
+  legR.position.set(0.14, 0.14, 0);
+  g.add(legR);
+
+  const body = new THREE.Mesh(a.bodyGeo, a.bodyMat);
+  body.position.y = 1.02;
+  g.add(body);
+
+  const head = new THREE.Mesh(a.headGeo, a.headMat);
+  head.position.y = 1.659;
+  g.add(head);
+
+  const eyeL = new THREE.Mesh(a.eyeGeo, a.eyeMat);
+  eyeL.position.set(-0.1, 0.06, 0.275);
+  head.add(eyeL);
+  const eyeR = new THREE.Mesh(a.eyeGeo, a.eyeMat);
+  eyeR.position.set(0.1, 0.06, 0.275);
+  head.add(eyeR);
+
+  const nose = new THREE.Mesh(a.noseGeo, a.noseMat);
+  nose.position.set(0, -0.01, 0.295);
+  head.add(nose);
+
+  const lips = new THREE.Mesh(a.lipGeo, a.lipMat);
+  lips.position.set(0, -0.15, 0.3);
+  head.add(lips);
+
+  // condition bars float above the head — high-poly boxes
+  const ringsGroup = new THREE.Group();
+  g.add(ringsGroup);
+
+  g.userData.body = body;
+  g.userData.head = head;
+  g.userData.ringsGroup = ringsGroup;
+  g.userData.baseScale = 1;
+
+  return g;
+}
+
+// shared bar assets — geometry is identical for every disease bar, only material color differs,
+// and colors repeat a lot (only a handful of disease hexes exist), so cache materials by hex
+const BAR_GEO = new RoundedBoxGeometry(0.42, 0.11, 0.18, 10, 0.05);
+const BAR_GLOW_GEO = new RoundedBoxGeometry(0.28, 0.08, 0.14, 10, 0.035);
+const BAR_GLOW_MAT = new THREE.MeshStandardMaterial({ color: 0x2c3644, emissive: 0x2c3644, emissiveIntensity: 0.3, transparent:true, opacity:0.5 });
+BAR_GEO.isSharedAsset = true;
+BAR_GLOW_GEO.isSharedAsset = true;
+BAR_GLOW_MAT.isSharedAsset = true;
+const barMatCache = new Map();
+function getBarMaterial(hex){
+  if (!barMatCache.has(hex)){
+    const mat = new THREE.MeshStandardMaterial({
+      color: hex, emissive: hex, emissiveIntensity: 0.85, roughness: 0.35, metalness: 0.4
+    });
+    mat.isSharedAsset = true;
+    barMatCache.set(hex, mat);
+  }
+  return barMatCache.get(hex);
+}
+
+function setFigureConditions(fig, colorHexes){
+  const group = fig.userData.ringsGroup;
+  while (group.children.length) group.remove(group.children[0]);
+  const n = colorHexes.length;
+  // head top sits at absolute y ~1.974 (head center 1.659 + upper radius 0.3*1.05=0.315); ringsGroup is at the
+  // figure's root (y=0), so baseY is absolute. 2.18 -> a clear ~0.15 gap above the head.
+  const baseY = 2.18;
+  const gap = 0.16;
+  colorHexes.forEach((hex, i) => {
+    const bar = new THREE.Mesh(BAR_GEO, getBarMaterial(hex));
+    bar.position.set(0, baseY + i*gap, 0);
+    group.add(bar);
+  });
+  if (n === 0){
+    const glow = new THREE.Mesh(BAR_GLOW_GEO, BAR_GLOW_MAT);
+    glow.position.set(0, baseY, 0);
+    group.add(glow);
+  }
+}
+
+
+function initPopulationTab(){
+
+let ACTIVE = [];
+let people = [];       // {id, name, bars:[key,...]}
+let figures = [];      // THREE.Group per person
+let positions = [];    // {x,z} grid slot per person
+
+function colorOf(key){ const d = ACTIVE.find(x=>x.key===key) || DISEASE_POOL.find(x=>x.key===key); return d ? d.color : '#888'; }
+function labelOf(key){ const d = ACTIVE.find(x=>x.key===key) || DISEASE_POOL.find(x=>x.key===key); return d ? d.label : key; }
+function diseaseByCode(code){ return ACTIVE.find(d=>d.code===code); }
+function countWith(key){ return people.filter(p=>p.bars.includes(key)).length; }
+function countWithBoth(a,b){ return people.filter(p=>p.bars.includes(a)&&p.bars.includes(b)).length; }
+
+/* ---------- scene setup ---------- */
+const stageEl = document.getElementById('popStage');
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x05070a, 0.028);
+
+const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 200);
+camera.position.set(0, 7, 13);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+stageEl.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 3;
+controls.maxDistance = 40;
+controls.maxPolarAngle = Math.PI*0.49;
+controls.target.set(0, 1, 0);
+setupLockToggle('popLockBtn', controls);
+
+scene.add(new THREE.HemisphereLight(0x88aaff, 0x0a0e14, 0.9));
+const key1 = new THREE.PointLight(0xff3d81, 40, 30); key1.position.set(-8, 8, 6); scene.add(key1);
+const key2 = new THREE.PointLight(0x7c5cff, 40, 30); key2.position.set(8, 8, -6); scene.add(key2);
+const sun = new THREE.DirectionalLight(0xffffff, 1.1); sun.position.set(4,10,6); scene.add(sun);
+
+const gridHelper = new THREE.GridHelper(60, 60, 0x1c2530, 0x11161d);
+gridHelper.position.y = -0.02;
+scene.add(gridHelper);
+
+const figuresGroup = new THREE.Group();
+scene.add(figuresGroup);
+
+function resizeStage(){
+  const w = stageEl.clientWidth, h = stageEl.clientHeight;
+  if (!w || !h) return;
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+new ResizeObserver(resizeStage).observe(stageEl);
+resizeStage();
+
+/* ---------- floating holo panels: legend + bayes + intersection ---------- */
+const legendPanel = new HoloPanel(560, 560, 3.4, 3.4);
+legendPanel.mesh.position.set(-6.6, 3.4, -1);
+legendPanel.mesh.rotation.y = 0.32;
+scene.add(legendPanel.mesh);
+
+const bayesPanel = new HoloPanel(620, 720, 3.6, 4.2);
+bayesPanel.mesh.position.set(6.8, 3.7, -1);
+bayesPanel.mesh.rotation.y = -0.32;
+scene.add(bayesPanel.mesh);
+
+function wrapText(ctx, text, x, y, maxW, lineH){
+  const words = text.split(' ');
+  let line = '', yy = y;
+  for (const w of words){
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && line){
+      ctx.fillText(line, x, yy);
+      line = w; yy += lineH;
+    } else line = test;
+  }
+  ctx.fillText(line, x, yy);
+  return yy;
+}
+
+function drawLegend(){
+  legendPanel.redraw((ctx, W, H) => {
+    let y = 40;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#e8edf4';
+    ctx.font = '700 22px monospace';
+    ctx.fillText('LEGEND', 26, y); y += 30;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.beginPath(); ctx.moveTo(26,y); ctx.lineTo(W-26,y); ctx.stroke();
+    y += 30;
+    ACTIVE.forEach(d => {
+      const count = countWith(d.key);
+      ctx.fillStyle = d.color;
+      roundRect(ctx, 26, y-16, 16, 16, 4); ctx.fill();
+      ctx.fillStyle = '#e8edf4';
+      ctx.font = '600 17px monospace';
+      ctx.fillText(`${d.code}. ${d.label}`, 52, y);
+      ctx.fillStyle = '#7c8a9c';
+      ctx.textAlign = 'right';
+      ctx.fillText(String(count), W-26, y);
+      ctx.textAlign = 'left';
+      y += 34;
+    });
+    y += 8;
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath(); ctx.moveTo(26,y); ctx.lineTo(W-26,y); ctx.stroke();
+    y += 26;
+    ctx.fillStyle = '#7c8a9c';
+    ctx.font = '600 14px monospace';
+    ctx.fillText(`TOTAL: ${people.length} PEOPLE`, 26, y);
+  });
+}
+
+function drawBayes(){
+  bayesPanel.redraw((ctx, W, H) => {
+    let y = 40;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#e8edf4';
+    ctx.font = '700 22px monospace';
+    ctx.fillText("BAYES' THEOREM", 26, y); y += 26;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.beginPath(); ctx.moveTo(26,y); ctx.lineTo(W-26,y); ctx.stroke();
+    y += 34;
+
+    const dA = diseaseByCode(parseInt(document.getElementById('codeA').value));
+    const dB = diseaseByCode(parseInt(document.getElementById('codeB').value));
+    document.getElementById('codeA').classList.toggle('invalid', !dA);
+    document.getElementById('codeB').classList.toggle('invalid', !dB);
+
+    ctx.font = '600 14px monospace'; ctx.fillStyle = '#7c8a9c';
+    ctx.fillText('A: ' + (dA ? dA.label : 'invalid code'), 26, y);
+    y += 22;
+    ctx.fillText('B: ' + (dB ? dB.label : 'invalid code'), 26, y);
+    y += 32;
+
+    if (!dA || !dB){
+      ctx.fillStyle = '#ff3d81'; ctx.font = '600 14px monospace';
+      ctx.fillText('Enter valid codes for A and B (see legend).', 26, y);
+      return;
+    }
+
+    const A = dA.key, B = dB.key, n = people.length;
+    const nA = countWith(A), nB = countWith(B), nAB = countWithBoth(A,B);
+    const pA = n?nA/n:0, pB = n?nB/n:0, pAB = n?nAB/n:0;
+    const pBgA = nA>0 ? nAB/nA : 0;
+    const pAgB = pB>0 ? (pBgA*pA)/pB : 0;
+
+    const rows = [
+      ['P(A)', `${fmtFrac(pA)} · ${fmtPct(pA)} (${nA}/${n})`],
+      ['P(B)', `${fmtFrac(pB)} · ${fmtPct(pB)} (${nB}/${n})`],
+      ['P(A ∩ B)', `${fmtFrac(pAB)} · ${fmtPct(pAB)} (${nAB}/${n})`],
+      ['P(B | A)', fmtPct(pBgA)],
+    ];
+    ctx.font = '600 15px monospace';
+    rows.forEach(([label, val]) => {
+      ctx.fillStyle = '#7c8a9c'; ctx.textAlign='left'; ctx.fillText(label, 26, y);
+      ctx.fillStyle = '#e8edf4'; ctx.textAlign='right'; ctx.fillText(val, W-26, y);
+      ctx.textAlign='left';
+      y += 26;
+    });
+
+    y += 12;
+    // highlight box
+    roundRect(ctx, 20, y-24, W-40, 74, 12);
+    ctx.fillStyle = 'rgba(255,61,129,0.1)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,61,129,0.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#ffb0cd'; ctx.font = '700 16px monospace';
+    ctx.fillText('P(A | B)', 34, y);
+    ctx.fillStyle = '#ff3d81'; ctx.textAlign = 'right'; ctx.font='700 16px monospace';
+    ctx.fillText(fmtPct(pAgB), W-34, y);
+    ctx.textAlign = 'left';
+    y += 22;
+    ctx.fillStyle = '#ffb0cd'; ctx.font = '11px monospace';
+    y = wrapText(ctx, `P(A|B) = P(B|A)·P(A)/P(B) = (${fmtFrac(pBgA)}×${fmtFrac(pA)})/${fmtFrac(pB)}`, 34, y, W-68, 15);
+    y += 40;
+
+    ctx.fillStyle = '#7c8a9c'; ctx.font = '12px monospace';
+    const note = A===B ? 'Same condition selected for A and B.'
+      : `${nAB} of ${n} people have both ${dA.label} and ${dB.label}.`;
+    y = wrapText(ctx, note, 26, y, W-52, 16);
+
+    // intersection explorer summary
+    y += 30;
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath(); ctx.moveTo(26,y); ctx.lineTo(W-26,y); ctx.stroke();
+    y += 26;
+    ctx.fillStyle = '#e8edf4'; ctx.font = '700 16px monospace';
+    ctx.fillText('INTERSECTION EXPLORER', 26, y);
+    y += 26;
+
+    const inputs = Array.from(document.querySelectorAll('.inter-code-input'));
+    const resolved = inputs.map(inp => {
+      const code = parseInt(inp.value);
+      const d = diseaseByCode(code);
+      inp.classList.toggle('invalid', inp.value !== '' && !d);
+      return { raw: inp.value, code, d };
+    });
+    ctx.font = '13px monospace';
+    resolved.forEach(r => {
+      let line;
+      if (r.raw === '') line = '—';
+      else if (!r.d) { line = `Code ${r.raw}: invalid`; ctx.fillStyle = '#ff3d81'; }
+      else {
+        const c = countWith(r.d.key);
+        line = `${r.code}. ${r.d.label} — ${fmtPct(n?c/n:0)} (${c}/${n})`;
+        ctx.fillStyle = '#e8edf4';
+      }
+      ctx.fillText(line, 26, y);
+      y += 20;
+    });
+
+    const validDiseases = resolved.filter(r=>r.d).map(r=>r.d);
+    y += 12;
+    if (resolved.some(r=>r.raw==='') || validDiseases.length < resolved.length){
+      ctx.fillStyle = '#7c8a9c'; ctx.font = '12px monospace';
+      wrapText(ctx, 'Fill every box with a valid code to see the intersection.', 26, y, W-52, 16);
+      return;
+    }
+    const keys = validDiseases.map(d=>d.key);
+    const count = people.filter(p => keys.every(k=>p.bars.includes(k))).length;
+    const prob = n ? count/n : 0;
+
+    roundRect(ctx, 20, y-20, W-40, 56, 12);
+    ctx.fillStyle = 'rgba(124,92,255,0.12)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(124,92,255,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle = '#cbb8ff'; ctx.font='700 14px monospace';
+    ctx.fillText(`P(${validDiseases.map(d=>d.label).join(' ∩ ')})`, 32, y);
+    ctx.fillStyle = '#7c5cff'; ctx.textAlign='right'; ctx.font='700 15px monospace';
+    ctx.fillText(`${fmtFrac(prob)} · ${fmtPct(prob)}`, W-32, y);
+    ctx.textAlign='left';
+    y += 30;
+    ctx.fillStyle = '#7c8a9c'; ctx.font='11px monospace';
+    wrapText(ctx, `${count} of ${n} have all of: ${validDiseases.map(d=>d.label).join(', ')}.`, 26, y, W-52, 15);
+  });
+}
+
+/* ---------- intersection explorer input rows (real HTML — needs typing) ---------- */
+let interCodes = [1,2];
+const interRowEl = document.getElementById('interRow');
+function renderInterBoxes(){
+  interRowEl.innerHTML = interCodes.map((val,i) => {
+    const removeBtn = interCodes.length>2 ? `<button class="inter-remove" data-idx="${i}" title="Remove">✕</button>` : '';
+    const box = `<input type="number" class="code-input inter-code-input" data-idx="${i}" min="1" value="${val===''?'':val}">${removeBtn}`;
+    const symbol = i < interCodes.length-1 ? `<span class="inter-symbol">∩</span>` : '';
+    return box + symbol;
+  }).join('');
+  drawBayes();
+}
+interRowEl.addEventListener('input', e => {
+  if (e.target.classList.contains('inter-code-input')){
+    interCodes[parseInt(e.target.dataset.idx)] = e.target.value;
+    drawBayes();
+  }
+});
+interRowEl.addEventListener('click', e => {
+  if (e.target.classList.contains('inter-remove')){
+    interCodes.splice(parseInt(e.target.dataset.idx),1);
+    renderInterBoxes();
+  }
+});
+document.getElementById('addInterBtn').addEventListener('click', () => {
+  interCodes.push('');
+  renderInterBoxes();
+});
+document.getElementById('codeA').addEventListener('input', drawBayes);
+document.getElementById('codeB').addEventListener('input', drawBayes);
+
+function resetIntersection(){
+  const c1 = ACTIVE[0] ? ACTIVE[0].code : 1;
+  const c2 = ACTIVE.length>1 ? ACTIVE[1].code : c1;
+  interCodes = [c1,c2];
+  renderInterBoxes();
+}
+function initBayesDefaults(){
+  document.getElementById('codeA').value = ACTIVE[0] ? ACTIVE[0].code : 1;
+  document.getElementById('codeB').value = ACTIVE.length>1 ? ACTIVE[1].code : (ACTIVE[0]?ACTIVE[0].code:1);
+}
+
+/* ---------- population generation ---------- */
+function pickRandom(arr,n){
+  const copy = arr.slice(); const out=[]; n = Math.min(n, copy.length);
+  for(let i=0;i<n;i++){ const idx = Math.floor(Math.random()*copy.length); out.push(copy.splice(idx,1)[0]); }
+  return out;
+}
+function pickWeighted(diseases,n){
+  const pool = diseases.slice(); const out=[]; n = Math.min(n, pool.length);
+  for(let i=0;i<n;i++){
+    const totalWeight = pool.reduce((s,d)=>s+d.weight,0);
+    let r = Math.random()*totalWeight, idx=0;
+    for(; idx<pool.length-1; idx++){ r -= pool[idx].weight; if (r<=0) break; }
+    out.push(pool.splice(idx,1)[0].key);
+  }
+  return out;
+}
+
+function clearFigures(){
+  figures.forEach(f => { figuresGroup.remove(f); disposeObject3D(f); });
+  figures = [];
+}
+
+function layoutGrid(){
+  const n = people.length;
+  const cols = Math.max(1, Math.min(14, Math.ceil(Math.sqrt(n*1.6))));
+  const spacing = 1.7;
+  positions = people.map((p,i) => {
+    const col = i % cols, row = Math.floor(i/cols);
+    const rows = Math.ceil(n/cols);
+    return {
+      x: (col - (cols-1)/2) * spacing,
+      z: (row - (rows-1)/2) * spacing
+    };
+  });
+}
+
+let raycaster = new THREE.Raycaster();
+let pointer = new THREE.Vector2();
+let hoveredFig = null;
+
+function buildFigures(){
+  clearFigures();
+  people.forEach((p,i) => {
+    const fig = makeHumanFigure();
+    const colors = p.bars.map(colorOf).map(c => new THREE.Color(c).getHex());
+    setFigureConditions(fig, colors);
+    const nameTag = new Billboard(p.name || ('P'+p.id), { fontsize:34, color:'#cfd8e3', bg:'rgba(8,11,16,0.55)', scale:0.009 });
+    nameTag.sprite.position.set(0, -0.15, 0);
+    fig.add(nameTag.sprite);
+    fig.userData.nameTag = nameTag;
+    fig.userData.personIndex = i;
+    const { x, z } = positions[i];
+    fig.position.set(x, 0, z);
+    fig.scale.setScalar(0.001);
+    fig.userData.targetScale = 0.72;
+    fig.userData.animDelay = i * (people.length>140 ? 3 : 10);
+    fig.userData.animT = 0;
+    figuresGroup.add(fig);
+    figures.push(fig);
+  });
+}
+
+function generate(){
+  const nPeople = Math.max(2, Math.min(300, parseInt(document.getElementById('numPeople').value)||10));
+  const nDiseases = Math.max(1, Math.min(8, parseInt(document.getElementById('numDiseases').value)||4));
+  document.getElementById('numPeople').value = nPeople;
+  document.getElementById('numDiseases').value = nDiseases;
+  const equalMode = document.getElementById('equalProbToggle').checked;
+
+  ACTIVE = DISEASE_POOL.slice(0, nDiseases);
+  people = [];
+  for (let i=0;i<nPeople;i++){
+    const howMany = ACTIVE.length===1 ? 1 : (Math.random()<0.5?1:2);
+    const chosen = equalMode ? pickRandom(ACTIVE.map(d=>d.key), howMany) : pickWeighted(ACTIVE, howMany);
+    people.push({ id:i+1, name:'Person '+(i+1), bars:chosen });
+  }
+
+  layoutGrid();
+  buildFigures();
+  drawLegend();
+  initBayesDefaults();
+  resetIntersection();
+  renderDistChart();
+
+  const dist = Math.max(10, nPeople*0.35 + 8);
+  controls.target.set(0,1,0);
+  camera.position.set(0, dist*0.55, dist);
+}
+document.getElementById('genBtn').addEventListener('click', generate);
+
+/* ---------- editor modal (real HTML — needs text + checkboxes) ---------- */
+const editOverlay = document.getElementById('editOverlay');
+const editPanel = document.getElementById('editPanel');
+const editName = document.getElementById('editName');
+const editDiseaseList = document.getElementById('editDiseaseList');
+let editingIdx = -1;
+
+function openEditor(i){
+  editingIdx = i;
+  const p = people[i];
+  editName.value = p.name || ('Person '+p.id);
+  editDiseaseList.innerHTML = ACTIVE.map(d => {
+    const checked = p.bars.includes(d.key) ? 'checked' : '';
+    return `<label class="edit-chk"><input type="checkbox" value="${d.key}" ${checked}><span class="swatch" style="background:${d.color}"></span>${d.code}. ${d.label}</label>`;
+  }).join('');
+  editOverlay.style.display = 'block';
+  editPanel.style.display = 'block';
+}
+function closeEditor(){
+  editOverlay.style.display = 'none';
+  editPanel.style.display = 'none';
+  editingIdx = -1;
+}
+function saveEditor(){
+  if (editingIdx < 0) return;
+  const p = people[editingIdx];
+  p.name = editName.value.trim() || ('Person '+p.id);
+  p.bars = Array.from(editDiseaseList.querySelectorAll('input:checked')).map(c=>c.value);
+  const fig = figures[editingIdx];
+  const colors = p.bars.map(colorOf).map(c => new THREE.Color(c).getHex());
+  setFigureConditions(fig, colors);
+  fig.userData.nameTag.setText(p.name);
+  drawLegend();
+  drawBayes();
+  renderDistChart();
+  closeEditor();
+}
+document.getElementById('editSave').addEventListener('click', saveEditor);
+document.getElementById('editCancel').addEventListener('click', closeEditor);
+editOverlay.addEventListener('click', closeEditor);
+
+renderer.domElement.addEventListener('click', (e) => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX-rect.left)/rect.width)*2 - 1;
+  pointer.y = -((e.clientY-rect.top)/rect.height)*2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(figuresGroup.children, true);
+  if (hits.length){
+    let obj = hits[0].object;
+    while (obj && obj.userData.personIndex === undefined) obj = obj.parent;
+    if (obj) openEditor(obj.userData.personIndex);
+  }
+});
+
+/* ---------- 3D distribution chart (separate stage) ---------- */
+const distStageEl = document.getElementById('distStage');
+const distScene = new THREE.Scene();
+const distCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+distCamera.position.set(0, 5.2, 8);
+const distRenderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+distRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
+distStageEl.appendChild(distRenderer.domElement);
+const distControls = new OrbitControls(distCamera, distRenderer.domElement);
+distControls.enableDamping = true;
+distControls.target.set(0,1,0);
+distControls.maxPolarAngle = Math.PI*0.49;
+setupLockToggle('distLockBtn', distControls);
+distScene.add(new THREE.HemisphereLight(0x88aaff, 0x0a0e14, 1.0));
+const distSun = new THREE.DirectionalLight(0xffffff, 1.2); distSun.position.set(4,8,6); distScene.add(distSun);
+const distGrid = new THREE.GridHelper(20,20,0x1c2530,0x11161d); distGrid.position.y=-0.01; distScene.add(distGrid);
+const distGroup = new THREE.Group();
+distScene.add(distGroup);
+
+function resizeDist(){
+  const w = distStageEl.clientWidth, h = distStageEl.clientHeight;
+  if (!w||!h) return;
+  distCamera.aspect = w/h; distCamera.updateProjectionMatrix();
+  distRenderer.setSize(w,h);
+}
+new ResizeObserver(resizeDist).observe(distStageEl);
+resizeDist();
+
+function clearDist(){ while(distGroup.children.length){ const c = distGroup.children[0]; distGroup.remove(c); disposeObject3D(c); } }
+
+function make3DBar(x, z, w, depth, height, color){
+  const geo = new THREE.BoxGeometry(w, Math.max(height,0.02), depth, 2, 6, 2);
+  const mat = new THREE.MeshPhysicalMaterial({ color, emissive:color, emissiveIntensity:0.35, roughness:0.35, metalness:0.3, clearcoat:0.5 });
+  const bar = new THREE.Mesh(geo, mat);
+  bar.position.set(x, height/2, z);
+  return bar;
+}
+
+function diseaseCounts(){ return ACTIVE.map(d => ({ d, count: countWith(d.key) })); }
+
+function renderBarSeries(values, colors, codeLabels, valueLabels, maxVal){
+  clearDist();
+  const n = values.length;
+  const spacing = 1.1;
+  const startX = -((n-1)*spacing)/2;
+  values.forEach((v,i) => {
+    const h = Math.max(0.05, (v/maxVal)*3.4);
+    const bar = make3DBar(startX+i*spacing, 0, 0.6, 0.6, h, colors[i]);
+    distGroup.add(bar);
+    const tag = new Billboard(valueLabels[i], { fontsize:34, color:'#e8edf4', scale:0.007 });
+    tag.sprite.position.set(startX+i*spacing, h+0.32, 0);
+    distGroup.add(tag.sprite);
+    const codeTag = new Billboard(codeLabels[i], { fontsize:30, color:'#7c8a9c', scale:0.006 });
+    codeTag.sprite.position.set(startX+i*spacing, -0.28, 0);
+    distGroup.add(codeTag.sprite);
+  });
+}
+
+function renderGroupedBars(actual, expected, colors, codeLabels, maxVal){
+  clearDist();
+  const n = actual.length;
+  const spacing = 1.3;
+  const startX = -((n-1)*spacing)/2;
+  actual.forEach((v,i) => {
+    const h = Math.max(0.05,(v/maxVal)*3.2);
+    const bar = make3DBar(startX+i*spacing-0.22, 0, 0.34, 0.34, h, colors[i]);
+    distGroup.add(bar);
+    const eh = Math.max(0.05,(expected[i]/maxVal)*3.2);
+    const geo = new THREE.BoxGeometry(0.34, eh, 0.34);
+    const mat = new THREE.MeshPhysicalMaterial({ color:0xe8edf4, transparent:true, opacity:0.32, roughness:0.5 });
+    const ebar = new THREE.Mesh(geo, mat);
+    ebar.position.set(startX+i*spacing+0.22, eh/2, 0);
+    distGroup.add(ebar);
+    const codeTag = new Billboard(codeLabels[i], { fontsize:30, color:'#7c8a9c', scale:0.006 });
+    codeTag.sprite.position.set(startX+i*spacing, -0.28, 0);
+    distGroup.add(codeTag.sprite);
+  });
+  const legend = new Billboard('■ actual   ▢ expected (weight)', { fontsize:28, color:'#e8edf4', scale:0.0055 });
+  legend.sprite.position.set(0, 4.0, 0);
+  distGroup.add(legend.sprite);
+}
+
+function renderPie3D(){
+  clearDist();
+  const data = diseaseCounts();
+  const total = data.reduce((s,x)=>s+x.count,0);
+  if (total===0){
+    const tag = new Billboard('No conditions assigned yet.', { fontsize:32, color:'#7c8a9c' });
+    tag.sprite.position.set(0,1.5,0);
+    distGroup.add(tag.sprite);
+    return;
+  }
+  let startAngle = -Math.PI/2;
+  const radius = 2.2, depth = 0.5;
+  data.forEach(item => {
+    if (item.count===0) return;
+    const angle = (item.count/total)*Math.PI*2;
+    const shape = new THREE.Shape();
+    shape.moveTo(0,0);
+    shape.absarc(0,0,radius,startAngle,startAngle+angle,false);
+    shape.lineTo(0,0);
+    const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled:true, bevelThickness:0.04, bevelSize:0.04, bevelSegments:4, curveSegments:48 });
+    geo.rotateX(-Math.PI/2);
+    const mat = new THREE.MeshPhysicalMaterial({ color:item.d.color, emissive:item.d.color, emissiveIntensity:0.3, roughness:0.3, metalness:0.35, clearcoat:0.6 });
+    const wedge = new THREE.Mesh(geo, mat);
+    wedge.position.y = 0;
+    distGroup.add(wedge);
+    const mid = startAngle + angle/2;
+    const pct = (item.count/total*100).toFixed(1);
+    const tag = new Billboard(`${item.d.code}. ${item.d.label} — ${pct}%`, { fontsize:28, color:'#e8edf4', bg:'rgba(8,11,16,0.55)', scale:0.006 });
+    tag.sprite.position.set(Math.cos(mid)*(radius+0.9), depth+0.3, Math.sin(mid)*(radius+0.9));
+    distGroup.add(tag.sprite);
+    startAngle += angle;
+  });
+  const totalTag = new Billboard(`${total} cases`, { fontsize:34, color:'#e8edf4', scale:0.007 });
+  totalTag.sprite.position.set(0, depth+0.5, 0);
+  distGroup.add(totalTag.sprite);
+}
+
+let currentDistType = 'probability';
+function renderDistChart(){
+  if (!people.length || !ACTIVE.length) { clearDist(); return; }
+  const data = diseaseCounts();
+  const n = people.length;
+  if (currentDistType === 'probability'){
+    const pcts = data.map(x => n? x.count/n*100 : 0);
+    renderBarSeries(pcts.map(p=>p/100), data.map(x=>x.d.color), data.map(x=>`P(${x.d.code})`), pcts.map(p=>p.toFixed(1)+'%'), Math.max(0.1, Math.max(...pcts)/100));
+  } else if (currentDistType === 'bar'){
+    const counts = data.map(x=>x.count);
+    renderBarSeries(counts, data.map(x=>x.d.color), data.map(x=>String(x.d.code)), counts.map(String), Math.max(1,...counts));
+  } else if (currentDistType === 'pie'){
+    renderPie3D();
+  } else if (currentDistType === 'conditions'){
+    const maxConds = Math.max(2, ...people.map(p=>p.bars.length));
+    const counts = new Array(maxConds+1).fill(0);
+    people.forEach(p=>counts[p.bars.length]++);
+    renderBarSeries(counts, counts.map(()=>'#7c5cff'), counts.map((_,i)=>i+' cond.'), counts.map(String), Math.max(1,...counts));
+  } else if (currentDistType === 'weighted'){
+    const totalWeight = ACTIVE.reduce((s,d)=>s+d.weight,0);
+    const actualPcts = data.map(x=>n?x.count/n*100:0);
+    const expectedPcts = ACTIVE.map(d=>d.weight/totalWeight*100);
+    renderGroupedBars(actualPcts, expectedPcts, data.map(x=>x.d.color), data.map(x=>String(x.d.code)), Math.max(10,...actualPcts,...expectedPcts));
+  }
+}
+
+const distSelectBtn = document.getElementById('distSelectBtn');
+const distSelectMenu = document.getElementById('distSelectMenu');
+const distSelectLabel = document.getElementById('distSelectLabel');
+const distSelectWrap = document.getElementById('distSelectWrap');
+function toggleDistMenu(force){
+  const open = force !== undefined ? force : !distSelectMenu.classList.contains('open');
+  distSelectMenu.classList.toggle('open', open);
+}
+distSelectBtn.addEventListener('click', e => { e.stopPropagation(); toggleDistMenu(); });
+distSelectMenu.addEventListener('click', e => {
+  const opt = e.target.closest('.dist-opt');
+  if (!opt) return;
+  currentDistType = opt.dataset.value;
+  distSelectLabel.textContent = opt.textContent;
+  distSelectMenu.querySelectorAll('.dist-opt').forEach(o=>o.classList.toggle('active', o===opt));
+  toggleDistMenu(false);
+  renderDistChart();
+});
+document.addEventListener('click', e => { if (!distSelectWrap.contains(e.target)) toggleDistMenu(false); });
+
+/* ---------- animation loop ---------- */
+let frame = 0;
+function animate(){
+  requestAnimationFrame(animate);
+  frame++;
+  figures.forEach(fig => {
+    if (fig.userData.animT < 1){
+      if (frame > fig.userData.animDelay){
+        fig.userData.animT = Math.min(1, fig.userData.animT + 0.045);
+        const t = fig.userData.animT;
+        const eased = t<1 ? 1-Math.pow(1-t,3) : 1;
+        fig.scale.setScalar(0.001 + eased*fig.userData.targetScale);
+      }
+    }
+    // condition bars are static, no per-frame spin
+    // figure stays static, no auto-rotation
+  });
+  distGroup.children.forEach(c => { if (c.geometry && c.geometry.type==='ExtrudeGeometry'){ /* pie stays static for readability */ } });
+  controls.update();
+  renderer.render(scene, camera);
+  distControls.update();
+  distRenderer.render(distScene, distCamera);
+}
+animate();
+
+generate();
+
+return { onShow(){ resizeStage(); resizeDist(); } };
+}
+
+function initDoorsTab(){
+
+let layers = [];       // [{count, color}]
+let selections = [];   // [doorIndex|null] per layer
+let currentView = 'corridor';
+
+const LAYER_SPACING = 3.6;
+const DOOR_SPACING = 1.5;
+const DOOR_W = 0.9, DOOR_H = 1.9;
+
+/* ---------- scene ---------- */
+const stageEl = document.getElementById('corridorStage');
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x05070a, 0.05);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+camera.position.set(0, 3.2, 6);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+stageEl.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 2;
+controls.maxDistance = 40;
+controls.target.set(0, 1.4, -3);
+setupLockToggle('corridorLockBtn', controls);
+
+scene.add(new THREE.HemisphereLight(0x6688ff, 0x0a0e14, 0.7));
+const torch1 = new THREE.PointLight(0xffb92e, 60, 20); torch1.position.set(-2, 3, 1); scene.add(torch1);
+const torch2 = new THREE.PointLight(0xff3d81, 40, 22); torch2.position.set(2, 3, -10); scene.add(torch2);
+const sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.position.set(3,10,4); scene.add(sun);
+
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(60,60,1,1),
+  new THREE.MeshStandardMaterial({ color:0x0a0e14, roughness:0.9, metalness:0.1 })
+);
+floor.rotation.x = -Math.PI/2;
+scene.add(floor);
+const floorGrid = new THREE.GridHelper(60,60,0x1c2530,0x11161d);
+scene.add(floorGrid);
+
+const corridorGroup = new THREE.Group();
+const treeGroup = new THREE.Group(); treeGroup.visible = false;
+const chartGroup = new THREE.Group();
+scene.add(corridorGroup, treeGroup, chartGroup);
+
+function resizeStage(){
+  const w = stageEl.clientWidth, h = stageEl.clientHeight;
+  if (!w||!h) return;
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+}
+new ResizeObserver(resizeStage).observe(stageEl);
+resizeStage();
+
+/* ---------- readout holo panel ---------- */
+const readoutPanel = new HoloPanel(620, 300, 4.4, 2.1);
+readoutPanel.mesh.position.set(0, 4.6, 1.5);
+scene.add(readoutPanel.mesh);
+
+function fmtPathPct(x){ return (x*100).toFixed(x*100<1 && x>0 ? 3:1)+'%'; }
+
+/* ---------- door arch geometry ---------- */
+function makeDoorArch(w,h,depth){
+  const r = w/2;
+  const shape = new THREE.Shape();
+  shape.moveTo(-w/2, 0);
+  shape.lineTo(-w/2, h-r);
+  shape.absarc(0, h-r, r, Math.PI, 0, true);
+  shape.lineTo(w/2, 0);
+  shape.lineTo(-w/2, 0);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled:true, bevelThickness:0.03, bevelSize:0.03, bevelSegments:6, curveSegments:48 });
+  geo.translate(0,0,-depth/2);
+  return geo;
+}
+
+const doorFrameMat = (color, chosen, locked) => new THREE.MeshPhysicalMaterial({
+  color: chosen ? color : 0x1c2530,
+  emissive: color,
+  emissiveIntensity: chosen ? 0.75 : 0.12,
+  roughness: 0.35, metalness: 0.4, clearcoat:0.5,
+  transparent: true, opacity: locked ? 0.35 : 1
+});
+
+let doorMeshes = []; // {mesh, li, d}
+let treeHits = [];   // {mesh, li, d}
+let walkerFig, walkerTarget;
+
+function activeLayerIndex(){
+  const idx = selections.findIndex(s=>s===null);
+  return idx===-1 ? layers.length : idx;
+}
+
+function doorWorldX(li, d){
+  const count = layers[li].count;
+  return (d - (count-1)/2) * DOOR_SPACING;
+}
+function layerWorldZ(li){ return -li*LAYER_SPACING; }
+
+function buildCorridorVisuals(){
+  while (corridorGroup.children.length){ const c = corridorGroup.children[0]; corridorGroup.remove(c); disposeObject3D(c); }
+  doorMeshes = [];
+  const active = activeLayerIndex();
+
+  layers.forEach((layer, li) => {
+    const z = layerWorldZ(li);
+    const label = new Billboard(`LAYER ${li+1} · 1/${layer.count}`, { fontsize:32, color:'#e8edf4', bg:'rgba(8,11,16,0.5)', scale:0.008 });
+    label.sprite.position.set(0, DOOR_H+0.9, z);
+    corridorGroup.add(label.sprite);
+
+    for (let d=0; d<layer.count; d++){
+      const chosen = selections[li]===d;
+      const locked = li !== active && !(li<active);
+      const x = doorWorldX(li,d);
+      const geo = makeDoorArch(DOOR_W, DOOR_H, 0.28);
+      const mesh = new THREE.Mesh(geo, doorFrameMat(layer.color, chosen, locked && li>active));
+      mesh.position.set(x, 0, z);
+      mesh.userData = { li, d };
+      corridorGroup.add(mesh);
+      doorMeshes.push({ mesh, li, d });
+
+      const pct = (100/layer.count).toFixed(1)+'%';
+      const tag = new Billboard(pct, { fontsize:26, color: chosen ? '#ffd77a' : '#7c8a9c', scale:0.0055 });
+      tag.sprite.position.set(x, DOOR_H+0.25, z);
+      corridorGroup.add(tag.sprite);
+
+      if (li===active){
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(DOOR_W*0.62, 0.02, 16, 64),
+          new THREE.MeshBasicMaterial({ color: layer.color, transparent:true, opacity:0.7 })
+        );
+        ring.position.set(x, 0.02, z+0.16);
+        ring.rotation.x = Math.PI/2;
+        ring.userData.pulse = true;
+        corridorGroup.add(ring);
+      }
+    }
+  });
+
+  if (!walkerFig){
+    walkerFig = makeHumanFigure();
+    walkerFig.scale.setScalar(0.55);
+    setFigureConditions(walkerFig, []);
+    scene.add(walkerFig);
+  }
+  positionWalkerTarget();
+}
+
+function positionWalkerTarget(){
+  const active = activeLayerIndex();
+  let x=0, z=1.4;
+  for (let i=selections.length-1;i>=0;i--){
+    if (selections[i]!==null){
+      x = doorWorldX(i, selections[i]);
+      z = layerWorldZ(i) + 0.5;
+      break;
+    }
+  }
+  walkerTarget = { x, y:0, z };
+  const camZ = layerWorldZ(Math.min(active, layers.length)) ;
+  controls.target.set(0, 1.4, camZ - 1.2);
+}
+
+function chooseDoor(li, d){
+  const active = activeLayerIndex();
+  if (li > active) return;
+  selections[li] = d;
+  for (let i=li+1;i<selections.length;i++) selections[i] = null;
+  buildCorridorVisuals();
+  buildTreeVisuals();
+  updateReadout();
+}
+
+/* ---------- tree view ---------- */
+const TREE_X_SPACING = 2.6, TREE_Y_SPACING = 0.85;
+
+function buildTreeVisuals(){
+  while (treeGroup.children.length){ const c = treeGroup.children[0]; treeGroup.remove(c); disposeObject3D(c); }
+  treeHits = [];
+  if (!layers.length) return;
+  const active = activeLayerIndex();
+
+  const rootPos = new THREE.Vector3(-TREE_X_SPACING, 1.4, 0);
+  const rootSphere = new THREE.Mesh(new THREE.SphereGeometry(0.12,32,32), new THREE.MeshStandardMaterial({ color:0xe8edf4, emissive:0x333333 }));
+  rootSphere.position.copy(rootPos);
+  treeGroup.add(rootSphere);
+  const rootLabel = new Billboard('start', { fontsize:26, color:'#7c8a9c', scale:0.005 });
+  rootLabel.sprite.position.set(rootPos.x, rootPos.y+0.3, rootPos.z);
+  treeGroup.add(rootLabel.sprite);
+
+  let parentPos = rootPos;
+  for (let li=0; li<layers.length; li++){
+    if (li>0 && selections[li-1]===null) break;
+    const layer = layers[li];
+    const colX = -TREE_X_SPACING + (li+1)*TREE_X_SPACING;
+    const count = layer.count;
+    const colLabel = new Billboard(`L${li+1} · 1/${count}`, { fontsize:26, color:'#7c8a9c', scale:0.005 });
+    colLabel.sprite.position.set(colX, 3.2, 0);
+    treeGroup.add(colLabel.sprite);
+
+    const isActiveLayer = li===active;
+    let chosenPos = null;
+
+    for (let d=0; d<count; d++){
+      const ny = 1.4 + (d - (count-1)/2) * TREE_Y_SPACING;
+      const nodePos = new THREE.Vector3(colX, ny, 0);
+      const isChosen = selections[li]===d;
+
+      const curve = new THREE.CatmullRomCurve3([parentPos, nodePos]);
+      const tubeGeo = new THREE.TubeGeometry(curve, 12, isChosen?0.035:0.012, 12, false);
+      const tubeMat = new THREE.MeshStandardMaterial({
+        color: isChosen ? layer.color : 0x2a3542,
+        emissive: isChosen ? layer.color : 0x000000,
+        emissiveIntensity: isChosen ? 0.8 : 0,
+        transparent: !isChosen, opacity: isChosen?1:0.5
+      });
+      treeGroup.add(new THREE.Mesh(tubeGeo, tubeMat));
+
+      const r = isChosen ? 0.14 : (isActiveLayer ? 0.1 : 0.07);
+      const sphMat = new THREE.MeshStandardMaterial({
+        color: isChosen ? layer.color : (isActiveLayer ? 0x9fb0c2 : 0x2c3644),
+        emissive: isChosen ? layer.color : 0x000000, emissiveIntensity: isChosen?0.7:0
+      });
+      const sph = new THREE.Mesh(new THREE.SphereGeometry(r,32,32), sphMat);
+      sph.position.copy(nodePos);
+      sph.userData = { li, d };
+      treeGroup.add(sph);
+      if (isActiveLayer) treeHits.push({ mesh: sph, li, d });
+
+      if (isChosen || isActiveLayer){
+        const tag = new Billboard(String(d+1), { fontsize:24, color: isChosen?'#e8edf4':'#7c8a9c', scale:0.0045 });
+        tag.sprite.position.set(colX+0.28, ny, 0);
+        treeGroup.add(tag.sprite);
+      }
+      if (isChosen) chosenPos = nodePos;
+    }
+    if (chosenPos) parentPos = chosenPos; else break;
+  }
+}
+
+/* ---------- decay chart (3D bars in-scene) ---------- */
+function buildDecayChart(stepProbs){
+  while (chartGroup.children.length){ const c = chartGroup.children[0]; chartGroup.remove(c); disposeObject3D(c); }
+  const n = stepProbs.length;
+  const spacing = 0.85;
+  const startX = -((n-1)*spacing)/2;
+  const baseZ = 3.4;
+  stepProbs.forEach((p,i) => {
+    const h = Math.max(0.04, p*2.6);
+    const color = i===0 ? 0x7c8a9c : new THREE.Color(PALETTE[(i-1)%PALETTE.length]).getHex();
+    const geo = new THREE.BoxGeometry(0.42, h, 0.42, 1,4,1);
+    const mat = new THREE.MeshPhysicalMaterial({ color, emissive:color, emissiveIntensity:0.4, roughness:0.35, metalness:0.3 });
+    const bar = new THREE.Mesh(geo, mat);
+    bar.position.set(startX+i*spacing, h/2, baseZ);
+    chartGroup.add(bar);
+    const tag = new Billboard(fmtPathPct(p), { fontsize:24, color:'#e8edf4', scale:0.0045 });
+    tag.sprite.position.set(startX+i*spacing, h+0.22, baseZ);
+    chartGroup.add(tag.sprite);
+    const stepTag = new Billboard(i===0?'start':'L'+i, { fontsize:22, color:'#7c8a9c', scale:0.004 });
+    stepTag.sprite.position.set(startX+i*spacing, -0.18, baseZ);
+    chartGroup.add(stepTag.sprite);
+  });
+}
+
+/* ---------- readout ---------- */
+function updateReadout(){
+  const active = activeLayerIndex();
+  const chosen = selections.slice(0, active);
+  let cumProb = 1;
+  const chainParts = [];
+  const stepProbs = [1];
+  chosen.forEach((d,i) => {
+    const p = 1/layers[i].count;
+    cumProb *= p;
+    stepProbs.push(cumProb);
+    chainParts.push(`1/${layers[i].count}`);
+  });
+
+  readoutPanel.redraw((ctx, W, H) => {
+    ctx.textAlign='left';
+    ctx.fillStyle = '#ffb92e';
+    ctx.font = "700 54px 'Bebas Neue', monospace";
+    ctx.fillText(fmtPathPct(cumProb), 26, 68);
+    ctx.fillStyle = '#7c8a9c';
+    ctx.font = '13px monospace';
+    ctx.fillText('P(this path) = ' + (chainParts.length ? chainParts.join(' × ') : '1'), 26, 92);
+
+    // meter
+    const meterY = 116, meterW = W-52;
+    roundRect(ctx, 26, meterY, meterW, 10, 5);
+    ctx.fillStyle = '#0a0e14'; ctx.fill();
+    ctx.strokeStyle = '#1c2530'; ctx.stroke();
+    const fillW = Math.max(4, cumProb*meterW);
+    const grad = ctx.createLinearGradient(26,0,26+fillW,0);
+    grad.addColorStop(0,'#ffb92e'); grad.addColorStop(1,'#ff3d81');
+    roundRect(ctx, 26, meterY, fillW, 10, 5);
+    ctx.fillStyle = grad; ctx.fill();
+
+    ctx.fillStyle = '#e8edf4'; ctx.font='13px monospace';
+    let chainText;
+    if (!chosen.length) chainText = 'No doors chosen yet.';
+    else chainText = chosen.map((d,i)=>`L${i+1}: door ${d+1}/${layers[i].count} (${(100/layers[i].count).toFixed(1)}%)`).join('   →   ');
+    ctx.font='12px monospace'; ctx.fillStyle='#cfd8e3';
+    let y = 152;
+    const words = chainText.split(' ');
+    let line='';
+    for (const w of words){
+      const test = line?line+' '+w:w;
+      if (ctx.measureText(test).width > W-52 && line){ ctx.fillText(line,26,y); line=w; y+=17; if(y>H-40) return; }
+      else line=test;
+    }
+    ctx.fillText(line,26,y); y+=24;
+
+    const totalPaths = layers.reduce((s,l)=>s*l.count,1);
+    ctx.fillStyle = '#7c8a9c'; ctx.font='11px monospace';
+    const note = active>=layers.length
+      ? `Your exact path is 1 of ${totalPaths} equally likely paths.`
+      : `Total distinct paths through all ${layers.length} layers: ${totalPaths}.`;
+    ctx.fillText(note, 26, Math.min(y, H-16));
+  });
+
+  buildDecayChart(stepProbs);
+}
+
+/* ---------- controls wiring ---------- */
+const numLayersInput = document.getElementById('numLayers');
+const layerInputsEl = document.getElementById('layerInputs');
+const doorCountsPanel = document.getElementById('doorCountsPanel');
+
+function setupLayerInputs(){
+  const n = Math.max(1, Math.min(6, parseInt(numLayersInput.value)||3));
+  numLayersInput.value = n;
+  const defaults = [1,3,4,2,5,3];
+  layerInputsEl.innerHTML = '';
+  for (let i=0;i<n;i++){
+    const color = PALETTE[i%PALETTE.length];
+    const wrap = document.createElement('div');
+    wrap.className = 'layer-input-group';
+    wrap.innerHTML = `<label><span class="dot" style="background:${color}"></span>Layer ${i+1} doors</label>
+      <input type="number" min="1" max="10" value="${defaults[i]||2}" data-idx="${i}">`;
+    layerInputsEl.appendChild(wrap);
+  }
+  doorCountsPanel.classList.add('show');
+}
+
+function buildCorridor(){
+  const inputs = Array.from(layerInputsEl.querySelectorAll('input'));
+  layers = inputs.map((inp,i) => {
+    const count = Math.max(1, Math.min(10, parseInt(inp.value)||1));
+    inp.value = count;
+    return { count, color: PALETTE[i%PALETTE.length] };
+  });
+  selections = layers.map(()=>null);
+  buildCorridorVisuals();
+  buildTreeVisuals();
+  updateReadout();
+  camera.position.set(0, 3.2, 6);
+  controls.target.set(0, 1.4, -3);
+}
+
+document.getElementById('layersBtn').addEventListener('click', setupLayerInputs);
+document.getElementById('corridorBtn').addEventListener('click', buildCorridor);
+
+let walkTimer = null;
+document.getElementById('randomWalkBtn').addEventListener('click', () => {
+  clearTimeout(walkTimer);
+  if (!layers.length) return;
+  selections = layers.map(()=>null);
+  buildCorridorVisuals(); buildTreeVisuals(); updateReadout();
+  let i = 0;
+  function step(){
+    if (i>=layers.length) return;
+    const d = Math.floor(Math.random()*layers[i].count);
+    selections[i] = d;
+    buildCorridorVisuals(); buildTreeVisuals(); updateReadout();
+    i++;
+    walkTimer = setTimeout(step, 600);
+  }
+  walkTimer = setTimeout(step, 300);
+});
+document.getElementById('resetWalkBtn').addEventListener('click', () => {
+  clearTimeout(walkTimer);
+  if (!layers.length) return;
+  selections = layers.map(()=>null);
+  buildCorridorVisuals(); buildTreeVisuals(); updateReadout();
+});
+
+const viewToggle = document.getElementById('viewToggle');
+viewToggle.addEventListener('click', e => {
+  const btn = e.target.closest('.vt-btn');
+  if (!btn) return;
+  currentView = btn.dataset.view;
+  viewToggle.querySelectorAll('.vt-btn').forEach(b=>b.classList.toggle('active', b===btn));
+  corridorGroup.visible = currentView==='corridor';
+  chartGroup.visible = currentView==='corridor';
+  if (walkerFig) walkerFig.visible = currentView==='corridor';
+  treeGroup.visible = currentView==='tree';
+  if (currentView==='tree'){
+    camera.position.set(2, 4, 8);
+    controls.target.set(2,1.4,0);
+  } else {
+    camera.position.set(0, 3.2, 6);
+    controls.target.set(0, 1.4, layerWorldZ(Math.min(activeLayerIndex(), layers.length))-1.2);
+  }
+});
+
+/* ---------- raycasting for doors + tree nodes ---------- */
+let raycaster = new THREE.Raycaster();
+let pointer = new THREE.Vector2();
+renderer.domElement.addEventListener('click', e => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX-rect.left)/rect.width)*2-1;
+  pointer.y = -((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(pointer, camera);
+
+  if (currentView==='corridor'){
+    const active = activeLayerIndex();
+    const activeMeshes = doorMeshes.filter(dm=>dm.li===active).map(dm=>dm.mesh);
+    const hits = raycaster.intersectObjects(activeMeshes, false);
+    if (hits.length){
+      const { li, d } = hits[0].object.userData;
+      chooseDoor(li,d);
+    }
+  } else {
+    const hits = raycaster.intersectObjects(treeHits.map(t=>t.mesh), false);
+    if (hits.length){
+      const found = treeHits.find(t=>t.mesh===hits[0].object);
+      if (found) chooseDoor(found.li, found.d);
+    }
+  }
+});
+
+/* ---------- animation loop ---------- */
+function animate(){
+  requestAnimationFrame(animate);
+  const time = performance.now()*0.001;
+  corridorGroup.children.forEach(c => { if (c.userData.pulse){ c.scale.setScalar(1+Math.sin(time*3)*0.08); } });
+  if (walkerFig && walkerTarget){
+    walkerFig.position.x += (walkerTarget.x - walkerFig.position.x)*0.08;
+    walkerFig.position.z += (walkerTarget.z - walkerFig.position.z)*0.08;
+    // condition bars are static, no per-frame spin
+  }
+  torch1.intensity = 55 + Math.sin(time*4)*8;
+  torch2.intensity = 38 + Math.sin(time*3.3+1)*7;
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+setupLayerInputs();
+buildCorridor();
+
+return { onShow(){ resizeStage(); } };
+}
+
+
+document.getElementById('loadingScreen').style.display = 'none';
+
+const pop = initPopulationTab();
+const doors = initDoorsTab();
+
+document.getElementById('toolTabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tool-tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tool-tab-btn').forEach(b => b.classList.toggle('active', b===btn));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id===btn.dataset.tab));
+  if (btn.dataset.tab === 'tab-population') pop.onShow();
+  if (btn.dataset.tab === 'tab-doors') doors.onShow();
+});
+</script>
+
+</body>
+</html>

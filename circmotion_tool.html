@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Circular Motion — Radial &amp; Tangential Acceleration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#121a21;
+    --panel:#1b2530;
+    --panel-edge:#2c3a47;
+    --text:#e7edf2;
+    --muted:#8fa3b0;
+    --amber:#ffb454;
+    --cyan:#4fd1c5;
+    --rose:#fb7185;
+    --green:#34d399;
+    --lav:#c4b5fd;
+    --grid-line:rgba(255,255,255,0.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(79,209,197,0.07), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    padding:18px;
+  }
+  .app{max-width:1080px;margin:0 auto;}
+  header{margin-bottom:16px;}
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:1.5rem;
+    margin:0 0 4px 0;
+    letter-spacing:0.2px;
+  }
+  h1 span{color:var(--amber);}
+  .sub{color:var(--muted);font-size:0.92rem;margin:0;line-height:1.45;max-width:640px;}
+
+  .layout{
+    display:grid;
+    grid-template-columns:minmax(0,560px) minmax(280px,1fr);
+    gap:18px;
+    align-items:start;
+  }
+  @media (max-width:840px){
+    .layout{grid-template-columns:1fr;}
+  }
+
+  .stage{
+    background:var(--panel);
+    border:1px solid var(--panel-edge);
+    border-radius:16px;
+    padding:14px;
+  }
+  .canvas-wrap{
+    position:relative;
+    width:100%;
+    aspect-ratio:1/1;
+    border-radius:12px;
+    overflow:hidden;
+    background:#0e151b;
+  }
+  canvas{display:block;width:100%;height:100%;}
+
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 16px;
+    margin-top:12px;
+    font-size:0.8rem;
+    color:var(--muted);
+  }
+  .legend .item{display:flex;align-items:center;gap:6px;}
+  .swatch{width:14px;height:3px;border-radius:2px;display:inline-block;}
+  .swatch.dashed{
+    background:repeating-linear-gradient(90deg, var(--lav) 0 5px, transparent 5px 9px);
+    height:3px;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-edge);
+    border-radius:16px;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .block-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--muted);
+    margin:0 0 8px 0;
+  }
+
+  .mode-toggle{
+    display:flex;
+    background:#10161c;
+    border:1px solid var(--panel-edge);
+    border-radius:10px;
+    padding:3px;
+    gap:3px;
+  }
+  .mode-toggle button{
+    flex:1;
+    border:none;
+    background:transparent;
+    color:var(--muted);
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:0.85rem;
+    padding:9px 6px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  .mode-toggle button.active{
+    background:var(--amber);
+    color:#1a1304;
+  }
+
+  .row{margin-bottom:12px;}
+  .row:last-child{margin-bottom:0;}
+  .row label{
+    display:flex;
+    justify-content:space-between;
+    font-size:0.84rem;
+    color:var(--text);
+    margin-bottom:6px;
+  }
+  .row label .val{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--amber);
+    font-weight:600;
+  }
+  input[type=range]{
+    width:100%;
+    -webkit-appearance:none;
+    appearance:none;
+    height:6px;
+    border-radius:4px;
+    background:#0e151b;
+    outline:none;
+    margin:0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:22px;height:22px;
+    border-radius:50%;
+    background:var(--amber);
+    border:3px solid #1a1304;
+    cursor:pointer;
+    margin-top:0px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:22px;height:22px;border-radius:50%;
+    background:var(--amber);border:3px solid #1a1304;cursor:pointer;
+  }
+
+  .non-uniform-only{display:none;}
+  .non-uniform-only.show{display:block;}
+
+  .btn-row{display:flex;gap:8px;}
+  .btn{
+    flex:1;
+    min-height:46px;
+    border-radius:10px;
+    border:1px solid var(--panel-edge);
+    background:#10161c;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:0.9rem;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    cursor:pointer;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn.primary{background:var(--amber);color:#1a1304;border-color:var(--amber);}
+
+  .readout{
+    background:#0e151b;
+    border:1px solid var(--panel-edge);
+    border-radius:12px;
+    padding:12px 14px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .readout .line{
+    display:flex;
+    justify-content:space-between;
+    font-size:0.86rem;
+    padding:4px 0;
+    border-bottom:1px dashed rgba(255,255,255,0.06);
+  }
+  .readout .line:last-child{border-bottom:none;}
+  .readout .k{color:var(--muted);}
+  .readout .v{color:var(--amber);font-weight:600;}
+
+  .formulas{
+    font-size:0.86rem;
+    line-height:2.1;
+    color:var(--text);
+  }
+  .formulas .eq{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    padding:6px 0;
+  }
+  .formulas .tag{
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--muted);
+    width:100%;
+  }
+  .frac{
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
+    vertical-align:middle;
+    font-size:0.92em;
+    margin:0 2px;
+  }
+  .frac .num{border-bottom:1.5px solid currentColor;padding:0 4px;line-height:1.3;}
+  .frac .den{padding:0 4px;line-height:1.3;}
+  .formulas .result{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--amber);
+    font-weight:600;
+  }
+  .formulas .sqrt{position:relative;padding:0 4px;}
+  .formulas .sqrt-rad{border-top:1.5px solid currentColor;padding:0 2px;}
+
+  .caption{
+    font-size:0.82rem;
+    color:var(--muted);
+    line-height:1.5;
+    border-top:1px solid var(--panel-edge);
+    padding-top:12px;
+  }
+  .caption b{color:var(--text);}
+
+  .vfunc-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:6px;
+    margin-top:2px;
+  }
+  .vfunc-btn{
+    background:#10161c;
+    border:1px solid var(--panel-edge);
+    border-radius:8px;
+    color:var(--muted);
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.72rem;
+    line-height:1.35;
+    padding:7px 4px;
+    cursor:pointer;
+    text-align:center;
+    transition:background .13s,color .13s,border-color .13s;
+  }
+  .vfunc-btn span{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-size:0.63rem;
+    color:var(--muted);
+    margin-top:2px;
+    opacity:0.7;
+  }
+  .vfunc-btn.active{
+    background:rgba(196,181,253,0.15);
+    border-color:var(--lav);
+    color:var(--lav);
+  }
+  .vfunc-btn.active span{color:var(--lav);opacity:0.8;}
+  .vfunc-btn:hover:not(.active){background:#1a2535;color:var(--text);}
+
+  /* ── floating live readout ── */
+  #floatReadout{
+    position:absolute;
+    top:10px; left:10px;
+    z-index:20;
+    background:rgba(0,0,0,0);
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+    border:1px solid rgba(255,255,255,0.13);
+    border-radius:11px;
+    min-width:200px;
+    max-width:255px;
+    box-shadow:0 4px 24px rgba(0,0,0,0.55);
+    user-select:none;
+    touch-action:none;
+    font-family:'JetBrains Mono',monospace;
+    overflow:hidden;
+    transition:box-shadow .15s;
+  }
+  #floatReadout:hover{box-shadow:0 6px 30px rgba(0,0,0,0.7);}
+  #floatReadout.dragging{box-shadow:0 10px 40px rgba(0,0,0,0.8);opacity:0.93;}
+
+  #floatHeader{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 10px 5px 10px;
+    cursor:grab;
+    border-bottom:1px solid rgba(255,255,255,0.07);
+    background:rgba(0,0,0,0);
+  }
+  #floatHeader:active{cursor:grabbing;}
+  #floatHeaderTitle{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--muted);
+  }
+  #floatCollapseBtn{
+    background:none;border:none;
+    color:var(--muted);
+    font-size:0.85rem;
+    cursor:pointer;
+    padding:0 2px;
+    line-height:1;
+    transition:color .12s;
+  }
+  #floatCollapseBtn:hover{color:var(--amber);}
+
+  #floatBody{
+    padding:7px 10px 8px;
+    display:flex;
+    flex-direction:column;
+    gap:1px;
+    overflow:hidden;
+    transition:max-height .22s ease, padding .22s ease, opacity .18s ease;
+    max-height:420px;
+    opacity:1;
+  }
+  #floatBody.collapsed{
+    max-height:0;
+    padding-top:0;
+    padding-bottom:0;
+    opacity:0;
+  }
+  .fline{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:6px;
+    font-size:0.78rem;
+    padding:2.5px 0;
+    border-bottom:1px dashed rgba(255,255,255,0.05);
+  }
+  .fline:last-child{border-bottom:none;}
+  .fline .fk{color:rgba(143,163,176,0.85);white-space:nowrap;}
+  .fline .fv{color:var(--amber);font-weight:600;text-align:right;}
+  .fline-sep{border-bottom:1px solid rgba(255,255,255,0.08) !important; margin-top:3px;}
+  .fline-vec .fk{color:rgba(196,181,253,0.7);font-size:0.72rem;padding-left:8px;}
+  .fline-vec .fv{color:var(--lav);font-size:0.75rem;}
+  .fline-vec{padding:1.5px 0 !important;}
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+<div class="app">
+  <header>
+    <h1>Circular Motion: Radial &amp; Tangential <span>Acceleration</span></h1>
+    <p class="sub">Watch how a particle's acceleration splits into a radial part that bends the path and, when the speed itself changes, a tangential part that stretches or shrinks the velocity vector.</p>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <div class="canvas-wrap">
+        <canvas id="cv"></canvas>
+        <!-- floating live readout -->
+        <div id="floatReadout">
+          <div id="floatHeader">
+            <span id="floatHeaderTitle">Live Readout</span>
+            <button id="floatCollapseBtn" title="Collapse / Expand">▾</button>
+          </div>
+          <div id="floatBody">
+            <div class="fline"><span class="fk">t (s)</span><span class="fv" id="outT">0.00</span></div>
+            <div class="fline"><span class="fk">θ (deg)</span><span class="fv" id="outTheta">0.0</span></div>
+            <div class="fline"><span class="fk">ω (rad/s)</span><span class="fv" id="outOmega">0.00</span></div>
+            <div class="fline"><span class="fk">T = 2π/ω (s)</span><span class="fv" id="outPeriod">0.00</span></div>
+            <div class="fline"><span class="fk">α (rad/s²)</span><span class="fv" id="outAlpha">0.00</span></div>
+            <div class="fline fline-sep"><span class="fk">v  |v|</span><span class="fv" id="outV">0.00</span></div>
+            <div class="fline fline-vec"><span class="fk">v̂ₓ</span><span class="fv" id="outVx">0.000</span></div>
+            <div class="fline fline-vec"><span class="fk">v̂ᵧ</span><span class="fv" id="outVy">0.000</span></div>
+            <div class="fline fline-sep"><span class="fk">a_r = v²/r</span><span class="fv" id="outAr">0.00</span></div>
+            <div class="fline fline-vec"><span class="fk">a_r,x</span><span class="fv" id="outArx">0.000</span></div>
+            <div class="fline fline-vec"><span class="fk">a_r,y</span><span class="fv" id="outAry">0.000</span></div>
+            <div class="fline fline-sep"><span class="fk">a_t = dv/dt</span><span class="fv" id="outAt">0.00</span></div>
+            <div class="fline fline-vec"><span class="fk">a_t,x</span><span class="fv" id="outAtx">0.000</span></div>
+            <div class="fline fline-vec"><span class="fk">a_t,y</span><span class="fv" id="outAty">0.000</span></div>
+            <div class="fline fline-sep"><span class="fk">a = √(a_r²+a_t²)</span><span class="fv" id="outA">0.00</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="item"><span class="swatch" style="background:var(--cyan)"></span> velocity, v</span>
+        <span class="item"><span class="swatch" style="background:var(--rose)"></span> radial accel, a_r = v²/r</span>
+        <span class="item"><span class="swatch" style="background:var(--green)"></span> tangential accel, a_t = dv/dt</span>
+        <span class="item"><span class="swatch dashed"></span> net accel, a</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div>
+        <p class="block-title">Mode</p>
+        <div class="mode-toggle">
+          <button id="modeUniform" class="active">Uniform</button>
+          <button id="modeNonUniform">Non-uniform</button>
+        </div>
+      </div>
+
+      <div>
+        <p class="block-title">Parameters</p>
+        <div class="row">
+          <label>Radius, r <span class="val" id="rVal">110</span></label>
+          <input type="range" id="rSlider" min="60" max="170" value="110" step="1">
+        </div>
+        <div class="row">
+          <label>Base speed, v₀ <span class="val" id="v0Val">45</span></label>
+          <input type="range" id="v0Slider" min="25" max="70" value="45" step="1">
+        </div>
+        <div class="row non-uniform-only" id="ampRow" style="display:none!important">
+          <label>Speed amplitude, A <span class="val" id="ampVal">12</span></label>
+          <input type="range" id="ampSlider" min="0" max="25" value="12" step="1">
+        </div>
+        <div class="row non-uniform-only" id="freqRow">
+          <label>Growth rate, k <span class="val" id="freqVal">0.50</span></label>
+          <input type="range" id="freqSlider" min="0.2" max="1.2" value="0.5" step="0.05">
+        </div>
+        <div class="row non-uniform-only" id="vFuncRow">
+          <label style="margin-bottom:7px;">v(t) profile</label>
+          <div class="vfunc-grid" id="vFuncGrid">
+            <button class="vfunc-btn active" data-fn="cosh">cosh(kt)<br><span>eᵏᵗ+e⁻ᵏᵗ)/2</span></button>
+            <button class="vfunc-btn" data-fn="exp">eᵏᵗ<br><span>pure growth</span></button>
+            <button class="vfunc-btn" data-fn="sin">sin(kt)<br><span>oscillating</span></button>
+            <button class="vfunc-btn" data-fn="linear">kt<br><span>linear ramp</span></button>
+            <button class="vfunc-btn" data-fn="quad">k²t²<br><span>parabolic</span></button>
+            <button class="vfunc-btn" data-fn="decay">e⁻ᵏᵗ<br><span>decay</span></button>
+          </div>
+        </div>
+        <div class="row">
+          <label>Playback speed <span class="val" id="playVal">1.0×</span></label>
+          <input type="range" id="playSlider" min="0.5" max="3" value="1" step="0.1">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="playPauseBtn">⏸ Pause</button>
+        <button class="btn" id="slowMoBtn">🐢 Slow-Mo</button>
+      </div>
+      <div class="btn-row" style="margin-top:6px;">
+        <button class="btn" id="resumeBtn" style="display:none">▶ Resume</button>
+        <button class="btn" id="replayBtn">↺ Replay</button>
+      </div>
+
+      <div>
+        <p class="block-title">Formulas</p>
+        <div class="formulas">
+          <div class="eq">
+            <span class="tag">Radial (always present)</span>
+            a_r =
+            <span class="frac"><span class="num">v²</span><span class="den">r</span></span>
+            = <span class="result" id="fAr">0.00</span>
+          </div>
+          <div class="eq" id="vFuncDisplay">
+            <span class="tag">Tangential (zero only if uniform)</span>
+            v = v₀·<span class="frac"><span class="num">eᵏᵗ + e⁻ᵏᵗ</span><span class="den">2</span></span>
+            &nbsp;→&nbsp; a_t = <span class="frac"><span class="num">dv</span><span class="den">dt</span></span>
+            = <span class="result" id="fAt">0.00</span>
+          </div>
+          <div class="eq">
+            <span class="tag">Total acceleration</span>
+            a = <span class="sqrt">√<span class="sqrt-rad">a_r² + a_t²</span></span>
+            = <span class="result" id="fA">0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="caption">
+        In <b>uniform</b> circular motion only a_r acts, so a = a_r and the particle keeps constant speed.
+        In <b>non-uniform</b> circular motion a_t also acts, so the total acceleration a is always
+        ≥ a_r — the speed is visibly stretching or shrinking as the particle goes around.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const VS = 560;            // virtual drawing space (square)
+  const cxv = VS/2, cyv = VS/2;
+
+  const COLORS = {
+    grid:'rgba(255,255,255,0.05)',
+    orbit:'rgba(255,255,255,0.18)',
+    particleSlow:[79,209,197],   // cyan
+    particleFast:[251,113,133],  // rose
+    v:'#4fd1c5',
+    ar:'#fb7185',
+    at:'#34d399',
+    atot:'#c4b5fd',
+    center:'#ffb454'
+  };
+
+  // ---- state ----
+  let mode = 'uniform';          // 'uniform' | 'nonuniform'
+  let r = 110, v0 = 45, amp = 12, freq = 0.5, playback = 1.0;
+  let t = 0, theta = 0;
+  let playing = true;
+  let lastTs = null;
+  let vFunc = 'cosh';   // active v(t) profile
+  let slowMo = false;   // slow-motion toggle
+
+  // Motion trail — stored as {x, y, v} stamps; we record a new dot every
+  // TRAIL_INTERVAL real seconds so dots bunch up when slow, spread when fast.
+  const TRAIL_MAX = 80;
+  const TRAIL_INTERVAL = 0.04;   // seconds between stamps (real sim time)
+  let trailDots = [];
+  let trailTimer = 0;
+
+  const VELOCITY_SCALE = 1.4;
+  const ACCEL_SCALE = 4.5;
+
+  // Maps true vector length -> pixel length with a smooth, ALWAYS-monotonic
+  // curve: bigger underlying value => longer arrow, every time, no flat
+  // "stuck at the floor/ceiling" zones like a hard clamp would produce.
+  // minLen: pixel length as true length -> 0 (usually 0, or a small floor for visibility)
+  // maxLen: pixel length as true length -> ∞ (asymptote; arrow never overshoots the center)
+  function normalizeArrowVec(dx, dy, minLen, maxLen){
+    const len = Math.hypot(dx, dy);
+    if(len < 0.05) return {dx:0, dy:0};
+    const L0 = maxLen; // characteristic scale: at len === L0, arrow is ~halfway to maxLen
+    const newLen = minLen + (maxLen - minLen) * (len / (len + L0));
+    const f = newLen/len;
+    return {dx: dx*f, dy: dy*f};
+  }
+
+  // ---- DOM refs ----
+  const rSlider = document.getElementById('rSlider');
+  const v0Slider = document.getElementById('v0Slider');
+  const ampSlider = document.getElementById('ampSlider');
+  const freqSlider = document.getElementById('freqSlider');
+  const playSlider = document.getElementById('playSlider');
+  const rVal = document.getElementById('rVal');
+  const v0Val = document.getElementById('v0Val');
+  const ampVal = document.getElementById('ampVal');
+  const freqVal = document.getElementById('freqVal');
+  const playVal = document.getElementById('playVal');
+  const modeUniformBtn = document.getElementById('modeUniform');
+  const modeNonUniformBtn = document.getElementById('modeNonUniform');
+  const ampRow = document.getElementById('ampRow');
+  const freqRow = document.getElementById('freqRow');
+  const vFuncRow = document.getElementById('vFuncRow');
+  const vFuncGrid = document.getElementById('vFuncGrid');
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const slowMoBtn = document.getElementById('slowMoBtn');
+  const resumeBtn = document.getElementById('resumeBtn');
+  const replayBtn = document.getElementById('replayBtn');
+
+  const outT = document.getElementById('outT');
+  const outTheta = document.getElementById('outTheta');
+  const outOmega = document.getElementById('outOmega');
+  const outPeriod = document.getElementById('outPeriod');
+  const outAlpha = document.getElementById('outAlpha');
+  const outV = document.getElementById('outV');
+  const outVx = document.getElementById('outVx');
+  const outVy = document.getElementById('outVy');
+  const outAr = document.getElementById('outAr');
+  const outArx = document.getElementById('outArx');
+  const outAry = document.getElementById('outAry');
+  const outAt = document.getElementById('outAt');
+  const outAtx = document.getElementById('outAtx');
+  const outAty = document.getElementById('outAty');
+  const outA = document.getElementById('outA');
+  const fAr = document.getElementById('fAr');
+  const fAt = document.getElementById('fAt');
+  const fA = document.getElementById('fA');
+
+  function setMode(m){
+    mode = m;
+    modeUniformBtn.classList.toggle('active', m==='uniform');
+    modeNonUniformBtn.classList.toggle('active', m==='nonuniform');
+    ampRow.classList.toggle('show', m==='nonuniform');
+    freqRow.classList.toggle('show', m==='nonuniform');
+    vFuncRow.classList.toggle('show', m==='nonuniform');
+    trailDots = []; trailTimer = 0;
+  }
+  modeUniformBtn.addEventListener('click', ()=>setMode('uniform'));
+  modeNonUniformBtn.addEventListener('click', ()=>setMode('nonuniform'));
+  setMode('uniform');
+
+  rSlider.addEventListener('input', ()=>{ r = +rSlider.value; rVal.textContent = r; });
+  v0Slider.addEventListener('input', ()=>{ v0 = +v0Slider.value; v0Val.textContent = v0; });
+  ampSlider.addEventListener('input', ()=>{ amp = +ampSlider.value; ampVal.textContent = amp; });
+  freqSlider.addEventListener('input', ()=>{ freq = +freqSlider.value; freqVal.textContent = freq.toFixed(2); });
+  playSlider.addEventListener('input', ()=>{ playback = +playSlider.value; playVal.textContent = playback.toFixed(1)+'×'; });
+
+  // vFunc buttons
+  vFuncGrid.querySelectorAll('.vfunc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      vFuncGrid.querySelectorAll('.vfunc-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      vFunc = btn.dataset.fn;
+      trailDots = []; trailTimer = 0;
+    });
+  });
+
+  // Play / Pause
+  playPauseBtn.addEventListener('click', ()=>{
+    playing = !playing;
+    playPauseBtn.innerHTML = playing ? '⏸ Pause' : '▶ Play';
+    resumeBtn.style.display = playing ? 'none' : 'flex';
+    lastTs = null;
+  });
+
+  // Slow-Mo toggle (0.2×)
+  slowMoBtn.addEventListener('click', ()=>{
+    slowMo = !slowMo;
+    slowMoBtn.classList.toggle('active', slowMo);
+    slowMoBtn.innerHTML = slowMo ? '🐇 Normal' : '🐢 Slow-Mo';
+  });
+
+  // Resume (shown when paused)
+  resumeBtn.addEventListener('click', ()=>{
+    playing = true;
+    playPauseBtn.innerHTML = '⏸ Pause';
+    resumeBtn.style.display = 'none';
+    lastTs = null;
+  });
+
+  // Replay — restart from t=0, keep playing
+  replayBtn.addEventListener('click', ()=>{
+    t = 0; theta = 0; trailDots = []; trailTimer = 0;
+    playing = true;
+    playPauseBtn.innerHTML = '⏸ Pause';
+    resumeBtn.style.display = 'none';
+    lastTs = null;
+  });
+
+  // ---- canvas resize (responsive, crisp on retina) ----
+  function resizeCanvas(){
+    const rect = cv.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const px = Math.max(rect.width, 1) * dpr;
+    cv.width = px;
+    cv.height = px;
+    const scale = px / VS;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  }
+  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('orientationchange', resizeCanvas);
+
+  function lerpColor(a,b,f){
+    return `rgb(${Math.round(a[0]+(b[0]-a[0])*f)},${Math.round(a[1]+(b[1]-a[1])*f)},${Math.round(a[2]+(b[2]-a[2])*f)})`;
+  }
+
+  function drawArrow(x0,y0,dx,dy,color,width){
+    const len = Math.hypot(dx,dy);
+    if(len < 1) return;
+    const x1 = x0+dx, y1 = y0+dy;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x0,y0);
+    ctx.lineTo(x1,y1);
+    ctx.stroke();
+    const headLen = Math.min(15, Math.max(9, len*0.45));
+    const ang = Math.atan2(dy,dx);
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x1 - headLen*Math.cos(ang-0.4), y1 - headLen*Math.sin(ang-0.4));
+    ctx.lineTo(x1 - headLen*Math.cos(ang+0.4), y1 - headLen*Math.sin(ang+0.4));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawDashedArrow(x0,y0,dx,dy,color,width){
+    const len = Math.hypot(dx,dy);
+    if(len < 1) return;
+    ctx.save();
+    ctx.setLineDash([6,5]);
+    drawArrowNoDash:{
+      const x1 = x0+dx, y1 = y0+dy;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(x0,y0);
+      ctx.lineTo(x1,y1);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const headLen = Math.min(15, Math.max(9, len*0.45));
+      const ang = Math.atan2(dy,dx);
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x1 - headLen*Math.cos(ang-0.4), y1 - headLen*Math.sin(ang-0.4));
+      ctx.lineTo(x1 - headLen*Math.cos(ang+0.4), y1 - headLen*Math.sin(ang+0.4));
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function draw(state){
+    ctx.clearRect(0,0,VS,VS);
+
+    // background grid
+    ctx.strokeStyle = COLORS.grid;
+    ctx.lineWidth = 1;
+    for(let x=0; x<=VS; x+=28){
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,VS); ctx.stroke();
+    }
+    for(let y=0; y<=VS; y+=28){
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(VS,y); ctx.stroke();
+    }
+
+    // orbit path
+    ctx.save();
+    ctx.strokeStyle = COLORS.orbit;
+    ctx.setLineDash([4,6]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cxv, cyv, state.r, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+
+    // motion trail — dots fade from dim to bright; bunching = slow, spreading = fast
+    if(state.trail && state.trail.length > 1){
+      const vmin = state.vMin, vmax = state.vMax;
+      const n = state.trail.length;
+      for(let i = 0; i < n; i++){
+        const dot = state.trail[i];
+        const ageFrac = i / (n - 1);              // 0 = oldest, 1 = newest
+        const alpha = 0.10 + 0.55 * ageFrac;
+        const dotR = 2.5 + 2.5 * ageFrac;
+        const f = vmax > vmin ? (dot.v - vmin)/(vmax - vmin) : 0;
+        const col = lerpColor(COLORS.particleSlow, COLORS.particleFast, Math.max(0,Math.min(1,f)));
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, dotR, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // center
+    ctx.fillStyle = COLORS.center;
+    ctx.beginPath();
+    ctx.arc(cxv, cyv, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,180,84,0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cxv,cyv);
+    ctx.lineTo(state.px, state.py);
+    ctx.stroke();
+    ctx.restore();
+
+    // vectors, drawn from particle position (scaled, then clamped to stay readable)
+    const vN = normalizeArrowVec(state.vVecX*VELOCITY_SCALE, state.vVecY*VELOCITY_SCALE, 20, state.r*0.95);
+    drawArrow(state.px, state.py, vN.dx, vN.dy, COLORS.v, 4);
+
+    const arN = normalizeArrowVec(state.arVecX*ACCEL_SCALE, state.arVecY*ACCEL_SCALE, 18, state.r*0.85);
+    drawArrow(state.px, state.py, arN.dx, arN.dy, COLORS.ar, 4);
+
+    if(Math.abs(state.at) > 0.05){
+      // NO minimum length — let the arrow truly scale with a_t magnitude
+      const atRaw = normalizeArrowVec(state.atVecX*ACCEL_SCALE, state.atVecY*ACCEL_SCALE, 0, state.r*0.85);
+      drawArrow(state.px, state.py, atRaw.dx, atRaw.dy, COLORS.at, 4);
+
+      const totN = normalizeArrowVec(state.aTotVecX*ACCEL_SCALE, state.aTotVecY*ACCEL_SCALE, 18, state.r*0.95);
+      drawDashedArrow(state.px, state.py, totN.dx, totN.dy, COLORS.atot, 3.5);
+    }
+
+    // particle, colored by speed
+    const vmin = state.vMin, vmax = state.vMax;
+    const f = vmax>vmin ? (state.v - vmin)/(vmax - vmin) : 0;
+    const col = lerpColor(COLORS.particleSlow, COLORS.particleFast, Math.max(0,Math.min(1,f)));
+    ctx.save();
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(state.px, state.py, 9, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function step(dt){
+    let v, at;
+    if(mode === 'uniform'){
+      v = v0;
+      at = 0;
+    } else {
+      // Periodic phase reset to prevent runaway
+      const period = 2 * Math.PI / freq;
+      const phase = t % period;
+      const kt = freq * phase;
+
+      if(vFunc === 'cosh'){
+        // v = v0 * cosh(kt)  =  v0*(e^kt + e^-kt)/2
+        const ekt = Math.exp(kt), emkt = Math.exp(-kt);
+        v = v0 * (ekt + emkt) / 2;
+        at = v0 * freq * (ekt - emkt) / 2;
+      } else if(vFunc === 'exp'){
+        // v = v0 * e^(kt)
+        const ekt = Math.exp(kt);
+        v = v0 * ekt;
+        at = v0 * freq * ekt;
+      } else if(vFunc === 'sin'){
+        // v = v0 * (1 + sin(kt))  — always positive
+        v = v0 * (1 + Math.sin(kt));
+        at = v0 * freq * Math.cos(kt);
+      } else if(vFunc === 'linear'){
+        // v = v0 * (1 + kt)
+        v = v0 * (1 + kt);
+        at = v0 * freq;
+      } else if(vFunc === 'quad'){
+        // v = v0 * (1 + (kt)²)
+        v = v0 * (1 + kt * kt);
+        at = v0 * 2 * freq * kt;
+      } else if(vFunc === 'decay'){
+        // v = v0 * e^(-kt)
+        v = v0 * Math.exp(-kt);
+        at = -v0 * freq * Math.exp(-kt);
+      }
+
+      v = Math.max(v, 3);
+      v = Math.min(v, v0 * 10); // safety cap
+    }
+    const omega = v / r;
+    theta += omega*dt;
+    t += dt;
+
+    const ar = (v*v)/r;
+    const alpha = at / r;
+    const cosT = Math.cos(theta), sinT = Math.sin(theta);
+
+    const px = cxv + r*cosT;
+    const py = cyv - r*sinT;
+
+    // velocity (canvas-space tangent), magnitude v
+    const vVecX = -v*sinT, vVecY = -v*cosT;
+    // radial (centripetal) unit dir: (-cosT, sinT)
+    const arVecX = ar*(-cosT), arVecY = ar*(sinT);
+    // tangential, same line as velocity direction, signed by at
+    const atVecX = at*(-sinT), atVecY = at*(-cosT);
+    const aTotVecX = arVecX + atVecX, aTotVecY = arVecY + atVecY;
+    const aTot = Math.hypot(ar, at);
+
+    const vMin = mode==='uniform' ? v0 : v0;
+    const vMax = mode==='uniform' ? v0 : v0 * 8;
+
+    return {
+      r, v, at, ar, aTot, theta, px, py, omega, alpha,
+      vVecX, vVecY, arVecX, arVecY, atVecX, atVecY, aTotVecX, aTotVecY,
+      vMin, vMax, trail: trailDots
+    };
+  }
+
+  function updateReadout(state){
+    outT.textContent = t.toFixed(2);
+    outTheta.textContent = ((theta*180/Math.PI)%360).toFixed(1);
+    outOmega.textContent = state.omega.toFixed(3);
+    const period = Math.abs(state.omega) > 1e-6 ? (2*Math.PI/Math.abs(state.omega)) : Infinity;
+    outPeriod.textContent = isFinite(period) ? period.toFixed(2) : '—';
+    outAlpha.textContent = state.alpha.toFixed(3);
+
+    // velocity vector in physics coords: tangent dir is (-sinθ, cosθ) in math y-up frame
+    // canvas y is flipped so physics-y = -canvas-y
+    const sinT = Math.sin(state.theta), cosT = Math.cos(state.theta);
+    const vx =  -state.v * sinT;   // x-component
+    const vy =   state.v * cosT;   // y-component (math frame, y up)
+
+    outV.textContent  = state.v.toFixed(2);
+    outVx.textContent = (vx >= 0 ? '+' : '') + vx.toFixed(2);
+    outVy.textContent = (vy >= 0 ? '+' : '') + vy.toFixed(2);
+
+    // radial accel vector: points toward centre, direction (-cosθ, -sinθ) in math frame
+    const arx = -state.ar * cosT;
+    const ary = -state.ar * sinT;
+    outAr.textContent  = state.ar.toFixed(2);
+    outArx.textContent = (arx >= 0 ? '+' : '') + arx.toFixed(2);
+    outAry.textContent = (ary >= 0 ? '+' : '') + ary.toFixed(2);
+
+    // tangential accel vector: along tangent direction, signed by at
+    const atx = -state.at * sinT;
+    const aty =  state.at * cosT;
+    outAt.textContent  = state.at.toFixed(2);
+    outAtx.textContent = (atx >= 0 ? '+' : '') + atx.toFixed(2);
+    outAty.textContent = (aty >= 0 ? '+' : '') + aty.toFixed(2);
+
+    outA.textContent = state.aTot.toFixed(2);
+    fAr.textContent = state.ar.toFixed(2);
+    fAt.textContent = state.at.toFixed(2);
+    fA.textContent = state.aTot.toFixed(2);
+  }
+
+  function loop(ts){
+    if(lastTs === null) lastTs = ts;
+    let dt = (ts - lastTs)/1000;
+    lastTs = ts;
+    dt = Math.min(dt, 0.05);
+
+    if(playing){
+      let speed = playback;
+      if(slowMo) speed *= 0.15;
+      dt *= speed;
+    } else { dt = 0; }
+    const state = step(dt);
+
+    // accumulate trail dots at fixed sim-time intervals
+    if(playing && dt > 0){
+      trailTimer += dt;
+      if(trailTimer >= TRAIL_INTERVAL){
+        trailTimer = 0;
+        trailDots.push({x: state.px, y: state.py, v: state.v});
+        if(trailDots.length > TRAIL_MAX) trailDots.shift();
+      }
+    }
+
+    draw(state);
+    updateReadout(state);
+    requestAnimationFrame(loop);
+  }
+
+  const vFuncDisplay = document.getElementById('vFuncDisplay');
+  const VFUNC_LABELS = {
+    cosh:    'v = v₀·(eᵏᵗ + e⁻ᵏᵗ)/2',
+    exp:     'v = v₀·eᵏᵗ',
+    sin:     'v = v₀·(1 + sin kt)',
+    linear:  'v = v₀·(1 + kt)',
+    quad:    'v = v₀·(1 + k²t²)',
+    decay:   'v = v₀·e⁻ᵏᵗ',
+  };
+  function updateVFuncLabel(){
+    vFuncDisplay.innerHTML =
+      `<span class="tag">v(t) profile — ${VFUNC_LABELS[vFunc]}</span>` +
+      `a_t = <span class="frac"><span class="num">dv</span><span class="den">dt</span></span>` +
+      ` = <span class="result" id="fAt">${fAt ? fAt.textContent : '0.00'}</span>`;
+  }
+  vFuncGrid.querySelectorAll('.vfunc-btn').forEach(btn => {
+    btn.addEventListener('click', updateVFuncLabel);
+  });
+
+  resizeCanvas();
+  requestAnimationFrame(loop);
+
+  // ── floating readout: drag + collapse ──
+  (function(){
+    const win    = document.getElementById('floatReadout');
+    const header = document.getElementById('floatHeader');
+    const body   = document.getElementById('floatBody');
+    const btn    = document.getElementById('floatCollapseBtn');
+    let collapsed = false;
+
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      collapsed = !collapsed;
+      body.classList.toggle('collapsed', collapsed);
+      btn.textContent = collapsed ? '▸' : '▾';
+    });
+
+    // drag (mouse + touch)
+    let dragging = false, ox = 0, oy = 0;
+
+    function startDrag(cx, cy){
+      dragging = true;
+      const rect = win.getBoundingClientRect();
+      ox = cx - rect.left;
+      oy = cy - rect.top;
+      win.classList.add('dragging');
+      win.style.transition = 'none';
+    }
+    function moveDrag(cx, cy){
+      if(!dragging) return;
+      const parent = win.offsetParent || win.parentElement;
+      const pr = parent.getBoundingClientRect();
+      let nx = cx - pr.left - ox;
+      let ny = cy - pr.top  - oy;
+      nx = Math.max(0, Math.min(pr.width  - win.offsetWidth,  nx));
+      ny = Math.max(0, Math.min(pr.height - win.offsetHeight, ny));
+      win.style.left = nx + 'px';
+      win.style.top  = ny + 'px';
+    }
+    function endDrag(){ dragging = false; win.classList.remove('dragging'); win.style.transition = ''; }
+
+    header.addEventListener('mousedown',  e => { e.preventDefault(); startDrag(e.clientX, e.clientY); });
+    window.addEventListener('mousemove',  e => moveDrag(e.clientX, e.clientY));
+    window.addEventListener('mouseup',    endDrag);
+
+    header.addEventListener('touchstart', e => { const t=e.touches[0]; startDrag(t.clientX, t.clientY); }, {passive:true});
+    window.addEventListener('touchmove',  e => { const t=e.touches[0]; moveDrag(t.clientX, t.clientY); }, {passive:true});
+    window.addEventListener('touchend',   endDrag);
+  })();
+})();
+</script>
+</body>
+</html>

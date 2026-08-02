@@ -1,0 +1,2728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>A = πr² — Circle Area Calculus</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root{
+  --bg:#080b14;
+  --bg2:#0d1220;
+  --panel:#0f1524;
+  --line:#1e2740;
+  --ink:#e8ecf7;
+  --dim:#7a86a8;
+  --accent:#5eead4;   /* teal - area */
+  --accent2:#f0abfc;  /* magenta - dA/dr */
+  --accent3:#fbbf24;  /* amber - d2A/dr2 */
+  --pos:#4ade80;
+  --neg:#f87171;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:
+    radial-gradient(ellipse at 20% -10%, #131b30 0%, transparent 55%),
+    radial-gradient(ellipse at 100% 100%, #0d1a24 0%, transparent 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:'Space Grotesk',sans-serif;
+  min-height:100vh;
+  padding:24px 16px 60px;
+}
+.wrap{max-width:1080px;margin:0 auto;}
+header{margin-bottom:22px;}
+.eyebrow{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  letter-spacing:.18em;
+  color:var(--accent);
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+h1{
+  font-size:clamp(24px,4vw,34px);
+  margin:0 0 6px;
+  font-weight:700;
+  letter-spacing:-.01em;
+}
+h1 .fn{color:var(--accent);}
+.sub{color:var(--dim);font-size:14px;max-width:560px;line-height:1.5;}
+
+.tabs{
+  display:flex;
+  gap:8px;
+  margin-top:16px;
+}
+.tab-btn{
+  font-family:'JetBrains Mono',monospace;
+  font-size:12px;
+  letter-spacing:.02em;
+  background:var(--panel);
+  color:var(--dim);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:8px 16px;
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.tab-btn:hover{color:var(--ink);border-color:#2c3856;}
+#graphAxisToggle .tab-btn{opacity:0.5;}
+#graphAxisToggle .tab-btn.active{opacity:1;}
+#graphAxisToggle .tab-btn:hover{opacity:0.8;}
+.tab-btn.active{
+  color:#080b14;
+  background:var(--accent);
+  border-color:var(--accent);
+  font-weight:500;
+}
+.tab-btn.active.sphere-active{
+  background:var(--accent2);
+  border-color:var(--accent2);
+}
+.tab-btn.active.rect-active{
+  background:#fbbf24;
+  border-color:#fbbf24;
+}
+.tab-btn.active.cuboid-active{
+  background:#60a5fa;
+  border-color:#60a5fa;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-top:20px;
+}
+@media (max-width:820px){ .grid{grid-template-columns:1fr;} }
+
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:18px;
+  position:relative;
+}
+.panel h2{
+  font-size:12px;
+  font-family:'JetBrains Mono',monospace;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--dim);
+  margin:0 0 12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+canvas{display:block;width:100%;border-radius:8px;background:#ffffff;}
+
+.slider-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:16px;
+}
+.slider-wrap{
+  position:relative;
+  flex:1;
+  display:flex;
+  align-items:center;
+}
+.slider-bubble{
+  position:absolute;
+  top:-30px;
+  transform:translateX(-50%) translateY(4px) scale(.85);
+  background:var(--ink);
+  color:#0b0f1a;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  font-weight:600;
+  padding:3px 7px;
+  border-radius:6px;
+  white-space:nowrap;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .15s ease, transform .15s cubic-bezier(.4,0,.2,1);
+  z-index:5;
+}
+.slider-bubble::after{
+  content:'';
+  position:absolute;
+  top:100%;
+  left:50%;
+  transform:translateX(-50%);
+  border:4px solid transparent;
+  border-top-color:var(--ink);
+}
+.slider-bubble.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0) scale(1);
+}
+input[type=range]{
+  flex:1;
+  -webkit-appearance:none;
+  height:4px;
+  border-radius:4px;
+  outline:none;
+}
+input[type=range]:disabled{
+  opacity:0.4;
+  cursor:not-allowed;
+}
+input[type=range]:disabled::-webkit-slider-thumb{
+  cursor:not-allowed;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:18px;height:18px;
+  border-radius:50%;
+  background:var(--ink);
+  border:3px solid var(--accent);
+  cursor:pointer;
+  box-shadow:0 0 0 4px rgba(94,234,212,.15);
+  transition:transform .15s cubic-bezier(.4,0,.2,1), box-shadow .15s ease;
+  position:relative;
+  z-index:2;
+}
+input[type=range]:active::-webkit-slider-thumb{
+  transform:scale(1.15);
+  box-shadow:0 0 0 7px rgba(94,234,212,.22);
+}
+input[type=range]::-moz-range-thumb{
+  width:18px;height:18px;
+  border-radius:50%;
+  background:var(--ink);
+  border:3px solid var(--accent);
+  cursor:pointer;
+  box-shadow:0 0 0 4px rgba(94,234,212,.15);
+  transition:transform .15s cubic-bezier(.4,0,.2,1), box-shadow .15s ease;
+}
+input[type=range]:active::-moz-range-thumb{
+  transform:scale(1.15);
+  box-shadow:0 0 0 7px rgba(94,234,212,.22);
+}
+.rval{
+  font-family:'JetBrains Mono',monospace;
+  font-size:15px;
+  color:var(--accent);
+  min-width:70px;
+  text-align:right;
+}
+
+.state-badge{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  padding:3px 9px;
+  border-radius:20px;
+  border:1px solid var(--line);
+  transition:color .35s cubic-bezier(.4,0,.2,1), border-color .35s cubic-bezier(.4,0,.2,1), background .35s cubic-bezier(.4,0,.2,1);
+}
+.state-badge.pos{color:var(--pos);border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.08);}
+.state-badge.neg{color:var(--neg);border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.08);}
+.state-badge.zero{color:var(--accent3);border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.08);}
+
+.math-stack{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:14px;
+}
+.math-card{
+  background:var(--bg2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:12px 14px;
+  transition:border-color .3s ease;
+}
+.math-card .label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10.5px;
+  color:var(--dim);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-bottom:6px;
+}
+.math-card .val{
+  font-family:'JetBrains Mono',monospace;
+  font-size:20px;
+  font-weight:500;
+  transition:color .3s ease;
+}
+.math-card .expr{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--dim);
+  margin-top:4px;
+}
+.c-area .val{color:var(--accent);}
+.c-dadr .val{color:var(--accent2);}
+.c-d2adr2 .val{color:var(--accent3);}
+
+.verdict{
+  grid-column:1 / -1;
+  background:var(--bg2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:14px 16px;
+  font-size:13.5px;
+  line-height:1.55;
+  color:var(--ink);
+}
+.verdict b{color:var(--accent3);}
+
+footer{
+  margin-top:20px;
+  color:var(--dim);
+  font-size:12px;
+  font-family:'JetBrains Mono',monospace;
+  line-height:1.6;
+}
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Calculus · Optimization</div>
+    <h1 id="pageTitle">Circle Area — <span class="fn">A = πr²</span></h1>
+    <p class="sub" id="pageSub">Drag r. Watch A(r) trace live. dA/dr and d²A/dr² tell you where area is momentarily flat, and whether that flat point is a peak or a floor.</p>
+    <div class="tabs">
+      <button class="tab-btn active" id="tabCircle">○ Circle Area · A = πr²</button>
+      <button class="tab-btn" id="tabRectangle">▭ Rectangle Area · A = x·y</button>
+      <button class="tab-btn" id="tabSphere">● Sphere Volume · V = 4⁄3πr³</button>
+      <button class="tab-btn" id="tabCuboid">▧ Cuboid Volume · V = x·y·z</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- CIRCLE -->
+    <div class="panel">
+      <h2><span id="shapeLabel">Circle</span> <span id="circleState" class="state-badge pos">growing</span></h2>
+      <canvas id="circleCanvas" width="720" height="540" style="touch-action:none;width:100%;height:auto;"></canvas>
+      <div id="sphere3D" style="display:none;position:relative;width:100%;aspect-ratio:480/360;border-radius:8px;background:#ffffff;cursor:grab;overflow:hidden;touch-action:none;">
+        <div id="sphere3DOverlay" style="position:absolute;inset:0;pointer-events:none;font-family:'JetBrains Mono',monospace;">
+          <div id="sphereRLabel" style="position:absolute;top:10px;left:12px;font-size:12px;color:#f0abfc;">r = 3.00</div>
+          <div id="sphereDeltaLabel" style="position:absolute;bottom:10px;left:12px;font-size:11px;color:#fbbf24;">ΔV = — (fixed)</div>
+          <div style="position:absolute;top:10px;right:12px;font-size:10px;color:#7a86a8;">drag to orbit</div>
+        </div>
+      </div>
+      <div id="cuboid3D" style="display:none;position:relative;width:100%;aspect-ratio:480/360;border-radius:8px;background:#ffffff;cursor:grab;overflow:hidden;touch-action:none;">
+        <div id="cuboid3DOverlay" style="position:absolute;inset:0;pointer-events:none;font-family:'JetBrains Mono',monospace;">
+          <div id="cuboidDimsLabel" style="position:absolute;top:10px;left:12px;font-size:12px;color:#60a5fa;">x=6.00, y=4.00, z=2.00</div>
+          <div id="cuboidDeltaLabel" style="position:absolute;bottom:10px;left:12px;font-size:11px;color:#fbbf24;">ΔV = — (fixed)</div>
+          <div style="position:absolute;top:10px;right:12px;font-size:10px;color:#7a86a8;">drag to orbit</div>
+        </div>
+      </div>
+      <div class="slider-row" id="rSliderRow">
+        <input type="range" id="rSlider" min="0" max="10" step="0.01" value="3">
+        <span class="rval"><span id="rVal">3.00</span> units</span>
+      </div>
+      <div class="slider-row" id="xSliderRow" style="display:none;">
+        <input type="range" id="xSlider" min="0.1" max="10" step="0.01" value="6">
+        <span class="rval">x (width) = <span id="xVal">6.00</span></span>
+      </div>
+      <div class="slider-row" id="ySliderRow" style="display:none;">
+        <input type="range" id="ySlider" min="0.1" max="10" step="0.01" value="3">
+        <span class="rval">y (height) = <span id="yVal">3.00</span></span>
+      </div>
+      <div class="slider-row" id="xZoomSliderRow" style="display:none;">
+        <input type="range" id="xZoomSlider" min="1" max="15" step="0.1" value="1">
+        <span class="rval">camera → Δx strip = <span id="xZoomVal">1.0</span>× <span style="color:var(--dim);">(moves camera, shape unchanged)</span></span>
+      </div>
+      <div class="slider-row" id="yZoomSliderRow" style="display:none;">
+        <input type="range" id="yZoomSlider" min="1" max="15" step="0.1" value="1">
+        <span class="rval">camera → Δy strip = <span id="yZoomVal">1.0</span>× <span style="color:var(--dim);">(moves camera, shape unchanged)</span></span>
+      </div>
+      <div class="slider-row" id="cubeXSliderRow" style="display:none;">
+        <input type="range" id="cubeXSlider" min="0.1" max="10" step="0.01" value="6">
+        <span class="rval">x = <span id="cubeXVal">6.00</span></span>
+      </div>
+      <div class="slider-row" id="cubeYSliderRow" style="display:none;">
+        <input type="range" id="cubeYSlider" min="0.1" max="10" step="0.01" value="4">
+        <span class="rval">y = <span id="cubeYVal">4.00</span></span>
+      </div>
+      <div class="slider-row" id="cubeZSliderRow" style="display:none;">
+        <input type="range" id="cubeZSlider" min="0.1" max="10" step="0.01" value="2">
+        <span class="rval">z = <span id="cubeZVal">2.00</span></span>
+      </div>
+      <div class="slider-row" id="cubeDxZoomRow" style="display:none;">
+        <input type="range" id="cubeDxZoomSlider" min="1" max="15" step="0.1" value="1">
+        <span class="rval">camera → Δx face = <span id="cubeDxZoomVal">1.0</span>× <span style="color:var(--dim);">(moves camera, x unchanged)</span></span>
+      </div>
+      <div class="slider-row" id="cubeDyZoomRow" style="display:none;">
+        <input type="range" id="cubeDyZoomSlider" min="1" max="15" step="0.1" value="1">
+        <span class="rval">camera → Δy face = <span id="cubeDyZoomVal">1.0</span>× <span style="color:var(--dim);">(moves camera, y unchanged)</span></span>
+      </div>
+      <div class="slider-row" id="cubeDzZoomRow" style="display:none;">
+        <input type="range" id="cubeDzZoomSlider" min="1" max="15" step="0.1" value="1">
+        <span class="rval">camera → Δz face = <span id="cubeDzZoomVal">1.0</span>× <span style="color:var(--dim);">(moves camera, z unchanged)</span></span>
+      </div>
+      <div class="slider-row" id="linkToggleRow" style="display:none;">
+        <span id="linkLabel" style="font-size:11px;color:var(--dim);">Link:</span>
+        <select id="linkOp" style="background:#111;color:#eee;border:1px solid #444;border-radius:6px;padding:5px 8px;font-size:11px;font-family:inherit;">
+          <option value="off">Off</option>
+          <option value="linear" selected>a·x + b·y = C</option>
+          <option value="prod">a·x × b·y = C</option>
+          <option value="sub">a·x − b·y = C</option>
+          <option value="div">a·x ÷ b·y = C</option>
+        </select>
+      </div>
+      <div class="slider-row" id="linkCoeffRow" style="display:none;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--dim);">a =</span>
+        <input type="range" id="linkASlider" min="-5" max="5" step="0.1" value="1" style="width:90px;">
+        <span class="rval" id="linkAVal" style="min-width:34px;display:inline-block;">1.0</span>
+        <span style="font-size:11px;color:var(--dim);margin-left:6px;">b =</span>
+        <input type="range" id="linkBSlider" min="-5" max="5" step="0.1" value="-1" style="width:90px;">
+        <span class="rval" id="linkBVal" style="min-width:34px;display:inline-block;">-1.0</span>
+      </div>
+      <div class="slider-row" id="linkConstRow" style="display:none;">
+        <span style="font-size:11px;color:var(--dim);">C =</span>
+        <input type="range" id="linkConstSlider" min="-20" max="20" step="0.1" value="0" style="width:120px;">
+        <span class="rval" id="linkConstVal" style="min-width:34px;display:inline-block;">0.0</span>
+      </div>
+      <div class="slider-row">
+        <input type="range" id="zoomSlider" min="1" max="15" step="0.1" value="1">
+        <span class="rval">camera zoom = <span id="zoomVal">1.0</span>×</span>
+      </div>
+      <div class="slider-row">
+        <button id="gridToggle" class="tab-btn active" style="padding:5px 12px;font-size:11px;">Grid: on</button>
+        <button id="axesToggle" class="tab-btn active" style="padding:5px 12px;font-size:11px;">Axes: on</button>
+        <button id="baseToggle" class="tab-btn active" style="padding:5px 12px;font-size:11px;">A: on</button>
+        <button id="deltaToggle" class="tab-btn active" style="padding:5px 12px;font-size:11px;">ΔA: on</button>
+        <button id="ringsToggle" class="tab-btn active" style="padding:5px 12px;font-size:11px;">Rings: on</button>
+        <button id="camModeToggle" class="tab-btn" style="padding:5px 12px;font-size:11px;display:none;">Cam: Orbit</button>
+      </div>
+    </div>
+
+    <!-- GRAPH -->
+    <div class="panel" style="grid-column:1/-1;">
+      <h2><span id="graphLabel">A(r) trace</span> <span id="graphState" class="state-badge pos">dA/dr &gt; 0</span></h2>
+      <div style="display:flex;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+        <button id="critProjToggle" class="tab-btn active" style="padding:5px 12px;font-size:11px;">Crit. projections: on</button>
+        <button id="domainToggle" class="tab-btn" style="padding:5px 12px;font-size:11px;">Domain: 0 → ∞</button>
+        <button id="viewResetToggle" class="tab-btn" style="padding:5px 12px;font-size:11px;">Reset zoom</button>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin:-4px 0 10px;">
+        Pinch or scroll to zoom (shift+scroll = vertical only) · drag to pan · double-tap to reset
+      </div>
+      <div id="graphAxisToggle" style="display:none;margin-bottom:10px;gap:8px;">
+        <button id="graphVsX" class="tab-btn active" style="padding:5px 12px;font-size:11px;">A vs x (y fixed)</button>
+        <button id="graphVsY" class="tab-btn" style="padding:5px 12px;font-size:11px;">A vs y (x fixed)</button>
+        <button id="graphVsZ" class="tab-btn" style="padding:5px 12px;font-size:11px;display:none;">V vs z (x,y fixed)</button>
+      </div>
+      <canvas id="graphCanvas" width="1200" height="600" style="width:100%;height:auto;max-height:600px;"></canvas>
+    </div>
+
+    <!-- MATH -->
+    <div class="panel" style="grid-column:1/-1;">
+      <h2>Derivatives at this instant</h2>
+      <div class="math-stack">
+        <div class="math-card c-area">
+          <div class="label" id="valLabel">Area A</div>
+          <div class="val" id="areaVal">28.27</div>
+          <div class="expr" id="valExpr">π · r²</div>
+        </div>
+        <div class="math-card c-dadr">
+          <div class="label" id="rateLabel">dA/dr — exact rate of growth</div>
+          <div class="val" id="dadrVal">18.85</div>
+          <div class="expr" id="rateExpr">2π · r (limit as Δr → 0)</div>
+        </div>
+        <div class="math-card" style="border-color:rgba(251,191,36,.35);">
+          <div class="label" id="deltaLabel">ΔA — actual strip volume (Δr fixed)</div>
+          <div class="val" id="secantVal" style="color:#fbbf24;">—</div>
+          <div class="expr" id="secantExpr">A(r+Δr) − A(r)  vs.  dA/dr · Δr</div>
+        </div>
+        <div class="math-card c-d2adr2">
+          <div class="label" id="rate2Label">d²A/dr² — curvature</div>
+          <div class="val" id="d2adr2Val">6.28</div>
+          <div class="expr" id="rate2Expr">2π (constant)</div>
+        </div>
+        <div class="math-card">
+          <div class="label" id="critLabel">Critical point (dA/dr = 0)</div>
+          <div class="val" id="criticalVal" style="color:var(--ink);">r = 0</div>
+          <div class="expr" id="critExpr">only solution to 2πr = 0</div>
+        </div>
+        <div class="verdict" id="verdict"></div>
+      </div>
+    </div>
+    <!-- RECTANGLE PROOF -->
+    <div class="panel" id="rectPanel" style="grid-column:1/-1;">
+      <h2>Why A = πr²? <span style="color:var(--dim);font-weight:400;">— cut into sectors, unfold into a rectangle</span></h2>
+      <canvas id="rectCanvas" width="480" height="260" style="width:100%;height:auto;background:#ffffff;border-radius:8px;"></canvas>
+      <div class="slider-row">
+        <input type="range" id="sectorSlider" min="3" max="40" step="1" value="12">
+        <span class="rval"><span id="sectorVal">12</span> sector-pairs</span>
+      </div>
+      <div class="slider-row">
+        <input type="range" id="unfoldSlider" min="0" max="1" step="0.01" value="0">
+        <span class="rval">unfold = <span id="unfoldVal">0.00</span></span>
+        <button id="unfoldPlay" style="margin-left:10px;padding:4px 12px;border-radius:6px;border:1px solid #2c3856;background:#161f36;color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;">▶ animate</button>
+      </div>
+      <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);">
+        As the number of sectors grows, the zigzag straightens into a rectangle: base = half the circumference = <span style="color:#5eead4;">πr</span>, height = <span style="color:#f0abfc;">r</span>.
+        Area = base × height = πr · r = <span style="color:var(--ink);">πr²</span> — exactly the circle's area, since cutting and rearranging never changes total area.
+      </div>
+    </div>
+  </div>
+
+  <footer id="pageFooter">
+    dA/dr = 2πr &nbsp;→&nbsp; zero only at r = 0. d²A/dr² = 2π &gt; 0 everywhere &nbsp;→&nbsp; concave up.<br>
+    So r = 0 is a strict <b style="color:var(--ink)">minimum</b> (A = 0), and A(r) has no interior maximum — it grows without bound as r increases.
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const rSlider = document.getElementById('rSlider');
+const zoomSlider = document.getElementById('zoomSlider');
+const rVal = document.getElementById('rVal');
+const zoomVal = document.getElementById('zoomVal');
+const areaVal = document.getElementById('areaVal');
+const dadrVal = document.getElementById('dadrVal');
+const secantVal = document.getElementById('secantVal');
+const d2adr2Val = document.getElementById('d2adr2Val');
+const criticalVal = document.getElementById('criticalVal');
+const DR_TRUE = 0.4; // the actual, fixed Δr used for every ΔA/ΔV calculation — never changes
+const SHELL_VISUAL_MULT = 4; // 3D-only: how much thicker the ΔV shell/slabs are DRAWN vs the true Δr, purely so they're visible against R_MAX=10 — never affects any computed/displayed ΔV number
+const verdict = document.getElementById('verdict');
+const circleState = document.getElementById('circleState');
+const graphState = document.getElementById('graphState');
+const tabCircle = document.getElementById('tabCircle');
+const tabRectangle = document.getElementById('tabRectangle');
+const tabSphere = document.getElementById('tabSphere');
+const tabCuboid = document.getElementById('tabCuboid');
+const pageTitle = document.getElementById('pageTitle');
+const pageSub = document.getElementById('pageSub');
+const pageFooter = document.getElementById('pageFooter');
+const shapeLabel = document.getElementById('shapeLabel');
+const graphLabel = document.getElementById('graphLabel');
+const valLabel = document.getElementById('valLabel');
+const valExpr = document.getElementById('valExpr');
+const rateLabel = document.getElementById('rateLabel');
+const rateExpr = document.getElementById('rateExpr');
+const deltaLabel = document.getElementById('deltaLabel');
+const rate2Label = document.getElementById('rate2Label');
+const rate2Expr = document.getElementById('rate2Expr');
+const critLabel = document.getElementById('critLabel');
+const critExpr = document.getElementById('critExpr');
+
+const MODES = {
+  circle: {
+    shapeName: 'Circle', quantitySym: 'A', quantityName: 'Area',
+    pageTitle: 'Circle Area — <span class="fn">A = πr²</span>',
+    pageSub: 'Drag r. Watch A(r) trace live. dA/dr and d²A/dr² tell you where area is momentarily flat, and whether that flat point is a peak or a floor.',
+    valLabel: 'Area A', valExpr: 'π · r²',
+    rateLabel: 'dA/dr — exact rate of growth', rateExprTpl: '2π · r (limit as Δr → 0)',
+    deltaLabelTpl: 'ΔA — actual strip area (Δr fixed)',
+    secantExprTpl: (dr,lin)=>`Δr = ${dr.toFixed(2)} fixed · linear approx dA/dr·Δr = ${lin.toFixed(3)}`,
+    rate2Label: 'd²A/dr² — curvature', rate2ExprTpl: '2π (constant)',
+    critLabel: 'Critical point (dA/dr = 0)', critExpr: 'only solution to 2πr = 0',
+    val: r => Math.PI * r * r,
+    rate: r => 2 * Math.PI * r,
+    rate2: r => 2 * Math.PI,
+    rate2IsConst: true,
+    footer: `dA/dr = 2πr &nbsp;→&nbsp; zero only at r = 0. d²A/dr² = 2π &gt; 0 everywhere &nbsp;→&nbsp; concave up.<br>
+    So r = 0 is a strict <b style="color:var(--ink)">minimum</b> (A = 0), and A(r) has no interior maximum — it grows without bound as r increases.`,
+    verdictZero: () => `At <b>r = 0</b>: dA/dr = 2π(0) = 0 — this is the only critical point. Since d²A/dr² = 2π &gt; 0, the curve is concave up here, so r = 0 is a strict <b>minimum</b> (A = 0). There is no interior maximum: A(r) keeps increasing for every r &gt; 0.`,
+    verdictElse: r => `At <b>r = ${r.toFixed(2)}</b>: dA/dr = ${(2*Math.PI*r).toFixed(2)} ≠ 0, so this is <b>not</b> a critical point — area is still changing. The only place dA/dr = 0 is r = 0. d²A/dr² = 2π &gt; 0 everywhere, confirming r = 0 is a minimum, not a maximum, and A(r) has no ceiling.`,
+    badgeUnit: 'dA/dr'
+  },
+  rectangle: {
+    shapeName: 'Rectangle', quantitySym: 'A', quantityName: 'Area',
+    pageTitle: 'Rectangle Area — <span class="fn">A = x · y</span>',
+    pageSub: 'Drag x and y independently — either one increases the area. ∂A/∂x = y and ∂A/∂y = x are the two partial rates.',
+    valLabel: 'Area A', valExpr: 'x · y',
+    rateLabel: '∂A/∂x — rate holding y fixed', rateExprTpl: '',
+    deltaLabelTpl: '∂A/∂y — rate holding x fixed',
+    secantExprTpl: (dr,lin)=>'',
+    rate2Label: 'ΔA — exact (Δx = Δy = 0.4 fixed)', rate2ExprTpl: '',
+    critLabel: 'Critical point (∂A/∂x = ∂A/∂y = 0)', critExpr: 'only at x = 0 AND y = 0 (the origin)',
+    val: (r)=>0, rate: (r)=>0, rate2: (r)=>0, rate2IsConst: true,
+    footer: `∂A/∂x = y and ∂A/∂y = x &nbsp;→&nbsp; both zero only when x = 0 AND y = 0 (the origin).<br>
+    Area increases whenever either side grows — there's no interior maximum, and A stalls to 0 whenever x = 0 or y = 0 on the boundary.`,
+    badgeUnit: '∂A'
+  },
+  sphere: {
+    shapeName: 'Sphere', quantitySym: 'V', quantityName: 'Volume',
+    pageTitle: 'Sphere Volume — <span class="fn">V = 4⁄3 πr³</span>',
+    pageSub: 'Drag r. Watch V(r) trace live. dV/dr and d²V/dr² tell you where volume is momentarily flat, and whether that flat point is a peak or a floor.',
+    valLabel: 'Volume V', valExpr: '4⁄3 · π · r³',
+    rateLabel: 'dV/dr — exact rate of growth', rateExprTpl: '4π · r² (limit as Δr → 0)',
+    deltaLabelTpl: 'ΔV — actual shell volume (Δr fixed)',
+    secantExprTpl: (dr,lin)=>`Δr = ${dr.toFixed(2)} fixed · linear approx dV/dr·Δr = ${lin.toFixed(3)}`,
+    rate2Label: 'd²V/dr² — curvature', rate2ExprTpl: '8π · r (grows with r)',
+    critLabel: 'Critical point (dV/dr = 0)', critExpr: 'only solution to 4πr² = 0',
+    val: r => (4/3) * Math.PI * r * r * r,
+    rate: r => 4 * Math.PI * r * r,
+    rate2: r => 8 * Math.PI * r,
+    rate2IsConst: false,
+    footer: `dV/dr = 4πr² &nbsp;→&nbsp; zero only at r = 0. d²V/dr² = 8πr &gt; 0 for every r &gt; 0 &nbsp;→&nbsp; concave up.<br>
+    So r = 0 is a strict <b style="color:var(--ink)">minimum</b> (V = 0), and V(r) has no interior maximum — it grows without bound as r increases.`,
+    verdictZero: () => `At <b>r = 0</b>: dV/dr = 4π(0)² = 0 — this is the only critical point. d²V/dr² = 8π(0) = 0 too, but for any r just above 0, d²V/dr² &gt; 0 — concave up — so r = 0 is a strict <b>minimum</b> (V = 0). There is no interior maximum: V(r) keeps increasing for every r &gt; 0.`,
+    verdictElse: r => `At <b>r = ${r.toFixed(2)}</b>: dV/dr = ${(4*Math.PI*r*r).toFixed(2)} ≠ 0, so this is <b>not</b> a critical point — volume is still changing. The only place dV/dr = 0 is r = 0. d²V/dr² = ${(8*Math.PI*r).toFixed(2)} &gt; 0, confirming r = 0 is a minimum, not a maximum, and V(r) has no ceiling.`,
+    badgeUnit: 'dV/dr'
+  },
+  cuboid: {
+    shapeName: 'Cuboid', quantitySym: 'V', quantityName: 'Volume',
+    pageTitle: 'Cuboid Volume — <span class="fn">V = x · y · z</span>',
+    pageSub: 'Drag x, y, and z independently — each one grows the volume. ∂V/∂x = yz, ∂V/∂y = xz, and ∂V/∂z = xy are the three partial rates.',
+    valLabel: 'Volume V', valExpr: 'x · y · z',
+    rateLabel: '∂V/∂x — rate holding y, z fixed', rateExprTpl: '',
+    deltaLabelTpl: '∂V/∂y — rate holding x, z fixed',
+    secantExprTpl: (dr,lin)=>'',
+    rate2Label: '∂V/∂z — rate holding x, y fixed', rate2ExprTpl: '',
+    critLabel: 'ΔV — exact (Δx=Δy=Δz=0.4 fixed)', critExpr: 'yzΔx + xzΔy + xyΔz + cross terms',
+    val: (r)=>0, rate: (r)=>0, rate2: (r)=>0, rate2IsConst: true,
+    footer: `∂V/∂x = yz, ∂V/∂y = xz, ∂V/∂z = xy &nbsp;→&nbsp; all zero only when x = 0 AND y = 0 AND z = 0 (the origin).<br>
+    Volume increases whenever any side grows — there's no interior maximum, and V stalls to 0 whenever x = 0, y = 0, or z = 0 on the boundary.`,
+    badgeUnit: '∂V'
+  }
+};
+let mode = 'circle';
+
+let graphAxis = 'x'; // for rectangle/cuboid mode: which variable the graph's cross-section is taken along
+function A(r){
+  if(mode==='rectangle'){
+    if(linkOp!=='off'){
+      if(graphAxis==='x'){
+        const y = solveLinkedY(r, linkOp, linkA, linkB, linkConst);
+        return y===null ? NaN : r*y;
+      } else {
+        const x = solveLinkedX(r, linkOp, linkA, linkB, linkConst);
+        return x===null ? NaN : r*x;
+      }
+    }
+    return graphAxis==='x' ? r*rectY : r*rectX;
+  }
+  if(mode==='cuboid'){
+    if(linkOp!=='off'){
+      if(graphAxis==='x'){
+        const y = solveLinkedY(r, linkOp, linkA, linkB, linkConst); // z mirrors y, same relation from x
+        return y===null ? NaN : r*y*y;
+      } else {
+        // graphAxis is 'y' or 'z' — both are tied to x by the same relation, so invert to x first
+        const x = solveLinkedX(r, linkOp, linkA, linkB, linkConst);
+        if(x===null) return NaN;
+        const other = solveLinkedY(x, linkOp, linkA, linkB, linkConst); // the third side
+        return other===null ? NaN : x*r*other;
+      }
+    }
+    if(graphAxis==='x') return r*cubeY*cubeZ;
+    if(graphAxis==='y') return cubeX*r*cubeZ;
+    return cubeX*cubeY*r;
+  }
+  return MODES[mode].val(r);
+}
+function dA(r){
+  if((mode==='rectangle' || mode==='cuboid') && linkOp!=='off'){
+    // once the other side(s) are no longer independent, the exact partial
+    // derivative isn't a constant — differentiate the constrained A(r)/V(r) numerically
+    const h = 1e-4;
+    return (A(r+h) - A(r-h)) / (2*h);
+  }
+  if(mode==='rectangle') return graphAxis==='x' ? rectY : rectX;
+  if(mode==='cuboid'){
+    if(graphAxis==='x') return cubeY*cubeZ;
+    if(graphAxis==='y') return cubeX*cubeZ;
+    return cubeX*cubeY;
+  }
+  return MODES[mode].rate(r);
+}
+function d2A_at(r){ if(mode==='rectangle'||mode==='cuboid') return 0; return MODES[mode].rate2(r); }
+
+function applyModeUI(){
+  const cfg = MODES[mode];
+  pageTitle.innerHTML = cfg.pageTitle;
+  pageSub.textContent = cfg.pageSub;
+  shapeLabel.textContent = cfg.shapeName;
+  graphLabel.textContent = cfg.quantitySym + '(r) trace';
+  valLabel.textContent = cfg.valLabel;
+  valExpr.textContent = cfg.valExpr;
+  rateLabel.textContent = cfg.rateLabel;
+  deltaLabel.textContent = cfg.deltaLabelTpl;
+  rate2Label.textContent = cfg.rate2Label;
+  rate2Expr.textContent = cfg.rate2ExprTpl;
+  critLabel.textContent = cfg.critLabel;
+  critExpr.textContent = cfg.critExpr;
+  pageFooter.innerHTML = cfg.footer;
+  tabCircle.classList.toggle('active', mode==='circle');
+  tabRectangle.classList.toggle('active', mode==='rectangle');
+  tabRectangle.classList.toggle('rect-active', mode==='rectangle');
+  tabSphere.classList.toggle('active', mode==='sphere');
+  tabSphere.classList.toggle('sphere-active', mode==='sphere');
+  tabCuboid.classList.toggle('active', mode==='cuboid');
+  tabCuboid.classList.toggle('cuboid-active', mode==='cuboid');
+
+  document.getElementById('circleCanvas').style.display = (mode==='circle' || mode==='rectangle') ? 'block' : 'none';
+  document.getElementById('sphere3D').style.display = mode==='sphere' ? 'block' : 'none';
+  document.getElementById('cuboid3D').style.display = mode==='cuboid' ? 'block' : 'none';
+  document.getElementById('rectPanel').style.display = mode==='circle' ? 'block' : 'none';
+  document.getElementById('rSliderRow').style.display = (mode==='rectangle' || mode==='cuboid') ? 'none' : 'flex';
+  document.getElementById('xSliderRow').style.display = mode==='rectangle' ? 'flex' : 'none';
+  document.getElementById('ySliderRow').style.display = mode==='rectangle' ? 'flex' : 'none';
+  document.getElementById('xZoomSliderRow').style.display = mode==='rectangle' ? 'flex' : 'none';
+  document.getElementById('yZoomSliderRow').style.display = mode==='rectangle' ? 'flex' : 'none';
+  document.getElementById('cubeXSliderRow').style.display = mode==='cuboid' ? 'flex' : 'none';
+  document.getElementById('cubeYSliderRow').style.display = mode==='cuboid' ? 'flex' : 'none';
+  document.getElementById('cubeZSliderRow').style.display = mode==='cuboid' ? 'flex' : 'none';
+  document.getElementById('cubeDxZoomRow').style.display = mode==='cuboid' ? 'flex' : 'none';
+  document.getElementById('cubeDyZoomRow').style.display = mode==='cuboid' ? 'flex' : 'none';
+  document.getElementById('cubeDzZoomRow').style.display = mode==='cuboid' ? 'flex' : 'none';
+  document.getElementById('linkToggleRow').style.display = (mode==='rectangle' || mode==='cuboid') ? 'flex' : 'none';
+  document.getElementById('linkCoeffRow').style.display = (mode==='rectangle' || mode==='cuboid') && linkOp!=='off' ? 'flex' : 'none';
+  document.getElementById('linkConstRow').style.display = (mode==='rectangle' || mode==='cuboid') && linkOp!=='off' ? 'flex' : 'none';
+  document.getElementById('camModeToggle').style.display = (mode==='sphere' || mode==='cuboid') ? 'inline-block' : 'none';
+  linkLabel.textContent = mode==='cuboid' ? 'Link y,z:' : 'Link:';
+  ySlider.disabled = mode==='rectangle' && linkOp!=='off';
+  cubeYSlider.disabled = mode==='cuboid' && linkOp!=='off';
+  cubeZSlider.disabled = mode==='cuboid' && linkOp!=='off';
+  document.getElementById('graphAxisToggle').style.display = (mode==='rectangle' || mode==='cuboid') ? 'flex' : 'none';
+  graphVsZ.style.display = mode==='cuboid' ? 'inline-block' : 'none';
+  document.getElementById('ringsToggle').style.display = mode==='circle' ? 'inline-block' : 'none';
+
+  const sym = cfg.quantitySym;
+  baseToggle.textContent = sym + ': ' + (showBase ? 'on' : 'off');
+  deltaToggle.textContent = 'Δ' + sym + ': ' + (showDelta ? 'on' : 'off');
+  if(mode==='rectangle'){
+    graphVsX.textContent = sym + ' vs x (y fixed)';
+    graphVsY.textContent = sym + ' vs y (x fixed)';
+  } else if(mode==='cuboid'){
+    graphVsX.textContent = sym + ' vs x (y,z fixed)';
+    graphVsY.textContent = sym + ' vs y (x,z fixed)';
+    graphVsZ.textContent = sym + ' vs z (x,y fixed)';
+  }
+
+  if(mode === 'sphere'){ initSphere3D(); }
+  if(mode === 'cuboid'){ initCuboid3D(); }
+}
+
+function resetGraphAxis(){
+  graphAxis = 'x';
+  graphVsX.classList.add('active'); graphVsY.classList.remove('active'); graphVsZ.classList.remove('active');
+}
+
+tabCircle.addEventListener('click', ()=>{ mode='circle'; applyModeUI(); update(); });
+tabRectangle.addEventListener('click', ()=>{ mode='rectangle'; resetGraphAxis(); applyModeUI(); update(); });
+tabSphere.addEventListener('click', ()=>{ mode='sphere'; applyModeUI(); update(); });
+tabCuboid.addEventListener('click', ()=>{ mode='cuboid'; resetGraphAxis(); applyModeUI(); update(); });
+
+const circleCanvas = document.getElementById('circleCanvas');
+const cctx = circleCanvas.getContext('2d');
+const graphCanvas = document.getElementById('graphCanvas');
+const gctx = graphCanvas.getContext('2d');
+
+const R_MAX = 10;
+
+// ===================== Graph viewport: domain toggle + pinch/wheel zoom + drag pan =====================
+let graphDomainMode = 'pos'; // 'pos' -> [0, R_MAX] · 'full' -> [-R_MAX, R_MAX]
+const GRAPH_MIN_SPAN = 0.4;          // closest allowed zoom (in r-units)
+const GRAPH_MAX_SPAN = 1e12;         // effectively unbounded — just guards against float blow-up
+function defaultGraphView(){
+  return graphDomainMode === 'full' ? [-R_MAX, R_MAX] : [0, R_MAX];
+}
+let [graphViewMin, graphViewMax] = defaultGraphView();
+let graphViewYMin = null, graphViewYMax = null; // null => auto-fit vertically from sampled data
+let graphLastYMin = 0, graphLastYMax = 1; // last-used A-range, kept for inverse-mapping touch/mouse Y to A
+const GRAPH_MIN_SPAN_Y = 0.1; // closest allowed vertical zoom (in A-units), scaled against data range at use time
+function clampGraphView(min, max){
+  let span = max - min;
+  if(span < GRAPH_MIN_SPAN){
+    const c = (min+max)/2;
+    min = c - GRAPH_MIN_SPAN/2; max = c + GRAPH_MIN_SPAN/2;
+  } else if(span > GRAPH_MAX_SPAN){
+    const c = (min+max)/2;
+    min = c - GRAPH_MAX_SPAN/2; max = c + GRAPH_MAX_SPAN/2;
+  }
+  // no pan boundary — the grid scrolls indefinitely in either direction
+  return [min, max];
+}
+function niceStep(range, targetTicks){
+  const raw = range/targetTicks;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw/mag;
+  let step;
+  if(norm < 1.5) step = 1; else if(norm < 3) step = 2; else if(norm < 7) step = 5; else step = 10;
+  return step*mag;
+}
+let showGrid = true;
+let showAxes = true;
+let showBase = true;   // hides the original A/V (the base shape itself)
+let showDelta = true;  // hides the ΔA/ΔV overlay (strip / shell / slabs)
+let showRings = true;  // hides the concentric reference rings (2D circle/rectangle grid only)
+let showCritProj = true; // solid projection lines dropped to both axes at points where dA/dr (or dV/dr) = 0
+let linkOp = 'linear';  // 'off' | 'linear' | 'prod' | 'sub' | 'div' — the relation between x and y
+let linkA = 1, linkB = -1, linkConst = 0;  // defaults reduce to x - y = 0, i.e. y = x
+// solves the chosen relation for y given x (and a, b, C)
+function solveLinkedY(x, op, a, b, c){
+  switch(op){
+    case 'linear': return b !== 0 ? (c - a*x) / b : null;                    // a·x + b·y = C
+    case 'sub':    return b !== 0 ? (a*x - c) / b : null;                    // a·x − b·y = C
+    case 'prod':   return (a !== 0 && b !== 0 && x !== 0) ? c / (a*b*x) : null; // a·x × b·y = C
+    case 'div':    return (b !== 0 && c !== 0) ? (a*x) / (b*c) : null;       // a·x ÷ b·y = C
+    default:       return null;
+  }
+}
+// inverse: solves the same relation for x given y
+function solveLinkedX(y, op, a, b, c){
+  switch(op){
+    case 'linear': return a !== 0 ? (c - b*y) / a : null;
+    case 'sub':    return a !== 0 ? (c + b*y) / a : null;
+    case 'prod':   return (a !== 0 && b !== 0 && y !== 0) ? c / (a*b*y) : null;
+    case 'div':    return a !== 0 ? (c*b*y) / a : null;
+    default:       return null;
+  }
+}
+const solveLinked = solveLinkedY; // alias — existing call sites pass x, want y
+let camMode = 'orbit'; // 'orbit' (external, orbits the body) | 'inside' (camera sits at the body's centre of mass, looks outward)
+let prevR = parseFloat(rSlider.value);
+
+// smoothed values — the canvas eases toward whatever the sliders say,
+// rather than snapping instantly, for a fluid Brilliant.org-style feel.
+let smoothR = parseFloat(rSlider.value);
+let smoothZoom = parseFloat(zoomSlider.value);
+let smoothX = 6, smoothY = 3, smoothXZoom = 1, smoothYZoom = 1;
+let smoothCubeX = 6, smoothCubeY = 4, smoothCubeZ = 2;
+let smoothDxZoom = 1, smoothDyZoom = 1, smoothDzZoom = 1;
+const EASE_K = 0.18; // higher = snappier, lower = floatier
+let trace = []; // {r, A} history for the trail
+
+// two-finger pinch-to-zoom on the 2D canvas — drives the same zoom slider
+// the circle/rectangle drawing already reads each frame (see smoothZoom above)
+(function attachCanvasPinchZoom(){
+  const activePointers = new Map(); // pointerId -> {x,y}
+  let pinchStartDist = null, pinchStartZoom = null;
+  circleCanvas.addEventListener('pointerdown', e=>{
+    activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    circleCanvas.setPointerCapture(e.pointerId);
+    if(activePointers.size === 2){
+      const pts = [...activePointers.values()];
+      pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      pinchStartZoom = parseFloat(zoomSlider.value);
+      e.preventDefault();
+    }
+  });
+  circleCanvas.addEventListener('pointermove', e=>{
+    if(!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(activePointers.size >= 2 && pinchStartDist){
+      const pts = [...activePointers.values()];
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      zoomSlider.value = Math.min(15, Math.max(1, pinchStartZoom * (dist / pinchStartDist)));
+      refreshAllSliders();
+      e.preventDefault();
+    }
+  });
+  function endPointer(e){
+    activePointers.delete(e.pointerId);
+    pinchStartDist = null;
+  }
+  circleCanvas.addEventListener('pointerup', endPointer);
+  circleCanvas.addEventListener('pointerleave', endPointer);
+  circleCanvas.addEventListener('pointercancel', endPointer);
+})();
+
+function drawCircle(r, dr, zoom, growing){
+  const w = circleCanvas.width, h = circleCanvas.height;
+  cctx.clearRect(0,0,w,h);
+  cctx.lineCap = 'round';
+  cctx.lineJoin = 'round';
+  const cx = w/2, cy = h/2;
+  const maxPix = Math.min(w,h)/2 - 20; // still governs circle/shape scale — keeps shapes proportional
+  const scale = maxPix / R_MAX;
+  const rp = r * scale;
+  // grid/axes fill the FULL canvas rectangle (edge-to-edge, no dead white margins),
+  // independent of maxPix — only the drawn shapes stay bound to the square scale above.
+  const halfW = w/2 - 4, halfH = h/2 - 4;
+  const gridUnits = Math.ceil(Math.max(halfW, halfH) / scale) + 2;
+
+  const rOuterTrue = Math.min(R_MAX, r + dr);
+  const rpOuterTrue = rOuterTrue * scale;
+  const rMidPx = (rp + rpOuterTrue) / 2;   // midpoint of the strip, in unzoomed pixels
+  // camera focus point = midpoint of the strip, on the radius line (y=0 world)
+  const fx = cx + rMidPx;
+  const fy = cy;
+
+  // Everything below is drawn in normal (unzoomed) canvas coordinates.
+  // The save/scale/translate makes the WHOLE canvas zoom in around the
+  // strip's midpoint — geometry itself never changes, only the camera does.
+  cctx.save();
+  cctx.translate(fx, fy);
+  cctx.scale(zoom, zoom);
+  cctx.translate(-fx, -fy);
+
+  // 2D cartesian grid — fills the entire canvas, no dead white space at the sides
+  if(showGrid){
+  cctx.strokeStyle = '#000000';
+  cctx.lineWidth = 1 / zoom;
+  for(let g=-gridUnits; g<=gridUnits; g+=1){
+    if(g===0) continue;
+    const gx = cx + g*scale, gy = cy + g*scale;
+    if(Math.abs(gx-cx) <= halfW){
+      cctx.beginPath(); cctx.moveTo(gx, cy-halfH); cctx.lineTo(gx, cy+halfH); cctx.stroke();
+    }
+    if(Math.abs(gy-cy) <= halfH){
+      cctx.beginPath(); cctx.moveTo(cx-halfW, gy); cctx.lineTo(cx+halfW, gy); cctx.stroke();
+    }
+  }
+  }
+  // axes
+  if(showAxes){
+  cctx.strokeStyle = '#000000';
+  cctx.lineWidth = 1.3 / zoom;
+  cctx.beginPath(); cctx.moveTo(cx-halfW, cy); cctx.lineTo(cx+halfW, cy); cctx.stroke();
+  cctx.beginPath(); cctx.moveTo(cx, cy-halfH); cctx.lineTo(cx, cy+halfH); cctx.stroke();
+  }
+  // reference rings
+  if(showRings){
+  cctx.strokeStyle = '#000000';
+  cctx.lineWidth = 1 / zoom;
+  for(let g=2; g<=R_MAX; g+=2){
+    cctx.beginPath();
+    cctx.arc(cx, cy, g*scale, 0, Math.PI*2);
+    cctx.stroke();
+  }
+  }
+
+  // area fill — the base A/V; hidden by the A/V toggle
+  if(showBase){
+  const grad = cctx.createRadialGradient(cx,cy,0,cx,cy,rp||1);
+  if(growing){
+    grad.addColorStop(0, 'rgba(94,234,212,0.35)');
+    grad.addColorStop(1, 'rgba(94,234,212,0.08)');
+  } else {
+    grad.addColorStop(0, 'rgba(248,113,113,0.35)');
+    grad.addColorStop(1, 'rgba(248,113,113,0.08)');
+  }
+  cctx.beginPath();
+  cctx.arc(cx, cy, rp, 0, Math.PI*2);
+  cctx.fillStyle = grad;
+  cctx.fill();
+
+  if(mode === 'sphere' && rp > 2){
+    const hl = cctx.createRadialGradient(cx-rp*0.35, cy-rp*0.35, 0, cx-rp*0.35, cy-rp*0.35, rp*0.9);
+    hl.addColorStop(0, 'rgba(255,255,255,0.22)');
+    hl.addColorStop(0.5, 'rgba(255,255,255,0.04)');
+    hl.addColorStop(1, 'rgba(255,255,255,0)');
+    cctx.beginPath();
+    cctx.arc(cx, cy, rp, 0, Math.PI*2);
+    cctx.fillStyle = hl;
+    cctx.fill();
+  }
+
+  // outline
+  cctx.beginPath();
+  cctx.arc(cx, cy, rp, 0, Math.PI*2);
+  cctx.strokeStyle = growing ? '#5eead4' : '#f87171';
+  cctx.lineWidth = 2.5 / zoom;
+  cctx.shadowColor = growing ? '#5eead4' : '#f87171';
+  cctx.shadowBlur = 12 / zoom;
+  cctx.stroke();
+  cctx.shadowBlur = 0;
+  }
+
+  // radius line
+  cctx.beginPath();
+  cctx.moveTo(cx, cy);
+  cctx.lineTo(cx + rp, cy);
+  cctx.strokeStyle = '#f0abfc';
+  cctx.lineWidth = 2 / zoom;
+  cctx.setLineDash([4/zoom,4/zoom]);
+  cctx.stroke();
+  cctx.setLineDash([]);
+
+  // ΔA strip: true annular ring from r to r+dr — real geometry, never exaggerated
+  if(showDelta && rOuterTrue > r){
+    cctx.beginPath();
+    cctx.arc(cx, cy, rpOuterTrue, 0, Math.PI*2);
+    cctx.arc(cx, cy, rp, 0, Math.PI*2, true);
+    cctx.fillStyle = 'rgba(251,191,36,0.32)';
+    cctx.fill('evenodd');
+
+    cctx.beginPath();
+    cctx.arc(cx, cy, rpOuterTrue, 0, Math.PI*2);
+    cctx.strokeStyle = '#fbbf24';
+    cctx.lineWidth = 1.5 / zoom;
+    cctx.shadowColor = '#fbbf24';
+    cctx.shadowBlur = 8 / zoom;
+    cctx.stroke();
+    cctx.shadowBlur = 0;
+  }
+
+  // center dot
+  cctx.beginPath();
+  cctx.arc(cx, cy, 3/zoom, 0, Math.PI*2);
+  cctx.fillStyle = '#111111';
+  cctx.shadowColor = '#111111';
+  cctx.shadowBlur = 6 / zoom;
+  cctx.fill();
+  cctx.shadowBlur = 0;
+
+  cctx.restore();
+
+  // --- text labels drawn AFTER restore, positioned via the same zoom math,
+  //     so font size stays crisp and readable at any zoom level ---
+  const toScreen = (px, py) => [fx + zoom*(px-fx), fy + zoom*(py-fy)];
+
+  if(showAxes){
+  cctx.fillStyle = '#7a86a8';
+  cctx.font = '9.5px JetBrains Mono';
+  for(let g=-R_MAX; g<=R_MAX; g+=2){
+    if(g===0) continue;
+    let [tx,ty] = toScreen(cx + g*scale - 6, cy + 12);
+    cctx.fillText(g, tx, ty);
+    [tx,ty] = toScreen(cx + 4, cy - g*scale + 3);
+    cctx.fillText(g, tx, ty);
+  }
+  {
+    const [zx,zy] = toScreen(cx+4, cy+12);
+    cctx.fillText('0', zx, zy);
+  }
+  }
+
+  // r label
+  {
+    const [lx,ly] = toScreen(cx + rp/2 - 20, cy - 8);
+    cctx.fillStyle = '#f0abfc';
+    cctx.font = '12px JetBrains Mono';
+    cctx.fillText('r = ' + r.toFixed(2), lx, ly);
+  }
+
+  // ΔA/ΔV strip label — true, fixed value; camera zoom just brings it into view
+  if(showDelta && rOuterTrue > r){
+    const deltaA = A(rOuterTrue) - A(r);
+    const sym = MODES[mode].quantitySym;
+    const belowFits = cy + rpOuterTrue + 16 <= circleCanvas.height - 8;
+    const [lx,ly] = toScreen(cx - rpOuterTrue, belowFits ? cy + rpOuterTrue + 16 : cy - rpOuterTrue - 10);
+    cctx.fillStyle = '#fbbf24';
+    cctx.font = '11px JetBrains Mono';
+    cctx.fillText('Δ' + sym + ' = ' + deltaA.toFixed(2) + '  (fixed)', lx, ly);
+  }
+}
+
+// ===================== RECTANGLE SHAPE (2:1 scaling rectangle) =====================
+function drawRectangleShape(x, y, zoom, xZoom, yZoom, growing){
+  const w = circleCanvas.width, h = circleCanvas.height;
+  cctx.clearRect(0,0,w,h);
+  cctx.lineCap = 'round';
+  cctx.lineJoin = 'round';
+  const cx = w/2, cy = h/2; // this is the fixed anchor — grid origin (0,0)
+  const maxPix = Math.min(w,h)/2 - 20; // still governs shape scale — keeps rectangle proportional
+  const scale = maxPix / R_MAX;
+  // grid/axes fill the FULL canvas rectangle (edge-to-edge, no dead white margins)
+  const halfW = w/2 - 4, halfH = h/2 - 4;
+  const gridUnits = Math.ceil(Math.max(halfW, halfH) / scale) + 2;
+
+  const DX = DR_TRUE, DY = DR_TRUE;
+  const xPx = x * scale, yPx = y * scale;
+  const xOuterPx = (x+DX) * scale, yOuterPx = (y+DY) * scale;
+  const dxPix = xOuterPx - xPx, dyPix = yOuterPx - yPx;
+
+  // rectangle: FIXED corner at the origin (cx,cy) — only the top and right edges move
+  const rectLeft = cx, rectRight = cx + xPx;
+  const rectBottom = cy, rectTop = cy - yPx;
+
+  // the growing corner — default focus when neither zoom slider is touched,
+  // i.e. the intersection of the Δx and Δy strips
+  const cornerX = cx + (xPx + xOuterPx)/2;
+  const cornerY = cy - (yPx + yOuterPx)/2;
+
+  // full centroid of the Δx strip (right band, spans the whole outer height)
+  const xStripX = rectRight + dxPix/2;
+  const xStripY = cy - (yPx + dyPix)/2;
+  // full centroid of the Δy strip (top band, spans the whole outer width)
+  const yStripX = cx + (xPx + dxPix)/2;
+  const yStripY = rectTop - dyPix/2;
+
+  // Δx zoom dollies toward the Δx strip specifically; Δy zoom toward the Δy
+  // strip specifically — each slider now frames a genuinely different region
+  // instead of both converging on the same corner.
+  const xZoomT = Math.min(1, Math.max(0, (xZoom - 1) / 14));
+  const yZoomT = Math.min(1, Math.max(0, (yZoom - 1) / 14));
+  const fx = cornerX + xZoomT*(xStripX - cornerX) + yZoomT*(yStripX - cornerX);
+  const fy = cornerY + xZoomT*(xStripY - cornerY) + yZoomT*(yStripY - cornerY);
+
+  // a single uniform zoom factor — no stretching, just how far in either
+  // slider (or the main camera zoom) pushes the view
+  const vzoom = zoom * Math.max(xZoom, yZoom);
+
+  cctx.save();
+  cctx.translate(fx, fy);
+  cctx.scale(vzoom, vzoom);
+  cctx.translate(-fx, -fy);
+
+  // 2D cartesian grid — fills the entire canvas, no dead white space at the sides
+  if(showGrid){
+  cctx.strokeStyle = '#000000';
+  cctx.lineWidth = 1 / vzoom;
+  for(let g=-gridUnits; g<=gridUnits; g+=1){
+    if(g===0) continue;
+    const gx = cx + g*scale, gy = cy + g*scale;
+    if(Math.abs(gx-cx) <= halfW){
+      cctx.beginPath(); cctx.moveTo(gx, cy-halfH); cctx.lineTo(gx, cy+halfH); cctx.stroke();
+    }
+    if(Math.abs(gy-cy) <= halfH){
+      cctx.beginPath(); cctx.moveTo(cx-halfW, gy); cctx.lineTo(cx+halfW, gy); cctx.stroke();
+    }
+  }
+  }
+  // axes
+  if(showAxes){
+  cctx.strokeStyle = '#000000';
+  cctx.lineWidth = 1.3 / vzoom;
+  cctx.beginPath(); cctx.moveTo(cx-halfW, cy); cctx.lineTo(cx+halfW, cy); cctx.stroke();
+  cctx.beginPath(); cctx.moveTo(cx, cy-halfH); cctx.lineTo(cx, cy+halfH); cctx.stroke();
+  }
+
+  // base rectangle fill — the original A/V; hidden by the A/V toggle
+  if(showBase){
+  const grad = cctx.createLinearGradient(rectLeft, cy, rectRight, cy);
+  if(growing){
+    grad.addColorStop(0, 'rgba(94,234,212,0.30)');
+    grad.addColorStop(1, 'rgba(94,234,212,0.12)');
+  } else {
+    grad.addColorStop(0, 'rgba(248,113,113,0.30)');
+    grad.addColorStop(1, 'rgba(248,113,113,0.12)');
+  }
+  cctx.fillStyle = grad;
+  cctx.fillRect(rectLeft, rectTop, xPx, yPx);
+  }
+
+  // ΔA/ΔV strips — hidden by the ΔA/ΔV toggle
+  if(showDelta){
+  // right strip: teal, extended up through the corner (full outer height y+dy)
+  // — this is the y·dx piece (Δx region)
+  cctx.fillStyle = 'rgba(94,234,212,0.45)';
+  cctx.fillRect(rectRight, rectTop - dyPix, dxPix, yPx + dyPix);
+
+  // top strip: magenta, extended right through the corner (full outer width x+dx)
+  // — this is the x·dy piece (Δy region). The two strips OVERLAP exactly in the
+  // dx×dy corner square, and their alpha blend there reads as the intersection
+  // of Δx and Δy (rather than a third, arbitrary colour).
+  cctx.fillStyle = 'rgba(240,171,252,0.40)';
+  cctx.fillRect(rectLeft, rectTop - dyPix, xPx + dxPix, dyPix);
+  }
+
+  // fixed-anchor marker at the origin corner (drawn in screen-space below, after restore)
+
+  cctx.restore();
+
+  // outlines are drawn AFTER restore, in screen space with a fixed pixel
+  // width, using the same uniform vzoom the shapes were transformed with.
+  const toScreen = (px, py) => [fx + vzoom*(px-fx), fy + vzoom*(py-fy)];
+  function strokeRectScreen(px, py, pw, ph, color){
+    const [x0,y0] = toScreen(px, py);
+    const [x1,y1] = toScreen(px+pw, py+ph);
+    cctx.strokeStyle = color;
+    cctx.lineWidth = 1.5;
+    cctx.shadowColor = color;
+    cctx.shadowBlur = 7;
+    cctx.strokeRect(x0, y0, x1-x0, y1-y0);
+    cctx.shadowBlur = 0;
+  }
+  if(showDelta){
+  strokeRectScreen(rectRight, rectTop - dyPix, dxPix, yPx + dyPix, '#5eead4');
+  strokeRectScreen(rectLeft, rectTop - dyPix, xPx + dxPix, dyPix, '#f0abfc');
+  }
+  if(showBase){
+  strokeRectScreen(rectLeft, rectTop, xPx, yPx, growing ? '#5eead4' : '#f87171');
+  }
+  // corner intersection outline — dashed, to mark where Δx and Δy overlap
+  if(showDelta){
+    const [x0,y0] = toScreen(rectRight, rectTop - dyPix);
+    const [x1,y1] = toScreen(rectRight + dxPix, rectTop);
+    cctx.save();
+    cctx.setLineDash([3,3]);
+    cctx.strokeStyle = '#fbbf24';
+    cctx.lineWidth = 1.3;
+    cctx.strokeRect(x0, y0, x1-x0, y1-y0);
+    cctx.restore();
+  }
+  {
+    const [ax,ay] = toScreen(cx, cy);
+    cctx.beginPath();
+    cctx.arc(ax, ay, 4, 0, Math.PI*2);
+    cctx.fillStyle = '#111111';
+    cctx.fill();
+    cctx.strokeStyle = '#080b14';
+    cctx.lineWidth = 1;
+    cctx.stroke();
+  }
+
+  if(showAxes){
+  cctx.fillStyle = '#7a86a8';
+  cctx.font = '9.5px JetBrains Mono';
+  for(let g=-R_MAX; g<=R_MAX; g+=2){
+    if(g===0) continue;
+    let [tx,ty] = toScreen(cx + g*scale - 6, cy + 12);
+    cctx.fillText(g, tx, ty);
+    [tx,ty] = toScreen(cx + 4, cy - g*scale + 3);
+    cctx.fillText(g, tx, ty);
+  }
+  {
+    const [zx,zy] = toScreen(cx+4, cy+12);
+    cctx.fillText('0  (fixed corner)', zx, zy);
+  }
+  }
+
+  // x label (below the right edge)
+  {
+    const [lx,ly] = toScreen(rectLeft, rectBottom + 16);
+    cctx.fillStyle = '#5eead4';
+    cctx.font = '12px JetBrains Mono';
+    cctx.fillText('x = ' + x.toFixed(2), lx, ly);
+  }
+  // y label (left of the top edge, rotated)
+  {
+    cctx.save();
+    const [lx,ly] = toScreen(rectLeft - 16, rectTop);
+    cctx.translate(lx, ly);
+    cctx.rotate(-Math.PI/2);
+    cctx.fillStyle = '#f0abfc';
+    cctx.font = '12px JetBrains Mono';
+    cctx.textAlign = 'center';
+    cctx.fillText('y = ' + y.toFixed(2), 0, 0);
+    cctx.restore();
+    cctx.textAlign = 'left';
+  }
+  // area label (center of rectangle)
+  if(showBase){
+    const [lx,ly] = toScreen(rectLeft + xPx/2, rectTop + yPx/2 + 4);
+    cctx.fillStyle = '#111111';
+    cctx.font = '11px JetBrains Mono';
+    cctx.textAlign = 'center';
+    cctx.fillText('A = ' + (x*y).toFixed(2), lx, ly);
+    cctx.textAlign = 'left';
+  }
+}
+
+// ===================== 3D SPHERE (Three.js) =====================
+let sphereScene, sphereCamera, sphereRenderer, sphereMesh, shellMesh, radiusLine, centerDot, groundGrid;
+let sphereAxisLines = [];
+let sphereInitialized = false;
+let camAngleX = 0.45, camAngleY = 0.7, camDist = 30;
+let camTarget = null; // set inside initSphere3D() — kept out of top-level scope so a failed/slow THREE.js CDN load can't crash the whole script (which would silently break every later feature, e.g. the Rectangle Link toggle)
+const sphereRLabel = document.getElementById('sphereRLabel');
+const sphereDeltaLabel = document.getElementById('sphereDeltaLabel');
+
+function initSphere3D(){
+  if(sphereInitialized) return;
+  sphereInitialized = true;
+  camTarget = new THREE.Vector3(0,0,0);
+  const container = document.getElementById('sphere3D');
+
+  sphereScene = new THREE.Scene();
+  sphereScene.fog = new THREE.Fog(0xffffff, 24, 90);
+  sphereCamera = new THREE.PerspectiveCamera(45, 480/360, 0.05, 300);
+  sphereRenderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  sphereRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  sphereRenderer.toneMappingExposure = 1.15;
+  sphereRenderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+  sphereRenderer.domElement.style.width = '100%';
+  sphereRenderer.domElement.style.height = '100%';
+  sphereRenderer.domElement.style.display = 'block';
+  container.insertBefore(sphereRenderer.domElement, container.firstChild);
+
+  // lights
+  sphereScene.add(new THREE.AmbientLight(0x8899bb, 0.6));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(6, 9, 7);
+  sphereScene.add(key);
+  const rim = new THREE.DirectionalLight(0x5eead4, 0.35);
+  rim.position.set(-7, -4, -5);
+  sphereScene.add(rim);
+
+  // axes through origin
+  const axisMat = new THREE.LineBasicMaterial({color:0x000000});
+  [[1,0,0],[0,1,0],[0,0,1]].forEach(d=>{
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-d[0]*R_MAX, -d[1]*R_MAX, -d[2]*R_MAX),
+      new THREE.Vector3( d[0]*R_MAX,  d[1]*R_MAX,  d[2]*R_MAX)
+    ]);
+    const axisLine = new THREE.Line(geo, axisMat);
+    axisLine.visible = showAxes;
+    sphereAxisLines.push(axisLine);
+    sphereScene.add(axisLine);
+  });
+
+  // equatorial reference grid — sized generously beyond R_MAX so no edge is visible
+  // when orbiting or zooming out; cell size (2 units) matches the original density
+  groundGrid = new THREE.GridHelper(R_MAX*20, 100, 0x000000, 0x000000);
+  groundGrid.visible = showGrid;
+  sphereScene.add(groundGrid);
+
+  // main solid sphere (unit radius, scaled per-frame)
+  const sphereGeo = new THREE.SphereGeometry(1, 48, 32);
+  const sphereMat = new THREE.MeshPhongMaterial({
+    color:0x5eead4, transparent:true, opacity:0.55,
+    shininess:70, specular:0x224444, side:THREE.DoubleSide
+  });
+  sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+  sphereScene.add(sphereMesh);
+
+  // outer shell boundary (r + dr), solid amber, the ΔV shell
+  const shellGeo = new THREE.SphereGeometry(1, 48, 32);
+  const shellMat = new THREE.MeshPhongMaterial({
+    color:0xfbbf24, transparent:true, opacity:0.22,
+    shininess:50, specular:0x554422, side:THREE.DoubleSide, depthWrite:false
+  });
+  shellMesh = new THREE.Mesh(shellGeo, shellMat);
+  sphereScene.add(shellMesh);
+
+  // radius line (dashed, magenta) along +X
+  const radGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(1,0,0)]);
+  const radMat = new THREE.LineDashedMaterial({color:0xf0abfc, dashSize:0.28, gapSize:0.18, linewidth:2});
+  radiusLine = new THREE.Line(radGeo, radMat);
+  radiusLine.computeLineDistances();
+  sphereScene.add(radiusLine);
+
+  // center dot
+  const dotMat = new THREE.MeshBasicMaterial({color:0x111111});
+  centerDot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), dotMat);
+  sphereScene.add(centerDot);
+
+  // drag-to-orbit (mouse + finger, via unified Pointer Events) +
+  // two-finger pinch-to-zoom (drives the same zoom slider the 3D view already reads each frame)
+  let dragging = false, lastX = 0, lastY = 0;
+  const activePointers = new Map(); // pointerId -> {x,y}
+  let pinchStartDist = null, pinchStartZoom = null;
+  const el = sphereRenderer.domElement;
+  el.style.touchAction = 'none';
+  el.addEventListener('pointerdown', e=>{
+    activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    el.setPointerCapture(e.pointerId);
+    if(activePointers.size === 1){
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
+      el.style.cursor = 'grabbing';
+    } else if(activePointers.size === 2){
+      dragging = false;
+      const pts = [...activePointers.values()];
+      pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      pinchStartZoom = parseFloat(zoomSlider.value);
+    }
+    e.preventDefault();
+  });
+  el.addEventListener('pointermove', e=>{
+    if(!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(activePointers.size >= 2 && pinchStartDist){
+      const pts = [...activePointers.values()];
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      zoomSlider.value = Math.min(15, Math.max(1, pinchStartZoom * (dist / pinchStartDist)));
+      refreshAllSliders();
+      e.preventDefault();
+      return;
+    }
+    if(!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    camAngleY -= dx * 0.006;
+    camAngleX = Math.max(-1.45, Math.min(1.45, camAngleX - dy * 0.006));
+    updateSphereCamera();
+    e.preventDefault();
+  });
+  function sphereEndPointer(e){
+    activePointers.delete(e.pointerId);
+    pinchStartDist = null;
+    if(activePointers.size === 1){
+      const pt = [...activePointers.values()][0];
+      dragging = true; lastX = pt.x; lastY = pt.y;
+    } else {
+      dragging = false; el.style.cursor = 'grab';
+    }
+  }
+  el.addEventListener('pointerup', sphereEndPointer);
+  el.addEventListener('pointerleave', sphereEndPointer);
+  el.addEventListener('pointercancel', sphereEndPointer);
+
+  const ro = new ResizeObserver(()=>{
+    const w = container.clientWidth, h = container.clientHeight;
+    if(w > 0 && h > 0){
+      sphereRenderer.setSize(w, h, false);
+      sphereCamera.aspect = w / h;
+      sphereCamera.updateProjectionMatrix();
+      renderSphereScene();
+    }
+  });
+  ro.observe(container);
+
+  updateSphereCamera();
+}
+
+function updateSphereCamera(){
+  if(!sphereCamera) return;
+  if(camMode === 'inside'){
+    // camera sits AT the sphere's true centre of mass (always the origin,
+    // regardless of r) and looks outward — same drag angles as orbit mode,
+    // but now they steer the LOOK direction instead of the camera's offset.
+    sphereCamera.position.set(0, 0, 0);
+    const dir = new THREE.Vector3(
+      Math.cos(camAngleX) * Math.sin(camAngleY),
+      Math.sin(camAngleX),
+      Math.cos(camAngleX) * Math.cos(camAngleY)
+    );
+    sphereCamera.lookAt(dir);
+  } else {
+    const x = camTarget.x + camDist * Math.cos(camAngleX) * Math.sin(camAngleY);
+    const y = camTarget.y + camDist * Math.sin(camAngleX);
+    const z = camTarget.z + camDist * Math.cos(camAngleX) * Math.cos(camAngleY);
+    sphereCamera.position.set(x, y, z);
+    sphereCamera.lookAt(camTarget);
+  }
+  renderSphereScene();
+}
+
+function renderSphereScene(){
+  if(sphereRenderer) sphereRenderer.render(sphereScene, sphereCamera);
+}
+
+function updateSphere3D(r, dr, zoom, growing){
+  if(!sphereInitialized) initSphere3D();
+
+  const rSafe = Math.max(r, 0.001);
+  const rOuterTrue = Math.min(R_MAX, r + dr);
+  const hasShell = rOuterTrue > r + 1e-6;
+  // the shell is rendered thicker than the true Δr so it's actually visible
+  // against R_MAX — this only affects the mesh's SIZE on screen, never the
+  // ΔV number, which is always computed from the true rOuterTrue below.
+  const rOuterVisual = r + dr * SHELL_VISUAL_MULT;
+
+  const color = growing ? 0x5eead4 : 0xf87171;
+  sphereMesh.material.color.setHex(color);
+  sphereMesh.scale.setScalar(rSafe);
+  // while the camera sits inside the sphere (COM mode), the solid's own inner
+  // wall fills the whole view and blocks the ΔV shell just beyond it — so we
+  // hide the base solid in that mode regardless of the V toggle.
+  sphereMesh.visible = showBase && camMode !== 'inside';
+
+  shellMesh.visible = showDelta && hasShell;
+  if(hasShell) shellMesh.scale.setScalar(Math.max(rOuterVisual, 0.001));
+
+  radiusLine.scale.set(rSafe, 1, 1);
+  radiusLine.computeLineDistances();
+
+  // at low zoom the camera stays on the sphere's centre, so growing r reads
+  // as real growth. As the zoom slider increases, the target slides out onto
+  // the ΔV shell itself (between r and r+dr) — so zooming in actually zooms
+  // onto the extra volume, not just closer to the same centre point.
+  const zoomT = Math.min(1, Math.max(0, (zoom - 1) / 14));
+  const shellMid = hasShell ? (rSafe + rOuterVisual) / 2 : rSafe;
+  camTarget.set(zoomT * shellMid, 0, 0);
+  const baseFovDeg = 45, closeFovDeg = 26;
+  const fovDeg = baseFovDeg - zoomT * (baseFovDeg - closeFovDeg);
+  sphereCamera.fov = fovDeg;
+  sphereCamera.updateProjectionMatrix();
+
+  // distance is a FIXED baseline sized to comfortably fit the largest
+  // possible sphere (r up to R_MAX) — not the current r. That's what makes
+  // dragging r read as real growth instead of the camera zooming to match it.
+  // The zoom slider still lets you push in closer to inspect the thin shell.
+  const fov = fovDeg * Math.PI / 180;
+  const fitDist = ((R_MAX + DR_TRUE * SHELL_VISUAL_MULT) / Math.tan(fov / 2)) * 1.15;
+  camDist = Math.max(1.2, fitDist / zoom);
+  updateSphereCamera();
+
+  sphereRLabel.textContent = 'r = ' + r.toFixed(2);
+  sphereDeltaLabel.style.display = showDelta ? 'block' : 'none';
+  if(hasShell){
+    const deltaV = A(rOuterTrue) - A(r);
+    sphereDeltaLabel.textContent = 'Δ' + MODES[mode].quantitySym + ' = ' + deltaV.toFixed(2) + '  (fixed)';
+  } else {
+    sphereDeltaLabel.textContent = 'Δ' + MODES[mode].quantitySym + ' = — (fixed)';
+  }
+}
+
+// ===================== 3D CUBOID (Three.js) =====================
+let cuboidScene, cuboidCamera, cuboidRenderer, cuboidMesh;
+let cuboidSlabX, cuboidSlabY, cuboidSlabZ, cuboidEdgeXY, cuboidEdgeXZ, cuboidEdgeYZ, cuboidCorner;
+let cuboidAxisLines = [], cuboidGroundGrid;
+let cuboidInitialized = false;
+let cubeCamAngleX = 0.45, cubeCamAngleY = 0.7, cubeCamDist = 30;
+let cubeCamTarget = null; // set inside initCuboid3D() — see camTarget comment above
+let cuboidCOM = null; // true centre of mass (x/2, y/2, z/2) — distinct from cubeCamTarget, which is the ΔV-zoom focus point
+const cuboidDimsLabel = document.getElementById('cuboidDimsLabel');
+const cuboidDeltaLabel = document.getElementById('cuboidDeltaLabel');
+
+function initCuboid3D(){
+  if(cuboidInitialized) return;
+  cuboidInitialized = true;
+  cubeCamTarget = new THREE.Vector3(0,0,0);
+  cuboidCOM = new THREE.Vector3(0,0,0);
+  const container = document.getElementById('cuboid3D');
+
+  cuboidScene = new THREE.Scene();
+  cuboidScene.fog = new THREE.Fog(0xffffff, 24, 90);
+  cuboidCamera = new THREE.PerspectiveCamera(45, 480/360, 0.05, 300);
+  cuboidRenderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  cuboidRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  cuboidRenderer.toneMappingExposure = 1.15;
+  cuboidRenderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+  cuboidRenderer.domElement.style.width = '100%';
+  cuboidRenderer.domElement.style.height = '100%';
+  cuboidRenderer.domElement.style.display = 'block';
+  container.insertBefore(cuboidRenderer.domElement, container.firstChild);
+
+  // lights
+  cuboidScene.add(new THREE.AmbientLight(0x8899bb, 0.6));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(6, 9, 7);
+  cuboidScene.add(key);
+  const rim = new THREE.DirectionalLight(0x60a5fa, 0.35);
+  rim.position.set(-7, -4, -5);
+  cuboidScene.add(rim);
+
+  // axes through origin
+  const axisMat = new THREE.LineBasicMaterial({color:0x000000});
+  [[1,0,0],[0,1,0],[0,0,1]].forEach(d=>{
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-d[0]*R_MAX, -d[1]*R_MAX, -d[2]*R_MAX),
+      new THREE.Vector3( d[0]*R_MAX,  d[1]*R_MAX,  d[2]*R_MAX)
+    ]);
+    const axisLine = new THREE.Line(geo, axisMat);
+    axisLine.visible = showAxes;
+    cuboidAxisLines.push(axisLine);
+    cuboidScene.add(axisLine);
+  });
+
+  // ground reference grid — sized generously beyond R_MAX so no edge is visible
+  // when orbiting or zooming out; cell size (2 units) matches the original density
+  cuboidGroundGrid = new THREE.GridHelper(R_MAX*20, 100, 0x000000, 0x000000);
+  cuboidGroundGrid.visible = showGrid;
+  cuboidScene.add(cuboidGroundGrid);
+
+  // main solid box — unit cube, corner pinned at the origin, scaled per-frame to (x,y,z)
+  const boxGeo = new THREE.BoxGeometry(1,1,1);
+  boxGeo.translate(0.5,0.5,0.5);
+  const boxMat = new THREE.MeshPhongMaterial({
+    color:0x5eead4, transparent:true, opacity:0.5,
+    shininess:70, specular:0x224444, side:THREE.DoubleSide
+  });
+  cuboidMesh = new THREE.Mesh(boxGeo, boxMat);
+  const edgesGeo = new THREE.EdgesGeometry(boxGeo);
+  const edgesMat = new THREE.LineBasicMaterial({color:0x111111, transparent:true, opacity:0.5});
+  cuboidMesh.add(new THREE.LineSegments(edgesGeo, edgesMat));
+  cuboidScene.add(cuboidMesh);
+
+  // ΔV decomposition, colour-coded by which axis-deltas make up each piece:
+  // (x+Δx)(y+Δy)(z+Δz) - xyz = 3 face slabs + 3 edge bars + 1 corner cube.
+  // face colours are additive-primary (X=red, Y=green, Z=blue); every
+  // intersection piece is literally the colour-mix of the axes it contains,
+  // so an edge bar (two axes) reads as a mixed hue and the corner (all three) reads white.
+  const COL_X = 0xff4d6d, COL_Y = 0x4dff88, COL_Z = 0x4d9dff;
+  const COL_XY = 0xffe066, COL_XZ = 0xff66e0, COL_YZ = 0x66f0ff, COL_XYZ = 0xffffff;
+  const unitGeo = new THREE.BoxGeometry(1,1,1);
+  unitGeo.translate(0.5,0.5,0.5);
+  function makePiece(color, opacity){
+    const mat = new THREE.MeshPhongMaterial({
+      color, transparent:true, opacity, shininess:60,
+      specular:0x334455, emissive:color, emissiveIntensity:0.28,
+      side:THREE.DoubleSide, depthWrite:false
+    });
+    const m = new THREE.Mesh(unitGeo, mat);
+    cuboidScene.add(m);
+    return m;
+  }
+  cuboidSlabX  = makePiece(COL_X,  0.42);   // yzΔx
+  cuboidSlabY  = makePiece(COL_Y,  0.42);   // xzΔy
+  cuboidSlabZ  = makePiece(COL_Z,  0.42);   // xyΔz
+  cuboidEdgeXY = makePiece(COL_XY, 0.55);   // zΔxΔy
+  cuboidEdgeXZ = makePiece(COL_XZ, 0.55);   // yΔxΔz
+  cuboidEdgeYZ = makePiece(COL_YZ, 0.55);   // xΔyΔz
+  cuboidCorner = makePiece(COL_XYZ, 0.85);  // ΔxΔyΔz
+
+  // origin corner dot
+  const dotMat = new THREE.MeshBasicMaterial({color:0x111111});
+  cuboidScene.add(new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), dotMat));
+
+  // drag-to-orbit (mouse + finger, via unified Pointer Events) +
+  // two-finger pinch-to-zoom (drives the same zoom slider the 3D view already reads each frame)
+  let dragging = false, lastX = 0, lastY = 0;
+  const activePointers = new Map(); // pointerId -> {x,y}
+  let pinchStartDist = null, pinchStartZoom = null;
+  const el = cuboidRenderer.domElement;
+  el.style.touchAction = 'none';
+  el.addEventListener('pointerdown', e=>{
+    activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    el.setPointerCapture(e.pointerId);
+    if(activePointers.size === 1){
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
+      el.style.cursor = 'grabbing';
+    } else if(activePointers.size === 2){
+      dragging = false;
+      const pts = [...activePointers.values()];
+      pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      pinchStartZoom = parseFloat(zoomSlider.value);
+    }
+    e.preventDefault();
+  });
+  el.addEventListener('pointermove', e=>{
+    if(!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(activePointers.size >= 2 && pinchStartDist){
+      const pts = [...activePointers.values()];
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      zoomSlider.value = Math.min(15, Math.max(1, pinchStartZoom * (dist / pinchStartDist)));
+      refreshAllSliders();
+      e.preventDefault();
+      return;
+    }
+    if(!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    cubeCamAngleY -= dx * 0.006;
+    cubeCamAngleX = Math.max(-1.45, Math.min(1.45, cubeCamAngleX - dy * 0.006));
+    updateCuboidCamera();
+    e.preventDefault();
+  });
+  function cuboidEndPointer(e){
+    activePointers.delete(e.pointerId);
+    pinchStartDist = null;
+    if(activePointers.size === 1){
+      const pt = [...activePointers.values()][0];
+      dragging = true; lastX = pt.x; lastY = pt.y;
+    } else {
+      dragging = false; el.style.cursor = 'grab';
+    }
+  }
+  el.addEventListener('pointerup', cuboidEndPointer);
+  el.addEventListener('pointerleave', cuboidEndPointer);
+  el.addEventListener('pointercancel', cuboidEndPointer);
+
+  const ro = new ResizeObserver(()=>{
+    const w = container.clientWidth, h = container.clientHeight;
+    if(w > 0 && h > 0){
+      cuboidRenderer.setSize(w, h, false);
+      cuboidCamera.aspect = w / h;
+      cuboidCamera.updateProjectionMatrix();
+      renderCuboidScene();
+    }
+  });
+  ro.observe(container);
+
+  updateCuboidCamera();
+}
+
+function updateCuboidCamera(){
+  if(!cuboidCamera) return;
+  if(camMode === 'inside'){
+    // camera sits AT the box's true centre of mass (x/2,y/2,z/2 — tracks the
+    // box as it resizes) and looks outward, using the same drag angles as
+    // orbit mode but as a look direction rather than a camera offset.
+    cuboidCamera.position.copy(cuboidCOM);
+    const dir = new THREE.Vector3(
+      Math.cos(cubeCamAngleX) * Math.sin(cubeCamAngleY),
+      Math.sin(cubeCamAngleX),
+      Math.cos(cubeCamAngleX) * Math.cos(cubeCamAngleY)
+    );
+    cuboidCamera.lookAt(cuboidCOM.clone().add(dir));
+  } else {
+    const x = cubeCamTarget.x + cubeCamDist * Math.cos(cubeCamAngleX) * Math.sin(cubeCamAngleY);
+    const y = cubeCamTarget.y + cubeCamDist * Math.sin(cubeCamAngleX);
+    const z = cubeCamTarget.z + cubeCamDist * Math.cos(cubeCamAngleX) * Math.cos(cubeCamAngleY);
+    cuboidCamera.position.set(x, y, z);
+    cuboidCamera.lookAt(cubeCamTarget);
+  }
+  renderCuboidScene();
+}
+
+function renderCuboidScene(){
+  if(cuboidRenderer) cuboidRenderer.render(cuboidScene, cuboidCamera);
+}
+
+function updateCuboid3D(x, y, z, zoom, dxZoom, dyZoom, dzZoom, growing){
+  if(!cuboidInitialized) initCuboid3D();
+
+  const xs = Math.max(x, 0.001), ys = Math.max(y, 0.001), zs = Math.max(z, 0.001);
+  const color = growing ? 0x5eead4 : 0xf87171;
+  cuboidMesh.material.color.setHex(color);
+  cuboidMesh.scale.set(xs, ys, zs);
+  // while the camera sits inside the box (COM mode), the solid's own inner
+  // wall fills the whole view and blocks the ΔV slabs just beyond it — so we
+  // hide the base solid in that mode regardless of the V toggle.
+  cuboidMesh.visible = showBase && camMode !== 'inside';
+  cuboidCOM.set(xs/2, ys/2, zs/2);
+
+  [cuboidSlabX, cuboidSlabY, cuboidSlabZ, cuboidEdgeXY, cuboidEdgeXZ, cuboidEdgeYZ, cuboidCorner]
+    .forEach(m => m.visible = showDelta);
+
+  // the shell box always uses the TRUE, fixed Δ for the ΔV NUMBER — but is
+  // DRAWN thicker (Dv) purely so the slabs are visible against R_MAX=10.
+  const D = DR_TRUE;
+  const Dv = DR_TRUE * SHELL_VISUAL_MULT;
+  const outerX = x + Dv;
+  const outerY = y + Dv;
+  const outerZ = z + Dv;
+
+  function place(mesh, ox, oy, oz, sx, sy, sz){
+    mesh.position.set(ox, oy, oz);
+    mesh.scale.set(Math.max(sx,0.0001), Math.max(sy,0.0001), Math.max(sz,0.0001));
+  }
+  // face slabs — pure yzΔx, xzΔy, xyΔz (drawn at visual thickness Dv)
+  place(cuboidSlabX, x, 0, 0, Dv, y, z);
+  place(cuboidSlabY, 0, y, 0, x, Dv, z);
+  place(cuboidSlabZ, 0, 0, z, x, y, Dv);
+  // edge bars — the two-axis intersections
+  place(cuboidEdgeXY, x, y, 0, Dv, Dv, z);
+  place(cuboidEdgeXZ, x, 0, z, Dv, y, Dv);
+  place(cuboidEdgeYZ, 0, y, z, x, Dv, Dv);
+  // corner cube — the three-axis intersection
+  place(cuboidCorner, x, y, z, Dv, Dv, Dv);
+
+  // the per-axis sliders no longer resize anything — they dolly the camera
+  // toward whichever ΔV piece is currently "active." The BASE target (before
+  // any axis slider is touched) already sits at the growing corner (x,y,z) —
+  // where every ΔV piece attaches — not the box's geometric centre, which is
+  // mostly just empty solid cube. Pushing an axis slider then slides that
+  // axis further in, onto the exact centre of its face slab / edge bar /
+  // corner cube — always the real ΔV geometry, not a guess.
+  const tx = Math.min(1, (dxZoom - 1) / 14);
+  const ty = Math.min(1, (dyZoom - 1) / 14);
+  const tz = Math.min(1, (dzZoom - 1) / 14);
+
+  // BASE target (all three D-sliders untouched, tx=ty=tz=0) sits at the
+  // centre of the corner cube — the true ΔxΔyΔz "extra volume" — instead of
+  // the box's raw (x,y,z) anchor point. Pushing an individual D-slider then
+  // slides the focus fully onto THAT axis' own face slab centroid, which
+  // spans the FULL extent of the other two axes (not just a nudge along one
+  // axis) — mirroring the 2D rectangle's corner → strip blend.
+  const cornerCubeX = x + Dv/2, cornerCubeY = y + Dv/2, cornerCubeZ = z + Dv/2;
+  const slabXc = { x: x + Dv/2, y: y/2,     z: z/2     }; // yz face slab centroid
+  const slabYc = { x: x/2,     y: y + Dv/2, z: z/2     }; // xz face slab centroid
+  const slabZc = { x: x/2,     y: y/2,     z: z + Dv/2 }; // xy face slab centroid
+
+  cubeCamTarget.set(
+    cornerCubeX + tx*(slabXc.x - cornerCubeX) + ty*(slabYc.x - cornerCubeX) + tz*(slabZc.x - cornerCubeX),
+    cornerCubeY + tx*(slabXc.y - cornerCubeY) + ty*(slabYc.y - cornerCubeY) + tz*(slabZc.y - cornerCubeY),
+    cornerCubeZ + tx*(slabXc.z - cornerCubeZ) + ty*(slabYc.z - cornerCubeZ) + tz*(slabZc.z - cornerCubeZ)
+  );
+
+  const maxT = Math.max(tx, ty, tz);
+  // narrow the FOV as we dolly in — a wide lens up close makes the box
+  // bulge/fisheye at the edges; a tighter lens keeps close-ups looking flat and natural
+  const baseFovDeg = 45, closeFovDeg = 26;
+  const fovDeg = baseFovDeg - maxT * (baseFovDeg - closeFovDeg);
+  cuboidCamera.fov = fovDeg;
+  cuboidCamera.updateProjectionMatrix();
+  const baseFovRad = baseFovDeg * Math.PI / 180;
+  const closeFovRad = closeFovDeg * Math.PI / 180;
+  // distance is a FIXED baseline sized to fit the largest possible box
+  // (x,y,z ALL at R_MAX simultaneously) — not the box's current size. That's
+  // what makes dragging x/y/z read as real growth instead of the camera
+  // zooming out to match it. Uses the box's full 3D diagonal (√3 factor),
+  // not a single dimension, so it still fits when x, y, and z are all large
+  // at once and the box is viewed corner-on.
+  const maxHalfExtent = Math.sqrt(3) * (R_MAX + Dv) / 2;
+  const fitDist = maxHalfExtent / Math.tan(baseFovRad / 2) * 1.2;
+  // safety net: whatever the fixed baseline assumed, never let the box's
+  // actual current farthest corner exceed the frame — this only guards the
+  // WIDE view; it fades out as you dolly in (maxT→1) so close-up inspection
+  // of the ΔV pieces still works even on a large box.
+  const farCornerDist = Math.sqrt(
+    Math.pow(Math.max(outerX - cubeCamTarget.x, cubeCamTarget.x), 2) +
+    Math.pow(Math.max(outerY - cubeCamTarget.y, cubeCamTarget.y), 2) +
+    Math.pow(Math.max(outerZ - cubeCamTarget.z, cubeCamTarget.z), 2)
+  );
+  const liveFitDist = farCornerDist / Math.tan(baseFovRad / 2) * 1.15;
+  const safeWideDist = Math.max(fitDist, liveFitDist);
+
+  // closest we ever let the camera get — still keeps a small neighborhood
+  // around the slab (not just the slab itself) inside the frame
+  const closeDist = Math.max(0.9, (Dv * 4) / Math.tan(closeFovRad / 2));
+  const framedDist = safeWideDist - maxT * (safeWideDist - closeDist);
+  let dist = Math.max(closeDist, Math.min(safeWideDist, framedDist)) / Math.max(1, zoom * 0.4);
+  cubeCamDist = Math.max(closeDist, dist);
+  updateCuboidCamera();
+
+  cuboidDimsLabel.textContent = `x=${x.toFixed(2)}, y=${y.toFixed(2)}, z=${z.toFixed(2)}`;
+  cuboidDeltaLabel.style.display = showDelta ? 'block' : 'none';
+  const deltaV = (x+D)*(y+D)*(z+D) - x*y*z;
+  cuboidDeltaLabel.textContent = 'ΔV = ' + deltaV.toFixed(3) + '  (fixed)';
+}
+
+// scans dA(r) across [0, R_MAX] for zero crossings (interior critical points) and
+// also flags r=0 whenever the derivative there is (numerically) zero, since that's
+// the boundary minimum for circle/sphere. Works for every mode, including the
+// numerically-differentiated linked rectangle/cuboid case.
+function findCriticalPoints(){
+  const roots = [];
+  const N = 240;
+  const step = R_MAX / N;
+  let prevR = 0, prevD = dA(0);
+  if(!isNaN(prevD) && Math.abs(prevD) < 1e-6) roots.push(0);
+  for(let i=1; i<=N; i++){
+    const rr = i * step;
+    const d = dA(rr);
+    if(isNaN(d) || isNaN(prevD)){ prevR = rr; prevD = d; continue; }
+    if(prevD === 0){ /* already captured at prevR */ }
+    else if(d === 0){ roots.push(rr); }
+    else if((prevD < 0 && d > 0) || (prevD > 0 && d < 0)){
+      // bisect for a tighter root between prevR and rr
+      let lo = prevR, hi = rr, dLo = prevD;
+      for(let k=0; k<25; k++){
+        const mid = (lo + hi) / 2;
+        const dMid = dA(mid);
+        if(isNaN(dMid)) break;
+        if((dLo < 0 && dMid > 0) || (dLo > 0 && dMid < 0)){ hi = mid; }
+        else { lo = mid; dLo = dMid; }
+      }
+      roots.push((lo + hi) / 2);
+    }
+    prevR = rr; prevD = d;
+  }
+  return roots;
+}
+
+function drawGraph(r, dr){
+  const w = graphCanvas.width, h = graphCanvas.height;
+  gctx.clearRect(0,0,w,h);
+  const padL = 46, padB = 30, padT = 14, padR = 14;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+  // constrained relations (link on) aren't monotonic in r — A(R_MAX) can be far
+  // from the actual peak (even zero or negative), so sample the swept domain
+  // for the real min/max instead of assuming the endpoint is the extreme.
+  const viewSpan = graphViewMax - graphViewMin;
+  let AloDomain, AhiDomain;
+  if(graphViewYMin !== null && graphViewYMax !== null){
+    AloDomain = graphViewYMin; AhiDomain = graphViewYMax;
+  } else {
+    AloDomain = Infinity; AhiDomain = -Infinity;
+    for(let i=0; i<=200; i++){
+      const rr = graphViewMin + viewSpan * i/200;
+      const aa = A(rr);
+      if(isNaN(aa) || !isFinite(aa)) continue;
+      if(aa > AhiDomain) AhiDomain = aa;
+      if(aa < AloDomain) AloDomain = aa;
+    }
+    if(!isFinite(AloDomain)) AloDomain = 0;
+    if(!isFinite(AhiDomain)) AhiDomain = 1;
+    if(AhiDomain <= AloDomain) AhiDomain = AloDomain + 1;
+  }
+  const ADomainRange = AhiDomain - AloDomain;
+  graphLastYMin = AloDomain; graphLastYMax = AhiDomain;
+
+  const xOf = rr => padL + ((rr - graphViewMin) / viewSpan) * plotW;
+  const yOf = aa => padT + plotH - ((aa - AloDomain) / ADomainRange) * plotH;
+
+  // axes
+  if(showAxes){
+  gctx.strokeStyle = '#000000';
+  gctx.lineWidth = 1;
+  gctx.beginPath();
+  gctx.moveTo(padL, padT); gctx.lineTo(padL, padT+plotH); gctx.lineTo(padL+plotW, padT+plotH);
+  gctx.stroke();
+
+  gctx.fillStyle = '#7a86a8';
+  gctx.font = '10px JetBrains Mono';
+  gctx.fillText((mode==='rectangle' || mode==='cuboid') ? graphAxis : 'r', padL+plotW-6, padT+plotH+18);
+  gctx.save();
+  gctx.translate(14, padT+14);
+  gctx.fillText(MODES[mode].quantitySym, 0, 0);
+  gctx.restore();
+  }
+
+  // vertical gridlines + x-axis ticks — step scales with the current zoom level
+  const xStep = niceStep(viewSpan, 8);
+  const xStartTick = Math.ceil(graphViewMin/xStep) * xStep;
+  const xTickDecimals = xStep < 1 ? 1 : 0;
+  for(let rr=xStartTick; rr<=graphViewMax+1e-9; rr+=xStep){
+    const x = xOf(rr);
+    if(showGrid){
+      gctx.strokeStyle = '#000000';
+      gctx.beginPath(); gctx.moveTo(x, padT); gctx.lineTo(x, padT+plotH); gctx.stroke();
+    }
+    if(showAxes){
+      gctx.fillStyle = '#7a86a8';
+      gctx.font = '10px JetBrains Mono';
+      gctx.fillText(rr.toFixed(xTickDecimals), x-4, padT+plotH+14);
+    }
+  }
+  // highlight r=0 whenever the negative side is in view, so the origin stays legible
+  if(showAxes && graphViewMin < 0 && graphViewMax > 0){
+    const x0 = xOf(0);
+    gctx.strokeStyle = '#3a4770';
+    gctx.lineWidth = 1.25;
+    gctx.beginPath(); gctx.moveTo(x0, padT); gctx.lineTo(x0, padT+plotH); gctx.stroke();
+  }
+
+  // horizontal gridlines + y-axis (A/V value) ticks
+  if(showGrid || showAxes){
+    const yTickCount = 5;
+    for(let i=0; i<=yTickCount; i++){
+      const aa = AloDomain + (ADomainRange * i / yTickCount);
+      const y = yOf(aa);
+      if(showGrid){
+        gctx.strokeStyle = '#000000';
+        gctx.beginPath(); gctx.moveTo(padL, y); gctx.lineTo(padL+plotW, y); gctx.stroke();
+      }
+      if(showAxes){
+        gctx.fillStyle = '#7a86a8';
+        gctx.font = '10px JetBrains Mono';
+        gctx.fillText(aa.toFixed(1), 2, y+3);
+      }
+    }
+  }
+
+  // full curve across the current view window (dim reference)
+  const curveStep = viewSpan/400;
+  gctx.beginPath();
+  let firstPt = true;
+  for(let rr=graphViewMin; rr<=graphViewMax+1e-9; rr+=curveStep){
+    const aa = A(rr);
+    if(isNaN(aa) || !isFinite(aa)){ firstPt = true; continue; }
+    const x = xOf(rr), y = yOf(aa);
+    if(firstPt){ gctx.moveTo(x,y); firstPt = false; } else gctx.lineTo(x,y);
+  }
+  gctx.strokeStyle = '#28324e';
+  gctx.lineWidth = 1.5;
+  gctx.stroke();
+
+  // traced path from 0 up to current r (teal) — r itself is never negative
+  gctx.beginPath();
+  const traceStart = Math.min(0, graphViewMin);
+  for(let rr=traceStart; rr<=r; rr+=0.05){
+    if(rr < graphViewMin) continue;
+    const x = xOf(rr), y = yOf(A(rr));
+    if(rr===traceStart || rr===graphViewMin) gctx.moveTo(x,y); else gctx.lineTo(x,y);
+  }
+  gctx.strokeStyle = '#5eead4';
+  gctx.lineWidth = 2.5;
+  gctx.stroke();
+
+  // secant line through (r-dr, A(r-dr)) and (r+dr, A(r+dr)) - zoomable toward tangent
+  const rL = Math.max(graphViewMin, r-dr), rR = Math.min(graphViewMax, r+dr);
+  const x1 = xOf(rL), y1 = yOf(A(rL));
+  const x2 = xOf(rR), y2 = yOf(A(rR));
+  gctx.beginPath();
+  gctx.moveTo(x1, y1);
+  gctx.lineTo(x2, y2);
+  gctx.strokeStyle = '#f0abfc';
+  gctx.lineWidth = 1.5;
+  gctx.setLineDash([5,4]);
+  gctx.stroke();
+  gctx.setLineDash([]);
+
+  // secant sample points
+  gctx.fillStyle = '#f0abfc';
+  [[x1,y1],[x2,y2]].forEach(p=>{
+    gctx.beginPath(); gctx.arc(p[0],p[1],3,0,Math.PI*2); gctx.fill();
+  });
+
+  // solid projection lines dropped to both axes at every critical point (dA/dr = 0)
+  if(showCritProj){
+    const crits = findCriticalPoints();
+    gctx.setLineDash([]);
+    crits.forEach(rc=>{
+      const ac = A(rc);
+      if(isNaN(ac)) return;
+      const cx = xOf(rc), cy = yOf(ac);
+      gctx.strokeStyle = '#ff5d73';
+      gctx.lineWidth = 1.25;
+      // vertical projection down to the x-axis
+      gctx.beginPath(); gctx.moveTo(cx, cy); gctx.lineTo(cx, padT+plotH); gctx.stroke();
+      // horizontal projection across to the y-axis
+      gctx.beginPath(); gctx.moveTo(cx, cy); gctx.lineTo(padL, cy); gctx.stroke();
+      // marker dot at the critical point itself
+      gctx.beginPath(); gctx.arc(cx, cy, 4, 0, Math.PI*2);
+      gctx.fillStyle = '#ff5d73'; gctx.fill();
+      gctx.strokeStyle = '#080b14'; gctx.lineWidth = 1.5; gctx.stroke();
+      // small label
+      gctx.fillStyle = '#ff5d73';
+      gctx.font = '9px JetBrains Mono';
+      const critVar = (mode==='rectangle' || mode==='cuboid') ? graphAxis : 'r';
+      const critLabelTxt = 'd' + MODES[mode].quantitySym + '/d' + critVar + '=0';
+      const labelX = Math.min(cx+5, padL+plotW-70);
+      const labelY = Math.max(cy-16, padT+9);
+      gctx.fillText(critLabelTxt, labelX, labelY);
+      const coordTxt = '(' + critVar + '=' + rc.toFixed(2) + ', ' + MODES[mode].quantitySym + '=' + ac.toFixed(2) + ')';
+      gctx.fillText(coordTxt, labelX, labelY + 11);
+    });
+  }
+
+  // live point
+  const px = xOf(r), py = yOf(A(r));
+  gctx.beginPath();
+  gctx.arc(px, py, 5, 0, Math.PI*2);
+  gctx.fillStyle = '#fbbf24';
+  gctx.fill();
+  gctx.strokeStyle = '#080b14';
+  gctx.lineWidth = 2;
+  gctx.stroke();
+}
+
+function update(){
+  if(mode === 'rectangle'){ updateRectangleMode(); drawGraph(graphAxis==='x' ? rectX : rectY, DR_TRUE); return; }
+  if(mode === 'cuboid'){
+    updateCuboidMode();
+    const gVal = graphAxis==='x' ? cubeX : (graphAxis==='y' ? cubeY : cubeZ);
+    drawGraph(gVal, DR_TRUE);
+    return;
+  }
+
+  const cfg = MODES[mode];
+  const r = smoothR;
+  const dr = DR_TRUE; // fixed — the zoom slider never touches this
+  const zoom = smoothZoom;
+  const growing = r >= prevR;
+  prevR = r;
+
+  rVal.textContent = r.toFixed(2);
+  zoomVal.textContent = zoom.toFixed(1);
+  areaVal.textContent = A(r).toFixed(2);
+  dadrVal.textContent = dA(r).toFixed(2);
+  d2adr2Val.textContent = d2A_at(r).toFixed(2);
+
+  const rOuter = Math.min(R_MAX, r + dr);
+  const deltaA = A(rOuter) - A(r);
+  const linApprox = dA(r) * dr;
+  secantVal.textContent = deltaA.toFixed(3);
+  document.getElementById('secantExpr').textContent = cfg.secantExprTpl(dr, linApprox);
+
+  // badges
+  if(r < 0.02){
+    circleState.textContent = 'r ≈ 0';
+    circleState.className = 'state-badge zero';
+    graphState.textContent = cfg.badgeUnit + ' ≈ 0';
+    graphState.className = 'state-badge zero';
+  } else if(growing){
+    circleState.textContent = 'growing';
+    circleState.className = 'state-badge pos';
+    graphState.textContent = cfg.badgeUnit + ' > 0';
+    graphState.className = 'state-badge pos';
+  } else {
+    circleState.textContent = 'shrinking';
+    circleState.className = 'state-badge neg';
+    graphState.textContent = cfg.badgeUnit + ' > 0 (r still > 0)';
+    graphState.className = 'state-badge neg';
+  }
+
+  if(r < 0.02){
+    criticalVal.textContent = 'r = 0  ✓ here';
+    verdict.innerHTML = cfg.verdictZero();
+  } else {
+    criticalVal.textContent = 'r = 0';
+    verdict.innerHTML = cfg.verdictElse(r);
+  }
+
+  if(mode === 'circle'){
+    drawCircle(r, dr, zoom, growing || r<0.02);
+    drawRectPanelNow();
+  } else {
+    updateSphere3D(r, dr, zoom, growing || r<0.02);
+  }
+  drawGraph(r, dr);
+}
+
+// ===================== RECTANGLE MODE (independent x, y) =====================
+let rectX = 6, rectY = 3, prevAreaXY = 18;
+const xSlider = document.getElementById('xSlider');
+const ySlider = document.getElementById('ySlider');
+const xValEl = document.getElementById('xVal');
+const yValEl = document.getElementById('yVal');
+const xZoomSlider = document.getElementById('xZoomSlider');
+const xZoomVal = document.getElementById('xZoomVal');
+const yZoomSlider = document.getElementById('yZoomSlider');
+const yZoomVal = document.getElementById('yZoomVal');
+
+function updateRectangleMode(){
+  const zoom = smoothZoom;
+  const xZoom = smoothXZoom;
+  const yZoom = smoothYZoom;
+  xZoomVal.textContent = xZoom.toFixed(1);
+  yZoomVal.textContent = yZoom.toFixed(1);
+  rectX = smoothX;
+  rectY = smoothY;
+  const x = rectX, y = rectY;
+  const area = x * y;
+  const growing = area >= prevAreaXY;
+  prevAreaXY = area;
+
+  graphLabel.textContent = graphAxis==='x' ? 'A(x) trace  (y fixed at ' + y.toFixed(2) + ')' : 'A(y) trace  (x fixed at ' + x.toFixed(2) + ')';
+
+  xValEl.textContent = x.toFixed(2);
+  yValEl.textContent = y.toFixed(2);
+  zoomVal.textContent = zoom.toFixed(1);
+  areaVal.textContent = area.toFixed(2);
+
+  // partial derivatives
+  dadrVal.textContent = y.toFixed(2);
+  document.getElementById('rateExpr').textContent = `= y (limit as Δx → 0, y held at ${y.toFixed(2)})`;
+  secantVal.textContent = x.toFixed(2);
+  document.getElementById('secantExpr').textContent = `= x (limit as Δy → 0, x held at ${x.toFixed(2)})`;
+
+  // exact ΔA for a fixed Δx = Δy = 0.4, split into its three geometric pieces
+  const DX = DR_TRUE, DY = DR_TRUE;
+  const rightStrip = y * DX;
+  const topStrip = x * DY;
+  const corner = DX * DY;
+  const exactDeltaA = rightStrip + topStrip + corner;
+  d2adr2Val.textContent = exactDeltaA.toFixed(3);
+  document.getElementById('rate2Expr').textContent =
+    `y·Δx + x·Δy + Δx·Δy = ${rightStrip.toFixed(2)} + ${topStrip.toFixed(2)} + ${corner.toFixed(2)}`;
+
+  if(x<0.15 && y<0.15){
+    criticalVal.textContent = `x=${x.toFixed(2)}, y=${y.toFixed(2)}  ✓ at the origin`;
+  } else if(x<0.15 || y<0.15){
+    criticalVal.textContent = `x=${x.toFixed(2)}, y=${y.toFixed(2)}  — only one side ≈ 0, not a critical point`;
+  } else {
+    criticalVal.textContent = 'x = 0  and  y = 0';
+  }
+
+  // badges
+  if(x < 0.15 || y < 0.15){
+    circleState.textContent = 'near boundary';
+    circleState.className = 'state-badge zero';
+    graphState.textContent = '∂A ≈ 0 along this edge';
+    graphState.className = 'state-badge zero';
+  } else if(growing){
+    circleState.textContent = 'area growing';
+    circleState.className = 'state-badge pos';
+    graphState.textContent = '∂A/∂x, ∂A/∂y > 0';
+    graphState.className = 'state-badge pos';
+  } else {
+    circleState.textContent = 'area shrinking';
+    circleState.className = 'state-badge neg';
+    graphState.textContent = 'moved to a smaller x·y';
+    graphState.className = 'state-badge neg';
+  }
+
+  verdict.innerHTML = `At <b>x = ${x.toFixed(2)}, y = ${y.toFixed(2)}</b>: ∂A/∂x = ${y.toFixed(2)} and ∂A/∂y = ${x.toFixed(2)} — both nonzero, so area is changing in both directions.
+    The exact area gained from nudging both sides by Δ = ${DR_TRUE.toFixed(2)} is ${exactDeltaA.toFixed(3)}: a right strip (y·Δx = ${rightStrip.toFixed(2)}),
+    a top strip (x·Δy = ${topStrip.toFixed(2)}), and a tiny corner square (Δx·Δy = ${corner.toFixed(2)}) that calculus' linear approximation drops as negligibly small.
+    Area has no interior maximum — it only stalls where <b>x = 0</b> or <b>y = 0</b>, its boundary minimum (A = 0).`;
+
+  drawRectangleShape(x, y, zoom, xZoom, yZoom, growing || x<0.15 || y<0.15);
+}
+
+// ===================== CUBOID MODE (independent x, y, z) =====================
+let cubeX = 6, cubeY = 4, cubeZ = 2, prevVolXYZ = 48;
+const cubeXSlider = document.getElementById('cubeXSlider');
+const cubeYSlider = document.getElementById('cubeYSlider');
+const cubeZSlider = document.getElementById('cubeZSlider');
+const cubeXVal = document.getElementById('cubeXVal');
+const cubeYVal = document.getElementById('cubeYVal');
+const cubeZVal = document.getElementById('cubeZVal');
+const cubeDxZoomSlider = document.getElementById('cubeDxZoomSlider');
+const cubeDyZoomSlider = document.getElementById('cubeDyZoomSlider');
+const cubeDzZoomSlider = document.getElementById('cubeDzZoomSlider');
+const cubeDxZoomVal = document.getElementById('cubeDxZoomVal');
+const cubeDyZoomVal = document.getElementById('cubeDyZoomVal');
+const cubeDzZoomVal = document.getElementById('cubeDzZoomVal');
+
+function updateCuboidMode(){
+  const zoom = smoothZoom;
+  const dxZoom = smoothDxZoom, dyZoom = smoothDyZoom, dzZoom = smoothDzZoom;
+  cubeDxZoomVal.textContent = dxZoom.toFixed(1);
+  cubeDyZoomVal.textContent = dyZoom.toFixed(1);
+  cubeDzZoomVal.textContent = dzZoom.toFixed(1);
+  cubeX = smoothCubeX; cubeY = smoothCubeY; cubeZ = smoothCubeZ;
+  const x = cubeX, y = cubeY, z = cubeZ;
+  const vol = x * y * z;
+  const growing = vol >= prevVolXYZ;
+  prevVolXYZ = vol;
+
+  const fixedLabel = graphAxis==='x' ? `(y,z fixed at ${y.toFixed(2)}, ${z.toFixed(2)})`
+                    : graphAxis==='y' ? `(x,z fixed at ${x.toFixed(2)}, ${z.toFixed(2)})`
+                    : `(x,y fixed at ${x.toFixed(2)}, ${y.toFixed(2)})`;
+  graphLabel.textContent = `V(${graphAxis}) trace  ${fixedLabel}`;
+
+  cubeXVal.textContent = x.toFixed(2);
+  cubeYVal.textContent = y.toFixed(2);
+  cubeZVal.textContent = z.toFixed(2);
+  zoomVal.textContent = zoom.toFixed(1);
+  areaVal.textContent = vol.toFixed(2);
+
+  // three partial derivatives
+  const dVdx = y*z, dVdy = x*z, dVdz = x*y;
+  dadrVal.textContent = dVdx.toFixed(2);
+  document.getElementById('rateExpr').textContent = `= y·z (limit as Δx → 0, y,z held fixed)`;
+  secantVal.textContent = dVdy.toFixed(2);
+  document.getElementById('secantExpr').textContent = `= x·z (limit as Δy → 0, x,z held fixed)`;
+  d2adr2Val.textContent = dVdz.toFixed(2);
+  document.getElementById('rate2Expr').textContent = `= x·y (limit as Δz → 0, x,y held fixed)`;
+
+  // exact ΔV for fixed Δx = Δy = Δz = 0.4, full trinomial expansion:
+  // (x+Δx)(y+Δy)(z+Δz) − xyz = three face slabs + three edge bars + one corner cube
+  const D = DR_TRUE;
+  const faceX = y*z*D, faceY = x*z*D, faceZ = x*y*D;
+  const edgeXY = z*D*D, edgeXZ = y*D*D, edgeYZ = x*D*D;
+  const cornerXYZ = D*D*D;
+  const exactDeltaV = faceX + faceY + faceZ + edgeXY + edgeXZ + edgeYZ + cornerXYZ;
+  criticalVal.textContent = exactDeltaV.toFixed(3);
+  critExpr.textContent =
+    `yzΔx+xzΔy+xyΔz+zΔxΔy+yΔxΔz+xΔyΔz+ΔxΔyΔz = ${exactDeltaV.toFixed(3)}`;
+
+  // badges
+  if(x < 0.15 || y < 0.15 || z < 0.15){
+    circleState.textContent = 'near boundary';
+    circleState.className = 'state-badge zero';
+    graphState.textContent = '∂V ≈ 0 along this face';
+    graphState.className = 'state-badge zero';
+  } else if(growing){
+    circleState.textContent = 'volume growing';
+    circleState.className = 'state-badge pos';
+    graphState.textContent = '∂V/∂x, ∂V/∂y, ∂V/∂z > 0';
+    graphState.className = 'state-badge pos';
+  } else {
+    circleState.textContent = 'volume shrinking';
+    circleState.className = 'state-badge neg';
+    graphState.textContent = 'moved to a smaller x·y·z';
+    graphState.className = 'state-badge neg';
+  }
+
+  verdict.innerHTML = `At <b>x = ${x.toFixed(2)}, y = ${y.toFixed(2)}, z = ${z.toFixed(2)}</b>: ∂V/∂x = ${dVdx.toFixed(2)}, ∂V/∂y = ${dVdy.toFixed(2)}, ∂V/∂z = ${dVdz.toFixed(2)} — all nonzero, so volume is changing along every edge.
+    The exact volume gained from nudging all three edges by Δ = ${D.toFixed(2)} is ${exactDeltaV.toFixed(3)}: three face slabs (yzΔx + xzΔy + xyΔz = ${(faceX+faceY+faceZ).toFixed(2)}),
+    three thin edge bars (zΔxΔy + yΔxΔz + xΔyΔz = ${(edgeXY+edgeXZ+edgeYZ).toFixed(2)}), and one tiny corner cube (ΔxΔyΔz = ${cornerXYZ.toFixed(3)}) that calculus' linear approximation — the three face slabs only — drops as negligibly small.
+    Volume has no interior maximum — it only stalls where <b>x = 0</b>, <b>y = 0</b>, or <b>z = 0</b>, its boundary minimum (V = 0).`;
+
+  updateCuboid3D(x, y, z, zoom, dxZoom, dyZoom, dzZoom, growing || x<0.15 || y<0.15 || z<0.15);
+}
+
+// ===================== RECTANGLE PROOF (sector rearrangement) =====================
+const rectCanvas = document.getElementById('rectCanvas');
+const rctx = rectCanvas.getContext('2d');
+const sectorSlider = document.getElementById('sectorSlider');
+const unfoldSlider = document.getElementById('unfoldSlider');
+const sectorVal = document.getElementById('sectorVal');
+const unfoldVal = document.getElementById('unfoldVal');
+const unfoldPlay = document.getElementById('unfoldPlay');
+const rectPanel = document.getElementById('rectPanel');
+const COLOR_A = '#5eead4', COLOR_B = '#2dd4bf88';
+
+function lerpPt(p0, p1, t){ return { x: p0.x + (p1.x - p0.x) * t, y: p0.y + (p1.y - p0.y) * t }; }
+
+function drawRectangleProof(r, N, t){
+  const w = rectCanvas.width, h = rectCanvas.height;
+  rctx.clearRect(0,0,w,h);
+
+  const margin = 34;
+  const scale = Math.min((w - 2*margin) / (Math.PI * R_MAX), (h - 2*margin) / R_MAX);
+  const R = Math.max(r * scale, 0.001);
+  const uw = (Math.PI * R) / N;   // width per sector-pair unit in the final row
+  const uh = R;                    // final height = r (scaled)
+  const delta = Math.PI / (2*N);   // half-angle of each small sector (2N sectors total)
+
+  const ccx = w/2, ccy = h/2;               // circle center (start pose)
+  const rectX0 = w/2 - (uw*N)/2;             // rectangle top-left (end pose)
+  const rectY0 = h/2 - uh/2;
+
+  // faint target rectangle outline, fades in with t
+  rctx.save();
+  rctx.globalAlpha = 0.15 + 0.55*t;
+  rctx.strokeStyle = '#fbbf24';
+  rctx.setLineDash([5,4]);
+  rctx.lineWidth = 1.3;
+  rctx.strokeRect(rectX0, rectY0, uw*N, uh);
+  rctx.setLineDash([]);
+  rctx.restore();
+
+  // faint origin circle outline, fades out with t
+  rctx.save();
+  rctx.globalAlpha = 0.25 * (1-t);
+  rctx.strokeStyle = '#000000';
+  rctx.beginPath();
+  rctx.arc(ccx, ccy, R, 0, Math.PI*2);
+  rctx.stroke();
+  rctx.restore();
+
+  const total = 2*N;
+  for(let i=0;i<total;i++){
+    const theta = i*(Math.PI/N) + Math.PI/(2*N);
+    const origApex = {x:ccx, y:ccy};
+    const origLeft  = {x: ccx + R*Math.cos(theta - delta), y: ccy + R*Math.sin(theta - delta)};
+    const origRight = {x: ccx + R*Math.cos(theta + delta), y: ccy + R*Math.sin(theta + delta)};
+
+    const p = Math.floor(i/2);
+    const isUp = (i % 2 === 0);
+    const cellX0 = rectX0 + p*uw;
+    let targApex, targLeft, targRight;
+    if(isUp){
+      targApex = {x: cellX0 + uw/2, y: rectY0};
+      targLeft  = {x: cellX0,      y: rectY0 + uh};
+      targRight = {x: cellX0 + uw, y: rectY0 + uh};
+    } else {
+      targApex = {x: cellX0 + uw/2, y: rectY0 + uh};
+      targLeft  = {x: cellX0,      y: rectY0};
+      targRight = {x: cellX0 + uw, y: rectY0};
+    }
+
+    const a = lerpPt(origApex, targApex, t);
+    const l = lerpPt(origLeft, targLeft, t);
+    const rr = lerpPt(origRight, targRight, t);
+
+    rctx.beginPath();
+    rctx.moveTo(a.x, a.y);
+    rctx.lineTo(l.x, l.y);
+    rctx.lineTo(rr.x, rr.y);
+    rctx.closePath();
+    rctx.fillStyle = (p % 2 === 0) ? 'rgba(94,234,212,0.35)' : 'rgba(45,212,191,0.22)';
+    rctx.fill();
+    rctx.strokeStyle = '#000000';
+    rctx.lineWidth = 0.8;
+    rctx.stroke();
+  }
+
+  // labels
+  rctx.font = '11px JetBrains Mono';
+  if(t < 0.85){
+    rctx.fillStyle = '#7a86a8';
+    rctx.textAlign = 'center';
+    rctx.fillText('circle: A = πr²', ccx, ccy + R + 18);
+  }
+  if(t > 0.15){
+    rctx.globalAlpha = Math.min(1, (t-0.15)/0.5);
+    rctx.fillStyle = '#5eead4';
+    rctx.textAlign = 'center';
+    rctx.fillText('base = πr = ' + (Math.PI*r).toFixed(2), rectX0 + uw*N/2, rectY0 + uh + 20);
+    rctx.save();
+    rctx.translate(rectX0 - 12, rectY0 + uh/2);
+    rctx.rotate(-Math.PI/2);
+    rctx.fillStyle = '#f0abfc';
+    rctx.fillText('height = r = ' + r.toFixed(2), 0, 0);
+    rctx.restore();
+    rctx.fillStyle = '#111111';
+    rctx.fillText('Area = πr · r = ' + (Math.PI*r*r).toFixed(2), rectX0 + uw*N/2, rectY0 - 12);
+    rctx.globalAlpha = 1;
+  }
+  rctx.textAlign = 'left';
+}
+
+let unfoldAnimating = false;
+function drawRectPanelNow(){
+  const r = parseFloat(rSlider.value);
+  const N = parseInt(sectorSlider.value, 10);
+  const t = parseFloat(unfoldSlider.value);
+  drawRectangleProof(r, N, t);
+}
+
+sectorSlider.addEventListener('input', ()=>{
+  sectorVal.textContent = sectorSlider.value;
+  drawRectPanelNow();
+});
+unfoldSlider.addEventListener('input', ()=>{
+  unfoldVal.textContent = parseFloat(unfoldSlider.value).toFixed(2);
+  drawRectPanelNow();
+});
+unfoldPlay.addEventListener('click', ()=>{
+  if(unfoldAnimating) return;
+  unfoldAnimating = true;
+  const start = parseFloat(unfoldSlider.value);
+  const target = start > 0.5 ? 0 : 1;
+  const dur = 1400;
+  const t0 = performance.now();
+  function step(now){
+    const p = Math.min(1, (now - t0)/dur);
+    const eased = p<0.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2; // ease-in-out
+    const val = start + (target - start) * eased;
+    unfoldSlider.value = val;
+    unfoldVal.textContent = val.toFixed(2);
+    drawRectPanelNow();
+    if(p < 1){ requestAnimationFrame(step); }
+    else { unfoldAnimating = false; }
+  }
+  requestAnimationFrame(step);
+});
+
+// continuous easing loop — sliders just set the target; this loop glides
+// the displayed values toward it every frame for a smooth, Brilliant-style feel.
+function clampSlider(slider, val){
+  const min = parseFloat(slider.min), max = parseFloat(slider.max);
+  return String(Math.min(max, Math.max(min, val)));
+}
+function animLoop(){
+  // when linked, the y (and z, for cuboid) slider values are slaved to x —
+  // done here, before reading targets below, so the rest of the easing
+  // pipeline treats them exactly like any other slider-driven target.
+  if(linkOp!=='off'){
+    if(mode === 'rectangle'){
+      const y = solveLinked(parseFloat(xSlider.value), linkOp, linkA, linkB, linkConst);
+      if(y!==null) ySlider.value = clampSlider(ySlider, y);
+    }
+    if(mode === 'cuboid'){
+      const yz = solveLinked(parseFloat(cubeXSlider.value), linkOp, linkA, linkB, linkConst);
+      if(yz!==null){
+        cubeYSlider.value = clampSlider(cubeYSlider, yz);
+        cubeZSlider.value = clampSlider(cubeZSlider, yz);
+      }
+    }
+  }
+
+  const targetR = parseFloat(rSlider.value);
+  const targetZoom = parseFloat(zoomSlider.value);
+  const targetX = parseFloat(xSlider.value);
+  const targetY = parseFloat(ySlider.value);
+  const targetXZoom = parseFloat(xZoomSlider.value);
+  const targetYZoom = parseFloat(yZoomSlider.value);
+  const targetCubeX = parseFloat(cubeXSlider.value);
+  const targetCubeY = parseFloat(cubeYSlider.value);
+  const targetCubeZ = parseFloat(cubeZSlider.value);
+  const targetDxZoom = parseFloat(cubeDxZoomSlider.value);
+  const targetDyZoom = parseFloat(cubeDyZoomSlider.value);
+  const targetDzZoom = parseFloat(cubeDzZoomSlider.value);
+
+  smoothR += (targetR - smoothR) * EASE_K;
+  smoothZoom += (targetZoom - smoothZoom) * EASE_K;
+  smoothX += (targetX - smoothX) * EASE_K;
+  smoothY += (targetY - smoothY) * EASE_K;
+  smoothXZoom += (targetXZoom - smoothXZoom) * EASE_K;
+  smoothYZoom += (targetYZoom - smoothYZoom) * EASE_K;
+  smoothCubeX += (targetCubeX - smoothCubeX) * EASE_K;
+  smoothCubeY += (targetCubeY - smoothCubeY) * EASE_K;
+  smoothCubeZ += (targetCubeZ - smoothCubeZ) * EASE_K;
+  smoothDxZoom += (targetDxZoom - smoothDxZoom) * EASE_K;
+  smoothDyZoom += (targetDyZoom - smoothDyZoom) * EASE_K;
+  smoothDzZoom += (targetDzZoom - smoothDzZoom) * EASE_K;
+
+  // snap once close enough so labels settle on an exact value instead of drifting forever
+  if(Math.abs(targetR-smoothR)<0.001) smoothR = targetR;
+  if(Math.abs(targetZoom-smoothZoom)<0.001) smoothZoom = targetZoom;
+  if(Math.abs(targetX-smoothX)<0.001) smoothX = targetX;
+  if(Math.abs(targetY-smoothY)<0.001) smoothY = targetY;
+  if(Math.abs(targetXZoom-smoothXZoom)<0.001) smoothXZoom = targetXZoom;
+  if(Math.abs(targetYZoom-smoothYZoom)<0.001) smoothYZoom = targetYZoom;
+  if(Math.abs(targetCubeX-smoothCubeX)<0.001) smoothCubeX = targetCubeX;
+  if(Math.abs(targetCubeY-smoothCubeY)<0.001) smoothCubeY = targetCubeY;
+  if(Math.abs(targetCubeZ-smoothCubeZ)<0.001) smoothCubeZ = targetCubeZ;
+  if(Math.abs(targetDxZoom-smoothDxZoom)<0.001) smoothDxZoom = targetDxZoom;
+  if(Math.abs(targetDyZoom-smoothDyZoom)<0.001) smoothDyZoom = targetDyZoom;
+  if(Math.abs(targetDzZoom-smoothDzZoom)<0.001) smoothDzZoom = targetDzZoom;
+
+  update();
+  if(typeof refreshAllSliders === 'function') refreshAllSliders();
+  requestAnimationFrame(animLoop);
+}
+
+const graphVsX = document.getElementById('graphVsX');
+const graphVsY = document.getElementById('graphVsY');
+const graphVsZ = document.getElementById('graphVsZ');
+graphVsX.addEventListener('click', ()=>{
+  graphAxis = 'x';
+  graphVsX.classList.add('active'); graphVsY.classList.remove('active'); graphVsZ.classList.remove('active');
+  update();
+});
+graphVsY.addEventListener('click', ()=>{
+  graphAxis = 'y';
+  graphVsY.classList.add('active'); graphVsX.classList.remove('active'); graphVsZ.classList.remove('active');
+  update();
+});
+graphVsZ.addEventListener('click', ()=>{
+  graphAxis = 'z';
+  graphVsZ.classList.add('active'); graphVsX.classList.remove('active'); graphVsY.classList.remove('active');
+  update();
+});
+
+const gridToggle = document.getElementById('gridToggle');
+gridToggle.addEventListener('click', ()=>{
+  showGrid = !showGrid;
+  gridToggle.textContent = showGrid ? 'Grid: on' : 'Grid: off';
+  gridToggle.classList.toggle('active', showGrid);
+  if(groundGrid) groundGrid.visible = showGrid;
+  if(cuboidGroundGrid) cuboidGroundGrid.visible = showGrid;
+  if(mode === 'sphere') renderSphereScene();
+  if(mode === 'cuboid') renderCuboidScene();
+  update();
+});
+
+const axesToggle = document.getElementById('axesToggle');
+axesToggle.addEventListener('click', ()=>{
+  showAxes = !showAxes;
+  axesToggle.textContent = showAxes ? 'Axes: on' : 'Axes: off';
+  axesToggle.classList.toggle('active', showAxes);
+  sphereAxisLines.forEach(l => l.visible = showAxes);
+  cuboidAxisLines.forEach(l => l.visible = showAxes);
+  if(mode === 'sphere') renderSphereScene();
+  if(mode === 'cuboid') renderCuboidScene();
+  update();
+});
+
+const baseToggle = document.getElementById('baseToggle');
+baseToggle.addEventListener('click', ()=>{
+  showBase = !showBase;
+  const sym = MODES[mode].quantitySym;
+  baseToggle.textContent = sym + ': ' + (showBase ? 'on' : 'off');
+  baseToggle.classList.toggle('active', showBase);
+  if(mode === 'sphere') renderSphereScene();
+  if(mode === 'cuboid') renderCuboidScene();
+  update();
+});
+
+const deltaToggle = document.getElementById('deltaToggle');
+deltaToggle.addEventListener('click', ()=>{
+  showDelta = !showDelta;
+  const sym = MODES[mode].quantitySym;
+  deltaToggle.textContent = 'Δ' + sym + ': ' + (showDelta ? 'on' : 'off');
+  deltaToggle.classList.toggle('active', showDelta);
+  if(mode === 'sphere') renderSphereScene();
+  if(mode === 'cuboid') renderCuboidScene();
+  update();
+});
+
+const ringsToggle = document.getElementById('ringsToggle');
+ringsToggle.addEventListener('click', ()=>{
+  showRings = !showRings;
+  ringsToggle.textContent = 'Rings: ' + (showRings ? 'on' : 'off');
+  ringsToggle.classList.toggle('active', showRings);
+  update();
+});
+
+const domainToggle = document.getElementById('domainToggle');
+domainToggle.addEventListener('click', ()=>{
+  graphDomainMode = graphDomainMode === 'pos' ? 'full' : 'pos';
+  domainToggle.textContent = 'Domain: ' + (graphDomainMode==='full' ? '−∞ → ∞' : '0 → ∞');
+  domainToggle.classList.toggle('active', graphDomainMode==='full');
+  [graphViewMin, graphViewMax] = defaultGraphView();
+  graphViewYMin = null; graphViewYMax = null;
+  update();
+});
+
+const viewResetToggle = document.getElementById('viewResetToggle');
+viewResetToggle.addEventListener('click', ()=>{
+  [graphViewMin, graphViewMax] = defaultGraphView();
+  graphViewYMin = null; graphViewYMax = null;
+  update();
+});
+
+// ===================== Graph gestures: pinch-zoom, wheel-zoom, drag-to-pan (both axes), double-tap reset =====================
+(function setupGraphGestures(){
+  const canvas = graphCanvas;
+  canvas.style.touchAction = 'none';
+  const pointers = new Map();
+  let lastDistX = null, lastDistY = null;
+  let dragLastR = null, dragLastA = null;
+
+  const padL = 46, padR = 14, padT = 14, padB = 30;
+
+  function canvasXToR(clientX){
+    const rect = canvas.getBoundingClientRect();
+    const px = (clientX - rect.left) * (canvas.width / rect.width);
+    const plotW = canvas.width - padL - padR;
+    const t = (px - padL) / plotW;
+    return graphViewMin + t * (graphViewMax - graphViewMin);
+  }
+
+  function canvasYToA(clientY){
+    const rect = canvas.getBoundingClientRect();
+    const py = (clientY - rect.top) * (canvas.height / rect.height);
+    const plotH = canvas.height - padT - padB;
+    const t = (py - padT) / plotH;
+    return graphLastYMax - t * (graphLastYMax - graphLastYMin);
+  }
+
+  function ensureManualY(){
+    if(graphViewYMin === null || graphViewYMax === null){
+      graphViewYMin = graphLastYMin; graphViewYMax = graphLastYMax;
+    }
+  }
+
+  function zoomAround(centerR, centerA, factorX, factorY){
+    if(factorX !== null){
+      const min = centerR - (centerR - graphViewMin) * factorX;
+      const max = centerR + (graphViewMax - centerR) * factorX;
+      [graphViewMin, graphViewMax] = clampGraphView(min, max);
+    }
+    if(factorY !== null){
+      ensureManualY();
+      const ySpan = graphViewYMax - graphViewYMin;
+      const minSpanY = Math.max(GRAPH_MIN_SPAN_Y, ySpan * 0.02);
+      let min = centerA - (centerA - graphViewYMin) * factorY;
+      let max = centerA + (graphViewYMax - centerA) * factorY;
+      if(max - min < minSpanY){ const c=(min+max)/2; min=c-minSpanY/2; max=c+minSpanY/2; }
+      graphViewYMin = min; graphViewYMax = max;
+    }
+    update();
+  }
+
+  canvas.addEventListener('pointerdown', e=>{
+    canvas.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pointers.size === 1){
+      dragLastR = canvasXToR(e.clientX);
+      dragLastA = canvasYToA(e.clientY);
+    } else if(pointers.size === 2){
+      const pts = [...pointers.values()];
+      lastDistX = Math.abs(pts[0].x-pts[1].x);
+      lastDistY = Math.abs(pts[0].y-pts[1].y);
+    }
+  });
+
+  canvas.addEventListener('pointermove', e=>{
+    if(!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pointers.size === 2){
+      const pts = [...pointers.values()];
+      const distX = Math.abs(pts[0].x-pts[1].x);
+      const distY = Math.abs(pts[0].y-pts[1].y);
+      const midR = canvasXToR((pts[0].x+pts[1].x)/2);
+      const midA = canvasYToA((pts[0].y+pts[1].y)/2);
+      // fingers spreading further apart on an axis -> zoom in on that axis;
+      // near-parallel movement (small distX or distY) leaves that axis alone
+      const factorX = (lastDistX && distX > 4) ? lastDistX/distX : null;
+      const factorY = (lastDistY && distY > 4) ? lastDistY/distY : null;
+      if(factorX !== null || factorY !== null) zoomAround(midR, midA, factorX, factorY);
+      lastDistX = distX; lastDistY = distY;
+    } else if(pointers.size === 1 && dragLastR !== null){
+      const curR = canvasXToR(e.clientX);
+      const curA = canvasYToA(e.clientY);
+      const deltaR = dragLastR - curR;
+      const deltaA = dragLastA - curA;
+      const [min, max] = clampGraphView(graphViewMin + deltaR, graphViewMax + deltaR);
+      graphViewMin = min; graphViewMax = max;
+      ensureManualY();
+      graphViewYMin += deltaA; graphViewYMax += deltaA;
+      update();
+      dragLastR = canvasXToR(e.clientX);
+      dragLastA = canvasYToA(e.clientY);
+    }
+  });
+
+  function releasePointer(e){
+    pointers.delete(e.pointerId);
+    if(pointers.size < 2){ lastDistX = null; lastDistY = null; }
+    if(pointers.size === 0){ dragLastR = null; dragLastA = null; }
+  }
+  canvas.addEventListener('pointerup', releasePointer);
+  canvas.addEventListener('pointercancel', releasePointer);
+  canvas.addEventListener('pointerleave', releasePointer);
+
+  canvas.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 1.12 : 1/1.12;
+    if(e.shiftKey){
+      // shift+scroll: vertical zoom only
+      zoomAround(canvasXToR(e.clientX), canvasYToA(e.clientY), null, factor);
+    } else {
+      // plain scroll: zoom both axes together, centered on the cursor
+      zoomAround(canvasXToR(e.clientX), canvasYToA(e.clientY), factor, factor);
+    }
+  }, {passive:false});
+
+  canvas.addEventListener('dblclick', ()=>{
+    [graphViewMin, graphViewMax] = defaultGraphView();
+    graphViewYMin = null; graphViewYMax = null;
+    update();
+  });
+})();
+
+const critProjToggle = document.getElementById('critProjToggle');
+critProjToggle.addEventListener('click', ()=>{
+  showCritProj = !showCritProj;
+  critProjToggle.textContent = 'Crit. projections: ' + (showCritProj ? 'on' : 'off');
+  critProjToggle.classList.toggle('active', showCritProj);
+  update();
+});
+
+const linkOpSelect = document.getElementById('linkOp');
+const linkConstSlider = document.getElementById('linkConstSlider');
+const linkASlider = document.getElementById('linkASlider');
+const linkBSlider = document.getElementById('linkBSlider');
+const linkAVal = document.getElementById('linkAVal');
+const linkBVal = document.getElementById('linkBVal');
+const linkConstVal = document.getElementById('linkConstVal');
+function applyLinkNow(){
+  ySlider.disabled = mode==='rectangle' && linkOp!=='off';
+  cubeYSlider.disabled = mode==='cuboid' && linkOp!=='off';
+  cubeZSlider.disabled = mode==='cuboid' && linkOp!=='off';
+  document.getElementById('linkCoeffRow').style.display = linkOp!=='off' ? 'flex' : 'none';
+  document.getElementById('linkConstRow').style.display = linkOp!=='off' ? 'flex' : 'none';
+  if(linkOp!=='off'){
+    // snap immediately so the linked sliders don't lag behind on changing the relation
+    const y = solveLinked(parseFloat(xSlider.value), linkOp, linkA, linkB, linkConst);
+    if(y!==null) ySlider.value = clampSlider(ySlider, y);
+    const yz = solveLinked(parseFloat(cubeXSlider.value), linkOp, linkA, linkB, linkConst);
+    if(yz!==null){
+      cubeYSlider.value = clampSlider(cubeYSlider, yz);
+      cubeZSlider.value = clampSlider(cubeZSlider, yz);
+    }
+  }
+  refreshAllSliders();
+}
+linkOpSelect.addEventListener('change', ()=>{
+  linkOp = linkOpSelect.value;
+  applyLinkNow();
+});
+// each of a, b, C is its own independent slider — drag any one alone, or any
+// combination of the three together, and the linked relation updates live.
+linkASlider.addEventListener('input', ()=>{
+  linkA = parseFloat(linkASlider.value);
+  linkAVal.textContent = linkA.toFixed(1);
+  applyLinkNow();
+});
+linkBSlider.addEventListener('input', ()=>{
+  linkB = parseFloat(linkBSlider.value);
+  linkBVal.textContent = linkB.toFixed(1);
+  applyLinkNow();
+});
+linkConstSlider.addEventListener('input', ()=>{
+  linkConst = parseFloat(linkConstSlider.value);
+  linkConstVal.textContent = linkConst.toFixed(1);
+  applyLinkNow();
+});
+
+const camModeToggle = document.getElementById('camModeToggle');
+camModeToggle.addEventListener('click', ()=>{
+  camMode = camMode === 'orbit' ? 'inside' : 'orbit';
+  camModeToggle.textContent = 'Cam: ' + (camMode==='orbit' ? 'Orbit' : 'Inside (COM)');
+  camModeToggle.classList.toggle('active', camMode==='inside');
+  if(mode === 'sphere') updateSphereCamera();
+  if(mode === 'cuboid') updateCuboidCamera();
+});
+
+// ===================== Slider polish: proportional fill + floating bubble =====================
+const sliderEnhancements = [];
+function enhanceSliders(){
+  document.querySelectorAll('input[type=range]').forEach(input=>{
+    if(input.dataset.enhanced) return;
+    input.dataset.enhanced = '1';
+
+    const wrap = document.createElement('span');
+    wrap.className = 'slider-wrap';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+
+    const bubble = document.createElement('span');
+    bubble.className = 'slider-bubble';
+    wrap.appendChild(bubble);
+
+    let hideTimer = null;
+    function showBubble(){
+      clearTimeout(hideTimer);
+      bubble.classList.add('show');
+    }
+    function scheduleHide(){
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(()=> bubble.classList.remove('show'), 550);
+    }
+    function refresh(){
+      const min = parseFloat(input.min) || 0, max = parseFloat(input.max) || 100;
+      const val = parseFloat(input.value);
+      const p = Math.min(100, Math.max(0, (val-min)/(max-min)*100));
+      input.style.background = `linear-gradient(90deg, var(--accent) 0%, var(--accent) ${p}%, rgba(255,255,255,.16) ${p}%, rgba(255,255,255,.16) 100%)`;
+      const decimals = (input.step && input.step.includes('.')) ? input.step.split('.')[1].length : 0;
+      bubble.textContent = decimals ? val.toFixed(decimals) : String(val);
+      const thumbW = 18;
+      const trackW = input.offsetWidth || 1;
+      const x = thumbW/2 + (p/100) * (trackW - thumbW);
+      bubble.style.left = x + 'px';
+    }
+
+    input.addEventListener('input', ()=>{ refresh(); showBubble(); });
+    input.addEventListener('pointerdown', ()=>{ refresh(); showBubble(); });
+    input.addEventListener('pointerup', scheduleHide);
+    input.addEventListener('mouseenter', showBubble);
+    input.addEventListener('mouseleave', ()=>{ if(document.activeElement!==input) scheduleHide(); });
+    input.addEventListener('blur', scheduleHide);
+
+    refresh();
+    sliderEnhancements.push(refresh);
+  });
+}
+function refreshAllSliders(){ sliderEnhancements.forEach(fn => fn()); }
+enhanceSliders();
+
+applyModeUI();
+requestAnimationFrame(animLoop);
+</script>
+</body>
+</html>

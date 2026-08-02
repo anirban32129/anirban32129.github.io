@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newton's Laws — 3D Physics Laboratory</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+:root {
+  --wood-dark: #2c1a0e;
+  --wood-mid: #5c3317;
+  --wood-light: #8b5e3c;
+  --wood-pale: #c4915a;
+  --wood-cream: #f5e6d0;
+  --chalk-white: #f0ece4;
+  --chalk-dim: #b8a898;
+  --law1-col: #e8c547;
+  --law2-col: #e07b39;
+  --law3-col: #5bb8d4;
+  --green-chalk: #7ec8a0;
+  --red-chalk: #d46b6b;
+  --bg: #1a0f07;
+  --panel-bg: rgba(28,18,10,0.92);
+  --border-wood: rgba(139,94,60,0.5);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(92,51,23,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(44,26,14,0.2) 0%, transparent 50%);
+  font-family: 'Crimson Pro', serif;
+  color: var(--chalk-white);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* WOOD GRAIN OVERLAY */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: repeating-linear-gradient(
+    88deg,
+    transparent 0px, transparent 18px,
+    rgba(92,51,23,0.04) 18px, rgba(92,51,23,0.04) 19px,
+    transparent 19px, transparent 35px,
+    rgba(44,26,14,0.06) 35px, rgba(44,26,14,0.06) 36px
+  );
+  pointer-events: none; z-index: 0;
+}
+
+/* HEADER */
+header {
+  position: relative; z-index: 10;
+  text-align: center;
+  padding: 36px 20px 16px;
+  border-bottom: 2px solid var(--border-wood);
+  background: linear-gradient(180deg, rgba(44,26,14,0.9) 0%, transparent 100%);
+}
+header::before {
+  content: '⚗ NEWTON\'S LAWS OF MOTION ⚗';
+  display: block;
+  font-family: 'Special Elite', cursive;
+  font-size: 0.6rem;
+  letter-spacing: 0.5em;
+  color: var(--wood-pale);
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2rem, 5vw, 3.8rem);
+  font-weight: 900;
+  color: var(--chalk-white);
+  text-shadow: 0 2px 20px rgba(196,145,90,0.4), 2px 2px 0 rgba(0,0,0,0.5);
+  letter-spacing: 0.03em;
+}
+header p {
+  font-family: 'Special Elite', cursive;
+  color: var(--chalk-dim);
+  font-size: 0.8rem;
+  letter-spacing: 0.25em;
+  margin-top: 8px;
+}
+
+/* CHALKBOARD TABS */
+.nav-tabs {
+  display: flex; justify-content: center; gap: 0;
+  padding: 0 20px;
+  position: relative; z-index: 10;
+  border-bottom: 3px solid var(--wood-mid);
+  flex-wrap: wrap;
+}
+.tab-btn {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  padding: 14px 32px;
+  border: none;
+  border-right: 1px solid var(--border-wood);
+  background: rgba(44,26,14,0.6);
+  cursor: pointer;
+  transition: all 0.3s;
+  color: var(--chalk-dim);
+  position: relative;
+  overflow: hidden;
+}
+.tab-btn:first-child { border-left: 1px solid var(--border-wood); }
+.tab-btn::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  transform: scaleX(0); transition: transform 0.3s;
+}
+.tab-btn[data-law="1"]::after { background: var(--law1-col); }
+.tab-btn[data-law="2"]::after { background: var(--law2-col); }
+.tab-btn[data-law="3"]::after { background: var(--law3-col); }
+.tab-btn.active { color: var(--chalk-white); background: rgba(92,51,23,0.4); }
+.tab-btn.active::after { transform: scaleX(1); }
+.tab-btn:hover { background: rgba(92,51,23,0.3); color: var(--chalk-white); }
+
+/* SECTIONS */
+.law-section { display: none; position: relative; z-index: 5; padding: 28px 20px 60px; }
+.law-section.active { display: block; animation: fadeUp 0.5s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+/* LAW HEADER BANNER */
+.law-banner {
+  max-width: 1280px; margin: 0 auto 28px;
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 20px; align-items: center;
+  padding: 20px 28px;
+  background: linear-gradient(135deg, rgba(44,26,14,0.95) 0%, rgba(28,18,10,0.9) 100%);
+  border: 1px solid var(--border-wood);
+  border-left: 5px solid;
+  position: relative; overflow: hidden;
+}
+.law-banner::before {
+  content: '';
+  position: absolute; top: -30px; right: -30px;
+  width: 120px; height: 120px; border-radius: 50%;
+  opacity: 0.05;
+}
+#law1 .law-banner { border-left-color: var(--law1-col); }
+#law1 .law-banner::before { background: var(--law1-col); }
+#law2 .law-banner { border-left-color: var(--law2-col); }
+#law2 .law-banner::before { background: var(--law2-col); }
+#law3 .law-banner { border-left-color: var(--law3-col); }
+#law3 .law-banner::before { background: var(--law3-col); }
+
+.law-banner-text .law-num {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.65rem; letter-spacing: 0.35em;
+  color: var(--wood-pale); margin-bottom: 6px;
+}
+.law-banner-text h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.3rem, 2.5vw, 2rem);
+  margin-bottom: 8px;
+}
+.law-banner-text p { font-size: 1.05rem; color: var(--chalk-dim); line-height: 1.6; max-width: 700px; }
+.law-formula-badge {
+  font-family: 'Special Elite', cursive;
+  font-size: clamp(1.4rem, 2.5vw, 2.2rem);
+  padding: 16px 28px;
+  border: 2px solid;
+  text-align: center; white-space: nowrap;
+  line-height: 1.5;
+  background: rgba(0,0,0,0.3);
+}
+#law1 .law-formula-badge { color: var(--law1-col); border-color: var(--law1-col); }
+#law2 .law-formula-badge { color: var(--law2-col); border-color: var(--law2-col); }
+#law3 .law-formula-badge { color: var(--law3-col); border-color: var(--law3-col); }
+
+/* SIM GRID */
+.sim-grid {
+  max-width: 1280px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.sim-grid.triple { grid-template-columns: 1fr 1fr 1fr; }
+@media(max-width:1000px) { .sim-grid, .sim-grid.triple { grid-template-columns: 1fr; } }
+.full { grid-column: 1 / -1; }
+
+/* PANEL = CHALKBOARD */
+.panel {
+  background: linear-gradient(145deg, #1c2820 0%, #18221a 50%, #1a2318 100%);
+  border: 2px solid #2d4a35;
+  border-radius: 2px;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+/* chalk texture */
+.panel::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 1; border-radius: inherit;
+}
+
+/* WOOD FRAME around panel */
+.panel-frame {
+  position: absolute; inset: -3px;
+  border: 6px solid;
+  border-image: linear-gradient(135deg, #8b5e3c, #5c3317, #8b5e3c, #5c3317) 1;
+  pointer-events: none; z-index: 5;
+}
+
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid rgba(45,74,53,0.5);
+  position: relative; z-index: 3;
+  background: rgba(0,0,0,0.2);
+}
+.panel-header h3 {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  color: var(--chalk-dim);
+}
+
+/* FULLSCREEN BUTTON */
+.fs-btn {
+  width: 28px; height: 28px;
+  background: rgba(139,94,60,0.2);
+  border: 1px solid var(--border-wood);
+  color: var(--wood-pale);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s;
+  border-radius: 2px;
+  position: relative; z-index: 10;
+  flex-shrink: 0;
+}
+.fs-btn:hover { background: rgba(139,94,60,0.5); color: var(--chalk-white); }
+
+/* CANVAS WRAPPER */
+.canvas-wrap {
+  position: relative;
+  width: 100%; padding-top: 62%;
+  overflow: hidden;
+  background: #0d1a10;
+}
+.canvas-wrap canvas,
+.canvas-wrap > div {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* CONTROLS AREA */
+.ctrl-zone {
+  padding: 14px 16px;
+  position: relative; z-index: 3;
+  border-top: 1px solid rgba(45,74,53,0.4);
+  background: rgba(0,0,0,0.15);
+}
+.ctrl-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.ctrl-row:last-child { margin-bottom: 0; }
+.ctrl-row label {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--chalk-dim);
+  min-width: 130px;
+}
+.ctrl-row input[type=range] {
+  flex: 1; min-width: 80px; height: 3px;
+  -webkit-appearance: none; appearance: none;
+  background: rgba(45,74,53,0.6);
+  outline: none; cursor: pointer; border-radius: 2px;
+}
+.ctrl-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  cursor: pointer; border: 2px solid rgba(0,0,0,0.4);
+}
+.l1 input[type=range]::-webkit-slider-thumb { background: var(--law1-col); }
+.l2 input[type=range]::-webkit-slider-thumb { background: var(--law2-col); }
+.l3 input[type=range]::-webkit-slider-thumb { background: var(--law3-col); }
+.ctrl-row .val {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.78rem; min-width: 55px; text-align: right;
+}
+.l1 .val { color: var(--law1-col); }
+.l2 .val { color: var(--law2-col); }
+.l3 .val { color: var(--law3-col); }
+
+/* BUTTONS */
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.btn {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.65rem; letter-spacing: 0.15em;
+  padding: 7px 16px;
+  border: 1px solid; background: transparent; cursor: pointer;
+  transition: all 0.2s; border-radius: 1px;
+}
+.btn-l1 { color: var(--law1-col); border-color: var(--law1-col); }
+.btn-l1:hover { background: rgba(232,197,71,0.15); }
+.btn-l2 { color: var(--law2-col); border-color: var(--law2-col); }
+.btn-l2:hover { background: rgba(224,123,57,0.15); }
+.btn-l3 { color: var(--law3-col); border-color: var(--law3-col); }
+.btn-l3:hover { background: rgba(91,184,212,0.15); }
+
+/* READOUT */
+.readout {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.72rem; letter-spacing: 0.04em;
+  color: var(--green-chalk);
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(45,74,53,0.4);
+  padding: 8px 12px; margin-top: 10px;
+  line-height: 1.6; border-radius: 1px;
+}
+
+/* FULLSCREEN OVERLAY */
+.fs-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 1000;
+  background: #0d1a10;
+  flex-direction: column;
+}
+.fs-overlay.active { display: flex; }
+.fs-top-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px;
+  background: rgba(0,0,0,0.5);
+  border-bottom: 1px solid var(--border-wood);
+  flex-shrink: 0;
+}
+.fs-top-bar h4 { font-family: 'Special Elite', cursive; font-size: 0.8rem; letter-spacing: 0.2em; color: var(--chalk-dim); }
+.fs-close {
+  font-family: 'Special Elite', cursive; font-size: 0.7rem;
+  padding: 6px 16px; border: 1px solid var(--border-wood);
+  background: transparent; color: var(--wood-pale); cursor: pointer;
+  letter-spacing: 0.15em;
+}
+.fs-close:hover { background: rgba(139,94,60,0.3); color: var(--chalk-white); }
+.fs-canvas-area {
+  flex: 1; position: relative; overflow: hidden;
+  display: block; min-height: 0;
+}
+.fs-canvas-area canvas {
+  position: absolute !important;
+  top: 0 !important; left: 0 !important;
+  width: 100% !important; height: 100% !important;
+  display: block;
+}
+.fs-ctrl-area {
+  padding: 14px 20px;
+  background: rgba(0,0,0,0.6);
+  border-top: 1px solid var(--border-wood);
+  display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* CONCEPT CARDS */
+.concept-grid {
+  max-width: 1280px; margin: 24px auto 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.concept-card {
+  background: rgba(44,26,14,0.7);
+  border: 1px solid var(--border-wood);
+  border-top: 3px solid;
+  padding: 16px 18px;
+}
+#law1 .concept-card { border-top-color: var(--law1-col); }
+#law2 .concept-card { border-top-color: var(--law2-col); }
+#law3 .concept-card { border-top-color: var(--law3-col); }
+.concept-card .icon { font-size: 1.6rem; margin-bottom: 8px; }
+.concept-card h4 { font-family: 'Special Elite', cursive; font-size: 0.68rem; letter-spacing: 0.2em; margin-bottom: 6px; }
+#law1 .concept-card h4 { color: var(--law1-col); }
+#law2 .concept-card h4 { color: var(--law2-col); }
+#law3 .concept-card h4 { color: var(--law3-col); }
+.concept-card p { font-size: 0.9rem; line-height: 1.55; color: var(--chalk-dim); }
+
+@media(max-width:700px) {
+  .law-banner { grid-template-columns: 1fr; }
+  .law-formula-badge { font-size: 1.2rem; }
+}
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+
+<header>
+  <h1>Newton's Laws of Motion</h1>
+  <p>INTERACTIVE 3D PHYSICS LABORATORY</p>
+</header>
+
+<nav class="nav-tabs">
+  <button class="tab-btn active" data-law="1" onclick="showLaw(1)">I — Law of Inertia</button>
+  <button class="tab-btn" data-law="2" onclick="showLaw(2)">II — F = ma</button>
+  <button class="tab-btn" data-law="3" onclick="showLaw(3)">III — Action &amp; Reaction</button>
+</nav>
+
+<!-- ============================================================ LAW 1 ============================================================ -->
+<section id="law1" class="law-section active">
+  <div class="law-banner">
+    <div class="law-banner-text">
+      <div class="law-num">// NEWTON'S FIRST LAW</div>
+      <h2>The Law of Inertia</h2>
+      <p>An object at rest stays at rest, and an object in motion stays in motion at constant velocity — <em>unless acted upon by a net external force.</em></p>
+    </div>
+    <div class="law-formula-badge">Σ<b>F</b> = 0 ⟹ <b>a</b> = 0<br><span style="font-size:0.55em;opacity:0.7">velocity remains constant</span></div>
+  </div>
+
+  <div class="sim-grid">
+    <!-- 3D INERTIA SIM -->
+    <div class="panel l1" id="p1_inertia">
+      <div class="panel-frame"></div>
+      <div class="panel-header">
+        <h3>▸ INERTIA — 3D SURFACE SIMULATION</h3>
+        <button class="fs-btn" onclick="openFS('fs1_inertia','p1_inertia')">⛶</button>
+      </div>
+      <div class="canvas-wrap" id="cw1_inertia"></div>
+      <div class="ctrl-zone l1">
+        <div class="ctrl-row">
+          <label>Friction μ</label>
+          <input type="range" id="mu1" min="0" max="1" step="0.01" value="0">
+          <span class="val" id="mu1_v">0.00</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Initial Speed</label>
+          <input type="range" id="spd1" min="1" max="15" step="0.5" value="6">
+          <span class="val" id="spd1_v">6</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Direction θ</label>
+          <input type="range" id="dir1" min="0" max="360" value="0">
+          <span class="val" id="dir1_v">0°</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-l1" onclick="launch_l1_inertia()">LAUNCH</button>
+          <button class="btn btn-l1" onclick="reset_l1_inertia()">RESET</button>
+          <button class="btn btn-l1" onclick="toggle_trail1()">TRAIL: <span id="trl1_lbl">ON</span></button>
+        </div>
+        <div class="readout" id="ro1_inertia">Ready — set μ=0 and launch to see pure inertia.</div>
+      </div>
+    </div>
+
+    <!-- 3D VECTOR EQUILIBRIUM -->
+    <div class="panel l1" id="p1_vector">
+      <div class="panel-frame"></div>
+      <div class="panel-header">
+        <h3>▸ FORCE EQUILIBRIUM — 3D VECTORS</h3>
+        <button class="fs-btn" onclick="openFS('fs1_vector','p1_vector')">⛶</button>
+      </div>
+      <div class="canvas-wrap" id="cw1_vector"></div>
+      <div class="ctrl-zone l1">
+        <div class="ctrl-row">
+          <label>Force Magnitude</label>
+          <input type="range" id="fm1" min="0" max="5" step="0.1" value="0">
+          <span class="val" id="fm1_v">0.0</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Azimuth φ</label>
+          <input type="range" id="fa1" min="0" max="360" value="45">
+          <span class="val" id="fa1_v">45°</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Elevation ψ</label>
+          <input type="range" id="fe1" min="-90" max="90" value="30">
+          <span class="val" id="fe1_v">30°</span>
+        </div>
+        <div class="readout" id="ro1_vector">ΣF = 0 → Object in equilibrium. No acceleration.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="concept-grid">
+    <div class="concept-card"><div class="icon">🛸</div><h4>VOYAGER 1</h4><p>Launched 1977, engines off for decades — still travelling at 61,000 km/h through deep space. Pure inertia.</p></div>
+    <div class="concept-card"><div class="icon">🪑</div><h4>SEATBELTS</h4><p>During sudden braking, your body wants to keep moving forward. The seatbelt provides the external force to stop you.</p></div>
+    <div class="concept-card"><div class="icon">📐</div><h4>GEOMETRIC INSIGHT</h4><p>With ΣF=0, the velocity vector is constant — the object traces a perfectly straight line in spacetime.</p></div>
+    <div class="concept-card"><div class="icon">⚖️</div><h4>DYNAMIC EQUILIBRIUM</h4><p>Multiple forces can act on an object — if they sum to zero, inertia is still preserved. That's dynamic equilibrium.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================ LAW 2 ============================================================ -->
+<section id="law2" class="law-section">
+  <div class="law-banner">
+    <div class="law-banner-text">
+      <div class="law-num">// NEWTON'S SECOND LAW</div>
+      <h2>Force = Mass × Acceleration</h2>
+      <p>Acceleration is <strong>directly proportional to net force</strong> and <strong>inversely proportional to mass</strong>. The direction of acceleration equals the direction of net force.</p>
+    </div>
+    <div class="law-formula-badge"><b>F</b> = m<b>a</b><br><b>a</b> = <b>F</b>/m<br><span style="font-size:0.5em;opacity:0.7">[N] = [kg·m/s²]</span></div>
+  </div>
+
+  <div class="sim-grid triple">
+    <!-- 3D FORCE SIM -->
+    <div class="panel l2" id="p2_force">
+      <div class="panel-frame"></div>
+      <div class="panel-header">
+        <h3>▸ F=ma — 3D FORCE SIMULATION</h3>
+        <button class="fs-btn" onclick="openFS('fs2_force','p2_force')">⛶</button>
+      </div>
+      <div class="canvas-wrap" id="cw2_force"></div>
+      <div class="ctrl-zone l2">
+        <div class="ctrl-row">
+          <label>Force F (N)</label>
+          <input type="range" id="f2" min="5" max="200" value="60">
+          <span class="val" id="f2_v">60 N</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Mass m (kg)</label>
+          <input type="range" id="m2" min="1" max="40" value="10">
+          <span class="val" id="m2_v">10 kg</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-l2" onclick="launch_l2()">APPLY FORCE</button>
+          <button class="btn btn-l2" onclick="reset_l2()">RESET</button>
+          <button class="btn btn-l2" onclick="compare_l2()">COMPARE 2×m</button>
+        </div>
+        <div class="readout" id="ro2_force">a = F/m = 6.00 m/s²</div>
+      </div>
+    </div>
+
+    <!-- 3D VECTOR DECOMPOSITION -->
+    <div class="panel l2" id="p2_decomp">
+      <div class="panel-frame"></div>
+      <div class="panel-header">
+        <h3>▸ 3D FORCE VECTOR DECOMPOSITION</h3>
+        <button class="fs-btn" onclick="openFS('fs2_decomp','p2_decomp')">⛶</button>
+      </div>
+      <div class="canvas-wrap" id="cw2_decomp"></div>
+      <div class="ctrl-zone l2">
+        <div class="ctrl-row">
+          <label>Fx (N)</label>
+          <input type="range" id="fx2" min="-10" max="10" step="0.5" value="5">
+          <span class="val" id="fx2_v">5</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Fy (N)</label>
+          <input type="range" id="fy2" min="-10" max="10" step="0.5" value="3">
+          <span class="val" id="fy2_v">3</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Fz (N)</label>
+          <input type="range" id="fz2" min="-10" max="10" step="0.5" value="4">
+          <span class="val" id="fz2_v">4</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Mass m (kg)</label>
+          <input type="range" id="md2" min="1" max="20" value="5">
+          <span class="val" id="md2_v">5 kg</span>
+        </div>
+        <div class="readout" id="ro2_decomp">|F| = 7.07 N | a = 1.41 m/s²</div>
+      </div>
+    </div>
+
+    <!-- INCLINED PLANE 3D -->
+    <div class="panel l2" id="p2_incline">
+      <div class="panel-frame"></div>
+      <div class="panel-header">
+        <h3>▸ INCLINED PLANE — FORCE COMPONENTS</h3>
+        <button class="fs-btn" onclick="openFS('fs2_incline','p2_incline')">⛶</button>
+      </div>
+      <div class="canvas-wrap" id="cw2_incline"></div>
+      <div class="ctrl-zone l2">
+        <div class="ctrl-row">
+          <label>Angle θ</label>
+          <input type="range" id="ang2" min="5" max="75" value="30">
+          <span class="val" id="ang2_v">30°</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Mass m (kg)</label>
+          <input type="range" id="mi2" min="1" max="20" value="5">
+          <span class="val" id="mi2_v">5 kg</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Friction μ</label>
+          <input type="range" id="muf2" min="0" max="0.8" step="0.01" value="0">
+          <span class="val" id="muf2_v">0.00</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-l2" onclick="drop_incline()">DROP BALL</button>
+          <button class="btn btn-l2" onclick="reset_incline()">RESET</button>
+        </div>
+        <div class="readout" id="ro2_incline">a = g·sin(30°) = 4.90 m/s²</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="concept-grid">
+    <div class="concept-card"><div class="icon">🚀</div><h4>ROCKET FUEL BURN</h4><p>As fuel burns, rocket mass decreases. Same engine thrust → acceleration increases over time. Variable-mass F=ma.</p></div>
+    <div class="concept-card"><div class="icon">🏎️</div><h4>SPORTS CAR vs TRUCK</h4><p>Same engine force in both — the sports car (small m) accelerates far faster. Directly from a = F/m.</p></div>
+    <div class="concept-card"><div class="icon">🌍</div><h4>FREE FALL</h4><p>F=mg → a=mg/m=g. Mass cancels! Every object falls at 9.8 m/s² regardless of weight in a vacuum.</p></div>
+    <div class="concept-card"><div class="icon">📐</div><h4>SLOPE = 1/m</h4><p>Plot F vs a on a graph — you get a straight line through the origin. The slope equals 1/m. Heavier → shallower slope.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================ LAW 3 ============================================================ -->
+<section id="law3" class="law-section">
+  <div class="law-banner">
+    <div class="law-banner-text">
+      <div class="law-num">// NEWTON'S THIRD LAW</div>
+      <h2>Action &amp; Reaction</h2>
+      <p>For every action force there is an <strong>equal and opposite reaction force</strong>. Force pairs always act on <em>different</em> objects — they never cancel each other.</p>
+    </div>
+    <div class="law-formula-badge"><b>F</b><sub>AB</sub> = −<b>F</b><sub>BA</sub><br><span style="font-size:0.55em;opacity:0.7">|action| = |reaction|, 180° opposite</span></div>
+  </div>
+
+  <div class="sim-grid triple">
+    <!-- 3D COLLISION -->
+    <div class="panel l3" id="p3_collision">
+      <div class="panel-frame"></div>
+      <div class="panel-header">
+        <h3>▸ 3D ELASTIC COLLISION</h3>
+        <button class="fs-btn" onclick="openFS('fs3_collision','p3_collision')">⛶</button>
+      </div>
+      <div class="canvas-wrap" id="cw3_collision"></div>
+      <div class="ctrl-zone l3">
+        <div class="ctrl-row">
+          <label>Mass A (kg)</label>
+          <input type="range" id="ma3" min="1" max="20" value="5">
+          <span class="val" id="ma3_v">5</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Mass B (kg)</label>
+          <input type="range" id="mb3" min="1" max="20" value="5">
+          <span class="val" id="mb3_v">5</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Elasticity e</label>
+          <input type="range" id="elas3" min="0" max="1" step="0.01" value="1">
+          <span class="val" id="elas3_v">1.00</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-l3" onclick="launch_collision()">COLLIDE!</button>
+          <button class="btn btn-l3" onclick="reset_collision()">RESET</button>
+        </div>
+        <div class="readout" id="ro3_collision">F_AB = −F_BA | Momentum conserved</div>
+      </div>
+    </div>
+
+    <!-- 3D ROCKET -->
+    <div class="panel l3" id="p3_rocket">
+      <div class="panel-frame"></div>
+      <div class="panel-header">
+        <h3>▸ ROCKET PROPULSION — 3D</h3>
+        <button class="fs-btn" onclick="openFS('fs3_rocket','p3_rocket')">⛶</button>
+      </div>
+      <div class="canvas-wrap" id="cw3_rocket"></div>
+      <div class="ctrl-zone l3">
+        <div class="ctrl-row">
+          <label>Thrust (kN)</label>
+          <input type="range" id="thr3" min="10" max="500" value="120">
+          <span class="val" id="thr3_v">120 kN</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Rocket Mass (kg)</label>
+          <input type="range" id="rm3" min="100" max="5000" value="1000">
+          <span class="val" id="rm3_v">1000</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Nozzle Angle</label>
+          <input type="range" id="na3" min="-40" max="40" value="0">
+          <span class="val" id="na3_v">0°</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-l3" onclick="fire_rocket()">IGNITE 🔥</button>
+          <button class="btn btn-l3" onclick="stop_rocket()">CUT ENGINE</button>
+          <button class="btn btn-l3" onclick="reset_rocket()">RESET</button>
+        </div>
+        <div class="readout" id="ro3_rocket">Exhaust ↓ (action) → Rocket ↑ (reaction)</div>
+      </div>
+    </div>
+
+    <!-- 3D RECOIL -->
+    <div class="panel l3" id="p3_recoil">
+      <div class="panel-frame"></div>
+      <div class="panel-header">
+        <h3>▸ CANNON RECOIL — PAIR VISUALIZATION</h3>
+        <button class="fs-btn" onclick="openFS('fs3_recoil','p3_recoil')">⛶</button>
+      </div>
+      <div class="canvas-wrap" id="cw3_recoil"></div>
+      <div class="ctrl-zone l3">
+        <div class="ctrl-row">
+          <label>Shell Mass (kg)</label>
+          <input type="range" id="sm3" min="1" max="30" value="5">
+          <span class="val" id="sm3_v">5</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Cannon Mass (kg)</label>
+          <input type="range" id="cm3" min="50" max="2000" value="500">
+          <span class="val" id="cm3_v">500</span>
+        </div>
+        <div class="ctrl-row">
+          <label>Explosion Force</label>
+          <input type="range" id="ef3" min="100" max="5000" value="1000">
+          <span class="val" id="ef3_v">1000 N</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-l3" onclick="fire_cannon()">FIRE! 💥</button>
+          <button class="btn btn-l3" onclick="reset_cannon()">RESET</button>
+        </div>
+        <div class="readout" id="ro3_recoil">p_shell = −p_cannon | momentum conserved</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="concept-grid">
+    <div class="concept-card"><div class="icon">🚀</div><h4>ROCKET PROPULSION</h4><p>Gas expelled backward at high velocity → rocket pushed forward. Works perfectly in vacuum — no air needed.</p></div>
+    <div class="concept-card"><div class="icon">🏊</div><h4>SWIMMING</h4><p>Swimmer pushes water backward (action) → water pushes swimmer forward (reaction). You propel via paired forces.</p></div>
+    <div class="concept-card"><div class="icon">📐</div><h4>ANTI-PARALLEL VECTORS</h4><p>Action and reaction are exactly 180° apart, same magnitude, but act on <em>different bodies</em> — so they never cancel.</p></div>
+    <div class="concept-card"><div class="icon">💥</div><h4>GUN RECOIL</h4><p>Bullet fires forward (action) → gun kicks backward (reaction). Same force, but gun is heavier → less acceleration.</p></div>
+  </div>
+</section>
+
+<!-- FULLSCREEN OVERLAYS -->
+<div class="fs-overlay" id="fs1_inertia">
+  <div class="fs-top-bar"><h4>INERTIA — 3D SURFACE SIMULATION</h4><button class="fs-close" onclick="closeFS('fs1_inertia')">✕ CLOSE</button></div>
+  <div class="fs-canvas-area" id="fscw1_inertia"></div>
+</div>
+<div class="fs-overlay" id="fs1_vector">
+  <div class="fs-top-bar"><h4>FORCE EQUILIBRIUM — 3D VECTORS</h4><button class="fs-close" onclick="closeFS('fs1_vector')">✕ CLOSE</button></div>
+  <div class="fs-canvas-area" id="fscw1_vector"></div>
+</div>
+<div class="fs-overlay" id="fs2_force">
+  <div class="fs-top-bar"><h4>F=ma — 3D FORCE SIMULATION</h4><button class="fs-close" onclick="closeFS('fs2_force')">✕ CLOSE</button></div>
+  <div class="fs-canvas-area" id="fscw2_force"></div>
+</div>
+<div class="fs-overlay" id="fs2_decomp">
+  <div class="fs-top-bar"><h4>3D FORCE VECTOR DECOMPOSITION</h4><button class="fs-close" onclick="closeFS('fs2_decomp')">✕ CLOSE</button></div>
+  <div class="fs-canvas-area" id="fscw2_decomp"></div>
+</div>
+<div class="fs-overlay" id="fs2_incline">
+  <div class="fs-top-bar"><h4>INCLINED PLANE — FORCE COMPONENTS</h4><button class="fs-close" onclick="closeFS('fs2_incline')">✕ CLOSE</button></div>
+  <div class="fs-canvas-area" id="fscw2_incline"></div>
+</div>
+<div class="fs-overlay" id="fs3_collision">
+  <div class="fs-top-bar"><h4>3D ELASTIC COLLISION</h4><button class="fs-close" onclick="closeFS('fs3_collision')">✕ CLOSE</button></div>
+  <div class="fs-canvas-area" id="fscw3_collision"></div>
+</div>
+<div class="fs-overlay" id="fs3_rocket">
+  <div class="fs-top-bar"><h4>ROCKET PROPULSION — 3D</h4><button class="fs-close" onclick="closeFS('fs3_rocket')">✕ CLOSE</button></div>
+  <div class="fs-canvas-area" id="fscw3_rocket"></div>
+</div>
+<div class="fs-overlay" id="fs3_recoil">
+  <div class="fs-top-bar"><h4>CANNON RECOIL — PAIR VISUALIZATION</h4><button class="fs-close" onclick="closeFS('fs3_recoil')">✕ CLOSE</button></div>
+  <div class="fs-canvas-area" id="fscw3_recoil"></div>
+</div>
+
+<script>
+// ===================== UTILITIES =====================
+function showLaw(n){
+  document.querySelectorAll('.law-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('law'+n).classList.add('active');
+  document.querySelector('[data-law="'+n+'"]').classList.add('active');
+  setTimeout(()=>Object.values(simulations).forEach(s=>s&&s.resize&&s.resize()),100);
+}
+
+function v(id){return document.getElementById(id);}
+function bind(id,displayId,suffix='',transform=x=>x){
+  const el=v(id); if(!el)return;
+  function upd(){v(displayId).textContent=transform(el.value)+suffix;}
+  el.oninput=upd; upd();
+}
+
+// ===================== THREE.JS SCENE FACTORY =====================
+function makeScene(containerEl, opts={}) {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0d1a10);
+  scene.fog = new THREE.Fog(0x0d1a10, 40, 120);
+
+  const w = containerEl.clientWidth || 400;
+  const h = containerEl.clientHeight || 260;
+  const camera = new THREE.PerspectiveCamera(45, w/h, 0.1, 1000);
+  camera.position.set(opts.cx||12, opts.cy||10, opts.cz||14);
+  camera.lookAt(opts.lx||0, opts.ly||0, opts.lz||0);
+
+  const renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(w, h);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  containerEl.appendChild(renderer.domElement);
+
+  // Lighting
+  const ambient = new THREE.AmbientLight(0xfff0e0, 0.5);
+  scene.add(ambient);
+  const sun = new THREE.DirectionalLight(0xffd080, 1.2);
+  sun.position.set(10,20,10); sun.castShadow=true;
+  sun.shadow.mapSize.width=1024; sun.shadow.mapSize.height=1024;
+  scene.add(sun);
+  const fill = new THREE.PointLight(0x80c0ff, 0.3);
+  fill.position.set(-10,5,5); scene.add(fill);
+
+  // Grid floor
+  const gridHelper = new THREE.GridHelper(40, 40, 0x1a4020, 0x112a18);
+  scene.add(gridHelper);
+
+  // Axes (chalk-style thin lines)
+  function axisLine(from,to,color){
+    const mat=new THREE.LineBasicMaterial({color});
+    const geo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...from),new THREE.Vector3(...to)]);
+    return new THREE.Line(geo,mat);
+  }
+  scene.add(axisLine([-20,0,0],[20,0,0],0x4a7a5a));
+  scene.add(axisLine([0,-20,0],[0,20,0],0x4a7a5a));
+  scene.add(axisLine([0,0,-20],[0,0,20],0x4a7a5a));
+
+  // Mouse orbit
+  let dragging=false,lastMX=0,lastMY=0,theta=opts.theta||0.5,phi=opts.phi||0.7,radius=opts.radius||20;
+  function updateCam(){
+    camera.position.x=radius*Math.sin(phi)*Math.sin(theta);
+    camera.position.y=radius*Math.cos(phi);
+    camera.position.z=radius*Math.sin(phi)*Math.cos(theta);
+    camera.lookAt(0,0,0);
+  }
+  updateCam();
+  renderer.domElement.addEventListener('mousedown',e=>{dragging=true;lastMX=e.clientX;lastMY=e.clientY;});
+  window.addEventListener('mouseup',()=>dragging=false);
+  window.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    theta+=(e.clientX-lastMX)*0.01; phi=Math.max(0.1,Math.min(Math.PI-0.1,phi+(e.clientY-lastMY)*0.01));
+    lastMX=e.clientX;lastMY=e.clientY; updateCam();
+  });
+  renderer.domElement.addEventListener('wheel',e=>{radius=Math.max(5,Math.min(60,radius+e.deltaY*0.05));updateCam();},{passive:true});
+  // touch
+  let t0=null;
+  renderer.domElement.addEventListener('touchstart',e=>{if(e.touches.length===1){t0={x:e.touches[0].clientX,y:e.touches[0].clientY,theta,phi};}},{passive:true});
+  renderer.domElement.addEventListener('touchmove',e=>{
+    if(!t0||e.touches.length!==1)return;
+    const dx=e.touches[0].clientX-t0.x,dy=e.touches[0].clientY-t0.y;
+    theta=t0.theta+dx*0.01; phi=Math.max(0.1,Math.min(Math.PI-0.1,t0.phi+dy*0.01));
+    updateCam();
+  },{passive:true});
+
+  function resize(){
+    // Use the canvas's current parent (could be panel wrap OR fullscreen area)
+    const parent = renderer.domElement.parentElement || containerEl;
+    const pw = parent.clientWidth || containerEl.clientWidth;
+    const ph = parent.clientHeight || containerEl.clientHeight;
+    if(!pw || !ph) return;
+    renderer.setSize(pw, ph);
+    camera.aspect = pw / ph;
+    camera.updateProjectionMatrix();
+  }
+
+  // Arrow helper
+  function makeArrow(dir,origin,length,color){
+    const ah=new THREE.ArrowHelper(dir.clone().normalize(),new THREE.Vector3(...origin),length,color,length*0.2,length*0.1);
+    return ah;
+  }
+
+  // Label sprite
+  function makeLabel(text,pos,color=0xf5e6d0){
+    const canvas=document.createElement('canvas'); canvas.width=256;canvas.height=64;
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,256,64);
+    ctx.fillStyle=`#${color.toString(16).padStart(6,'0')}`; ctx.font='bold 28px Special Elite, serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(text,128,32);
+    const tex=new THREE.CanvasTexture(canvas);
+    const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
+    const sprite=new THREE.Sprite(mat); sprite.scale.set(3,0.75,1);
+    sprite.position.set(...pos);
+    return sprite;
+  }
+
+  return {scene,camera,renderer,resize,makeArrow,makeLabel,updateCam,getTheta:()=>theta,getPhi:()=>phi};
+}
+
+// ── Dynamic floating label ──────────────────────────────────────
+function makeDynamicLabel(scene, offsetY=2.2){
+  const CV = document.createElement('canvas');
+  CV.width=320; CV.height=80;
+  const tex = new THREE.CanvasTexture(CV);
+  const mat = new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false, depthWrite:false});
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(4.5,1.1,1);
+  scene.add(sprite);
+  function update(text, pos){
+    const ctx=CV.getContext('2d');
+    ctx.clearRect(0,0,320,80);
+    // pill background
+    ctx.fillStyle='rgba(10,20,14,0.82)';
+    roundRect(ctx,4,4,312,72,14); ctx.fill();
+    ctx.strokeStyle='rgba(126,200,160,0.7)'; ctx.lineWidth=2;
+    roundRect(ctx,4,4,312,72,14); ctx.stroke();
+    // text
+    ctx.fillStyle='#e8f5ec';
+    ctx.font='bold 22px monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(text,160,40);
+    tex.needsUpdate=true;
+    if(pos) sprite.position.set(pos.x, pos.y+offsetY, pos.z);
+  }
+  function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
+  sprite.visible=false;
+  return {sprite, update, show:()=>sprite.visible=true, hide:()=>sprite.visible=false};
+}
+
+// Shared materials
+const MAT_WOOD = () => new THREE.MeshLambertMaterial({color:0xc47a35});
+const MAT_CHALK = col => new THREE.MeshLambertMaterial({color:col,emissive:col,emissiveIntensity:0.1});
+const MAT_BALL = col => new THREE.MeshPhongMaterial({color:col,shininess:60,specular:0x443322});
+const MAT_GROUND = () => new THREE.MeshLambertMaterial({color:0x1a3020});
+
+const simulations = {};
+let animRunning = true;
+
+// ===================== LAW 1 — INERTIA SIM =====================
+function initL1_inertia(containerId){
+  const wrap = v(containerId);
+  const S = makeScene(wrap,{cx:16,cy:12,cz:16,theta:0.8,phi:1.0,radius:22});
+  const {scene} = S;
+
+  // Ground
+  const ground = new THREE.Mesh(new THREE.BoxGeometry(30,0.3,30), MAT_GROUND());
+  ground.position.y=-0.15; ground.receiveShadow=true; scene.add(ground);
+  // Wood plank texture strips
+  for(let i=-14;i<15;i+=2){
+    const plank=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.01,30),new THREE.MeshLambertMaterial({color:0x2a4a30}));
+    plank.position.set(i,0.001,0); scene.add(plank);
+  }
+
+  // Ball
+  const ballGeo = new THREE.SphereGeometry(0.8,32,32);
+  const ballA = new THREE.Mesh(ballGeo, MAT_BALL(0xe8c547));
+  ballA.castShadow=true; ballA.position.set(-12,0.8,0); scene.add(ballA);
+  const lblV1 = makeDynamicLabel(scene, 2.4);
+  // trail dots
+  const trail=[]; const maxTrail=60;
+  const trailDots=[];
+  for(let i=0;i<maxTrail;i++){
+    const td=new THREE.Mesh(new THREE.SphereGeometry(0.12,8,8),new THREE.MeshLambertMaterial({color:0xe8c547,transparent:true,opacity:0}));
+    scene.add(td); trailDots.push(td);
+  }
+  // velocity arrow
+  let velArrow = new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(0,0.8,0),2,0x7ec8a0,0.5,0.3);
+  scene.add(velArrow);
+
+  let state = {vx:0,vz:0,x:-12,z:0,running:false,mu:0,showTrail:true};
+
+  function updateVelArrow(){
+    const spd=Math.sqrt(state.vx**2+state.vz**2);
+    if(spd>0.01){
+      scene.remove(velArrow);
+      velArrow=new THREE.ArrowHelper(new THREE.Vector3(state.vx,0,state.vz).normalize(),new THREE.Vector3(state.x,0.8,state.z),Math.min(spd*0.3,5),0x7ec8a0,0.5,0.3);
+      scene.add(velArrow);
+    } else { velArrow.setLength(0); }
+  }
+
+  let trailIdx=0, trailTimer=0;
+  S.update=function(dt){
+    if(state.running){
+      const spd=Math.sqrt(state.vx**2+state.vz**2);
+      if(spd>0.001){
+        const fric=state.mu*9.8*dt;
+        const dec=Math.min(fric,spd);
+        const nx=state.vx-(state.vx/spd)*dec;
+        const nz=state.vz-(state.vz/spd)*dec;
+        state.vx=Math.abs(nx)<0.001?0:nx; state.vz=Math.abs(nz)<0.001?0:nz;
+      }
+      state.x+=state.vx*dt; state.z+=state.vz*dt;
+      if(Math.abs(state.x)>17||Math.abs(state.z)>17){state.x=-12;state.z=0;trail.length=0;trailIdx=0;}
+      ballA.position.set(state.x,0.8,state.z);
+      trailTimer+=dt;
+      if(state.showTrail&&trailTimer>0.04){
+        trailTimer=0; trail.push({x:state.x,y:0.8,z:state.z});
+        if(trail.length>maxTrail)trail.shift();
+        for(let i=0;i<maxTrail;i++){
+          if(i<trail.length){
+            trailDots[i].position.set(trail[i].x,trail[i].y,trail[i].z);
+            trailDots[i].material.opacity=(i/trail.length)*0.5;
+          } else { trailDots[i].material.opacity=0; }
+        }
+      }
+      updateVelArrow();
+      const spd2=Math.sqrt(state.vx**2+state.vz**2);
+      const acc1=(state.mu*9.8);
+      lblV1.show();
+      lblV1.update('v='+spd2.toFixed(2)+'m/s  a=-'+acc1.toFixed(2)+'m/s2', ballA.position);
+      v('ro1_inertia').textContent='|v|='+spd2.toFixed(2)+' m/s | mu='+state.mu.toFixed(2)+(spd2<0.01?' | STOPPED':' | MOVING - inertia');
+    }
+    S.renderer.render(S.scene,S.camera);
+  };
+
+  window.launch_l1_inertia=()=>{
+    state.mu=parseFloat(v('mu1').value);
+    const spd=parseFloat(v('spd1').value);
+    const dir=parseFloat(v('dir1').value)*Math.PI/180;
+    state.vx=Math.cos(dir)*spd; state.vz=Math.sin(dir)*spd;
+    state.x=-12; state.z=0; state.running=true; trail.length=0;
+  };
+  window.reset_l1_inertia=()=>{state.running=false;state.x=-12;state.z=0;state.vx=0;state.vz=0;trail.length=0;ballA.position.set(-12,0.8,0);lblV1.hide();};
+  window.toggle_trail1=()=>{state.showTrail=!state.showTrail;v('trl1_lbl').textContent=state.showTrail?'ON':'OFF';};
+
+  ['mu1','spd1','dir1'].forEach(id=>v(id)&&(v(id).oninput=()=>{state.mu=parseFloat(v('mu1').value);v('mu1_v').textContent=parseFloat(v('mu1').value).toFixed(2);v('spd1_v').textContent=v('spd1').value;v('dir1_v').textContent=v('dir1').value+'°';}));
+
+  return S;
+}
+
+// ===================== LAW 1 — VECTOR EQUILIBRIUM =====================
+function initL1_vector(containerId){
+  const wrap=v(containerId);
+  const S=makeScene(wrap,{theta:0.6,phi:0.8,radius:18});
+  const {scene}=S;
+
+  // Static force arrows (always-on balanced set)
+  const baseForces=[
+    {dir:[1,0,0],len:4,color:0xe8c547,label:'F₁'},
+    {dir:[-0.5,0,0.866],len:4,color:0xe07b39,label:'F₂'},
+    {dir:[-0.5,0,-0.866],len:4,color:0x5bb8d4,label:'F₃'},
+  ];
+  const baseArrows=baseForces.map(f=>{
+    const a=new THREE.ArrowHelper(new THREE.Vector3(...f.dir),new THREE.Vector3(0,0,0),f.len,f.color,0.8,0.4);
+    scene.add(a); return a;
+  });
+  // Object sphere
+  const obj=new THREE.Mesh(new THREE.SphereGeometry(0.7,32,32),MAT_BALL(0xf5e6d0));
+  obj.castShadow=true; scene.add(obj);
+  // Extra adjustable force arrow
+  let extraArrow=null;
+
+  function updateExtra(){
+    const mag=parseFloat(v('fm1').value);
+    const az=parseFloat(v('fa1').value)*Math.PI/180;
+    const el=parseFloat(v('fe1').value)*Math.PI/180;
+    const dx=Math.cos(el)*Math.sin(az);
+    const dy=Math.sin(el);
+    const dz=Math.cos(el)*Math.cos(az);
+    if(extraArrow){scene.remove(extraArrow);}
+    if(mag>0){
+      extraArrow=new THREE.ArrowHelper(new THREE.Vector3(dx,dy,dz),new THREE.Vector3(0,0,0),mag,0xd46b6b,mag*0.2,mag*0.1);
+      scene.add(extraArrow);
+    }
+    // Compute net
+    let nx=dx*mag,ny=dy*mag,nz=dz*mag;
+    baseForces.forEach(f=>{nx+=f.dir[0]*f.len*0.5;ny+=f.dir[1]*f.len*0.5;nz+=f.dir[2]*f.len*0.5;});
+    const netMag=Math.sqrt(nx**2+ny**2+nz**2);
+    v('ro1_vector').textContent=netMag<0.3?'ΣF = 0 → Perfect equilibrium. Zero acceleration.':`ΣF = ${netMag.toFixed(2)} N → Object accelerates in net force direction.`;
+    v('fm1_v').textContent=parseFloat(v('fm1').value).toFixed(1);
+    v('fa1_v').textContent=v('fa1').value+'°';
+    v('fe1_v').textContent=v('fe1').value+'°';
+  }
+  ['fm1','fa1','fe1'].forEach(id=>v(id)&&(v(id).oninput=updateExtra));
+  updateExtra();
+
+  S.update=()=>S.renderer.render(S.scene,S.camera);
+  return S;
+}
+
+// ===================== LAW 2 — F=ma 3D =====================
+function initL2_force(containerId){
+  const wrap=v(containerId);
+  const S=makeScene(wrap,{theta:0.5,phi:0.9,radius:22});
+  const {scene}=S;
+
+  const ground=new THREE.Mesh(new THREE.BoxGeometry(40,0.3,10),MAT_GROUND());
+  ground.position.y=-0.15; scene.add(ground);
+
+  const balls=[];
+  function makeBall(color,startX,radius){
+    const b=new THREE.Mesh(new THREE.SphereGeometry(radius,32,32),MAT_BALL(color));
+    b.castShadow=true; b.position.set(startX,radius,0); scene.add(b);
+    return b;
+  }
+  let ballA=makeBall(0xe07b39,-12,1), ballB=null;
+  let state={vA:0,running:false,vB:0,hasB:false};
+  let forceArrow=null, forceArrowB=null;
+  const lblA2=makeDynamicLabel(scene,2.5);
+  let lblB2=null;
+
+  S.update=function(dt){
+    if(state.running){
+      const F=parseFloat(v('f2').value), m=parseFloat(v('m2').value);
+      const a=F/m*dt;
+      state.vA+=a; ballA.position.x+=state.vA*dt;
+      if(ballA.position.x>20){ballA.position.x=-12;state.vA=0;}
+      if(state.hasB&&ballB){
+        state.vB+=F/(m*3)*dt; ballB.position.x+=state.vB*dt;
+        if(ballB.position.x>20){ballB.position.x=-12;state.vB=0;}
+      }
+      if(forceArrow){scene.remove(forceArrow);}
+      forceArrow=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),ballA.position.clone(),Math.min(state.vA*0.3,4),0xe07b39,0.6,0.3);
+      scene.add(forceArrow);
+      if(state.hasB&&ballB&&forceArrowB){
+        scene.remove(forceArrowB);
+        forceArrowB=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),ballB.position.clone(),Math.min(state.vB*0.3,4),0xa855f7,0.6,0.3);
+        scene.add(forceArrowB);
+      }
+      const a_val=(F/m).toFixed(2);
+      lblA2.show();
+      lblA2.update('v='+state.vA.toFixed(1)+'  a='+a_val+'m/s2', ballA.position);
+      if(state.hasB && ballB && lblB2){ lblB2.show(); lblB2.update('v='+state.vB.toFixed(1)+'  a='+(F/(m*3)).toFixed(2)+'m/s2', ballB.position); }
+      v('ro2_force').textContent='F='+F+'N | mA='+m+'kg | aA='+a_val+'m/s2'+(state.hasB?' | mB='+(m*3)+'kg | aB='+(F/(m*3)).toFixed(2)+'m/s2':'');
+    }
+    S.renderer.render(S.scene,S.camera);
+  };
+
+  window.launch_l2=()=>{state.running=true;};
+  window.reset_l2=()=>{
+    state={vA:0,running:false,vB:0,hasB:false};
+    ballA.position.set(-12,1,0);
+    if(ballB){scene.remove(ballB);ballB=null;}
+    if(forceArrow){scene.remove(forceArrow);forceArrow=null;}
+    if(forceArrowB){scene.remove(forceArrowB);forceArrowB=null;}
+    lblA2.hide(); if(lblB2)lblB2.hide();
+  };
+  window.compare_l2=()=>{
+    window.reset_l2();
+    state.hasB=true; state.running=true;
+    ballA.position.set(-12,1,-2);
+    ballB=makeBall(0xa855f7,-12,1.4); ballB.position.set(-12,1.4,2);
+    forceArrowB=null;
+    lblB2=makeDynamicLabel(scene,3.0);
+  };
+  ['f2','m2'].forEach(id=>v(id)&&(v(id).oninput=()=>{
+    v('f2_v').textContent=v('f2').value+' N';
+    v('m2_v').textContent=v('m2').value+' kg';
+    const F=parseFloat(v('f2').value),m=parseFloat(v('m2').value);
+    v('ro2_force').textContent=`a = F/m = ${(F/m).toFixed(2)} m/s²`;
+  }));
+
+  return S;
+}
+
+// ===================== LAW 2 — FORCE DECOMP 3D =====================
+function initL2_decomp(containerId){
+  const wrap=v(containerId);
+  const S=makeScene(wrap,{theta:0.7,phi:0.75,radius:16});
+  const {scene}=S;
+
+  const obj=new THREE.Mesh(new THREE.SphereGeometry(0.8,32,32),MAT_BALL(0xe07b39));
+  obj.castShadow=true; scene.add(obj);
+
+  let arrows={x:null,y:null,z:null,net:null};
+  function updateArrows(){
+    const fx=parseFloat(v('fx2').value), fy=parseFloat(v('fy2').value), fz=parseFloat(v('fz2').value);
+    const md=parseFloat(v('md2').value);
+    Object.values(arrows).forEach(a=>{if(a)scene.remove(a);});
+    const scale=0.4;
+    if(Math.abs(fx)>0.1) arrows.x=new THREE.ArrowHelper(new THREE.Vector3(Math.sign(fx),0,0),new THREE.Vector3(0,0,0),Math.abs(fx)*scale,0xe8c547,0.4,0.2); else arrows.x=null;
+    if(Math.abs(fy)>0.1) arrows.y=new THREE.ArrowHelper(new THREE.Vector3(0,Math.sign(fy),0),new THREE.Vector3(0,0,0),Math.abs(fy)*scale,0x7ec8a0,0.4,0.2); else arrows.y=null;
+    if(Math.abs(fz)>0.1) arrows.z=new THREE.ArrowHelper(new THREE.Vector3(0,0,Math.sign(fz)),new THREE.Vector3(0,0,0),Math.abs(fz)*scale,0x5bb8d4,0.4,0.2); else arrows.z=null;
+    const nx=fx,ny=fy,nz=fz; const nm=Math.sqrt(nx**2+ny**2+nz**2);
+    if(nm>0.1) arrows.net=new THREE.ArrowHelper(new THREE.Vector3(nx,ny,nz).normalize(),new THREE.Vector3(0,0,0),nm*scale,0xffffff,0.5,0.3);
+    else arrows.net=null;
+    Object.values(arrows).forEach(a=>{if(a)scene.add(a);});
+    const am=nm/md;
+    v('ro2_decomp').textContent=`|F|=${nm.toFixed(2)}N | m=${md}kg | |a|=${am.toFixed(2)}m/s² | a⃗=(${(fx/md).toFixed(1)},${(fy/md).toFixed(1)},${(fz/md).toFixed(1)})`;
+    v('fx2_v').textContent=fx; v('fy2_v').textContent=fy; v('fz2_v').textContent=fz;
+    v('md2_v').textContent=md+' kg';
+  }
+  ['fx2','fy2','fz2','md2'].forEach(id=>v(id)&&(v(id).oninput=updateArrows));
+  updateArrows();
+  S.update=()=>S.renderer.render(S.scene,S.camera);
+  return S;
+}
+
+// ===================== LAW 2 — INCLINED PLANE =====================
+function initL2_incline(containerId){
+  const wrap=v(containerId);
+  const S=makeScene(wrap,{theta:0.4,phi:0.8,radius:20});
+  const {scene}=S;
+
+  let ramp=null, ball=null, normalArr=null, weightArr=null, parallelArr=null, incLbl=null;
+  let incState={running:false,pos:0,vel:0};
+
+  function buildRamp(){
+    if(ramp){scene.remove(ramp);}
+    const ang=parseFloat(v('ang2').value)*Math.PI/180;
+    const rampGeo=new THREE.BoxGeometry(12,0.3,5);
+    ramp=new THREE.Mesh(rampGeo,new THREE.MeshLambertMaterial({color:0x3a5a40}));
+    ramp.rotation.z=ang; ramp.position.set(-2,Math.sin(ang)*6*0.5,0);
+    scene.add(ramp);
+    if(ball){scene.remove(ball);}
+    ball=new THREE.Mesh(new THREE.SphereGeometry(0.6,32,32),MAT_BALL(0xe07b39));
+    ball.castShadow=true;
+    const ballX=-5*Math.cos(ang)+ramp.position.x;
+    const ballY=5*Math.sin(ang)+ramp.position.y+0.6;
+    ball.position.set(ballX,ballY,0); scene.add(ball);
+    incState.pos=5; incState.vel=0; incState.ang=ang;
+    incState.startX=ballX; incState.startY=ballY;
+    if(!incLbl) incLbl=makeDynamicLabel(scene,1.8);
+    updateInclineArrows(ang,ballX,ballY);
+  }
+  function updateInclineArrows(ang,bx,by){
+    [normalArr,weightArr,parallelArr].forEach(a=>{if(a)scene.remove(a);});
+    const m=parseFloat(v('mi2').value),g=9.8;
+    const wScale=m*g*0.04;
+    // weight arrow (down)
+    weightArr=new THREE.ArrowHelper(new THREE.Vector3(0,-1,0),new THREE.Vector3(bx,by,0),wScale,0xd46b6b,0.4,0.2);
+    // normal arrow (perpendicular to ramp)
+    normalArr=new THREE.ArrowHelper(new THREE.Vector3(-Math.sin(ang),Math.cos(ang),0),new THREE.Vector3(bx,by,0),wScale*Math.cos(ang),0x5bb8d4,0.4,0.2);
+    // parallel component (down the ramp)
+    parallelArr=new THREE.ArrowHelper(new THREE.Vector3(Math.cos(ang),-Math.sin(ang),0),new THREE.Vector3(bx,by,0),wScale*Math.sin(ang),0xe8c547,0.4,0.2);
+    scene.add(weightArr); scene.add(normalArr); scene.add(parallelArr);
+    const mu=parseFloat(v('muf2').value);
+    const a=(g*Math.sin(ang)-mu*g*Math.cos(ang));
+    v('ro2_incline').textContent=`θ=${(ang*180/Math.PI).toFixed(0)}° | m=${m}kg | a=${a.toFixed(2)}m/s² | N=${(m*g*Math.cos(ang)).toFixed(1)}N | F∥=${(m*g*Math.sin(ang)).toFixed(1)}N`;
+    v('ang2_v').textContent=(ang*180/Math.PI).toFixed(0)+'°';
+    v('mi2_v').textContent=m+' kg'; v('muf2_v').textContent=mu.toFixed(2);
+  }
+
+  buildRamp();
+  ['ang2','mi2','muf2'].forEach(id=>v(id)&&(v(id).oninput=()=>{buildRamp();}));
+
+  S.update=function(dt){
+    if(incState.running&&ball){
+      const ang=incState.ang,mu=parseFloat(v('muf2').value),g=9.8;
+      const a=g*Math.sin(ang)-mu*g*Math.cos(ang);
+      incState.vel+=a*dt; incState.pos-=incState.vel*dt;
+      const bx=incState.pos*Math.cos(ang)+ramp.position.x-6*Math.cos(ang);
+      const by=incState.pos*Math.sin(ang)+ramp.position.y+0.6;
+      ball.position.set(bx,by,0);
+      updateInclineArrows(ang,bx,by);
+      if(incLbl){
+        incLbl.show();
+        incLbl.update('v='+incState.vel.toFixed(2)+'  a='+(9.8*Math.sin(ang)-parseFloat(v('muf2').value)*9.8*Math.cos(ang)).toFixed(2)+'m/s2', ball.position);
+      }
+      if(by<0.6){incState.running=false;incState.vel=0;}
+    }
+    S.renderer.render(S.scene,S.camera);
+  };
+
+  window.drop_incline=()=>{incState.running=true;};
+  window.reset_incline=()=>{incState.running=false;buildRamp();};
+  return S;
+}
+
+// ===================== LAW 3 — COLLISION =====================
+function initL3_collision(containerId){
+  const wrap=v(containerId);
+  const S=makeScene(wrap,{theta:0.5,phi:0.8,radius:22});
+  const {scene}=S;
+
+  const ground=new THREE.Mesh(new THREE.BoxGeometry(40,0.3,10),MAT_GROUND());
+  ground.position.y=-0.15; scene.add(ground);
+
+  let ballA, ballB;
+  let state={ax:-10,bx:10,vA:3,vB:-2,collided:false,running:false,ma:5,mb:5,e:1};
+  let arrowA=null,arrowB=null,fArrowA=null,fArrowB=null;
+
+  let colLblA=makeDynamicLabel(scene,2.2), colLblB=makeDynamicLabel(scene,2.2);
+  function buildBalls(){
+    if(ballA)scene.remove(ballA); if(ballB)scene.remove(ballB);
+    const ma=parseFloat(v('ma3').value), mb=parseFloat(v('mb3').value);
+    const ra=Math.max(0.6,ma*0.12), rb=Math.max(0.6,mb*0.12);
+    ballA=new THREE.Mesh(new THREE.SphereGeometry(ra,32,32),MAT_BALL(0xa855f7));
+    ballA.castShadow=true; ballA.position.set(-10,ra,0); scene.add(ballA);
+    ballB=new THREE.Mesh(new THREE.SphereGeometry(rb,32,32),MAT_BALL(0x5bb8d4));
+    ballB.castShadow=true; ballB.position.set(10,rb,0); scene.add(ballB);
+    state={ax:-10,bx:10,vA:3,vB:-2,collided:false,running:false,ma,mb,e:parseFloat(v('elas3').value),ra,rb};
+    colLblA.hide(); colLblB.hide();
+  }
+  buildBalls();
+
+  S.update=function(dt){
+    if(state.running){
+      if(!state.collided){
+        state.ax+=state.vA*dt*3; state.bx+=state.vB*dt*3;
+        ballA.position.x=state.ax; ballB.position.x=state.bx;
+        const dist=Math.abs(state.ax-state.bx);
+        if(dist<=state.ra+state.rb){
+          state.collided=true;
+          const ma=state.ma,mb=state.mb,e=state.e,va=state.vA,vb=state.vB;
+          const newVA=((ma-e*mb)*va+(1+e)*mb*vb)/(ma+mb);
+          const newVB=((mb-e*ma)*vb+(1+e)*ma*va)/(ma+mb);
+          state.vA=newVA; state.vB=newVB;
+          colLblA.show(); colLblA.update('v='+newVA.toFixed(2)+'m/s', ballA.position);
+          colLblB.show(); colLblB.update('v='+newVB.toFixed(2)+'m/s', ballB.position);
+          const p1=ma*va+mb*vb, p2=ma*newVA+mb*newVB;
+          v('ro3_collision').textContent=`COLLISION! p_before=${p1.toFixed(2)} p_after=${p2.toFixed(2)} | F_AB=-F_BA ✓ | Δp=0`;
+          // force impulse arrows
+          if(fArrowA)scene.remove(fArrowA); if(fArrowB)scene.remove(fArrowB);
+          fArrowA=new THREE.ArrowHelper(new THREE.Vector3(-1,0,0),ballA.position.clone(),3,0xd46b6b,0.6,0.3);
+          fArrowB=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),ballB.position.clone(),3,0x7ec8a0,0.6,0.3);
+          scene.add(fArrowA); scene.add(fArrowB);
+        }
+      } else {
+        state.ax+=state.vA*dt*3; state.bx+=state.vB*dt*3;
+        ballA.position.x=state.ax; ballB.position.x=state.bx;
+        colLblA.show(); colLblA.update('v='+state.vA.toFixed(2)+'m/s', ballA.position);
+        colLblB.show(); colLblB.update('v='+state.vB.toFixed(2)+'m/s', ballB.position);
+        if(Math.abs(state.ax)>20||Math.abs(state.bx)>20)state.running=false;
+      }
+    }
+    S.renderer.render(S.scene,S.camera);
+  };
+
+  window.launch_collision=()=>{
+    buildBalls();state.running=true;
+    [fArrowA,fArrowB].forEach(a=>{if(a)scene.remove(a);}); fArrowA=null;fArrowB=null;
+  };
+  window.reset_collision=()=>{buildBalls();[fArrowA,fArrowB].forEach(a=>{if(a)scene.remove(a);});fArrowA=null;fArrowB=null;};
+  ['ma3','mb3','elas3'].forEach(id=>v(id)&&(v(id).oninput=()=>{
+    v('ma3_v').textContent=v('ma3').value; v('mb3_v').textContent=v('mb3').value;
+    v('elas3_v').textContent=parseFloat(v('elas3').value).toFixed(2);
+  }));
+
+  return S;
+}
+
+// ===================== LAW 3 — ROCKET =====================
+function initL3_rocket(containerId){
+  const wrap=v(containerId);
+  const S=makeScene(wrap,{theta:0.3,phi:0.7,radius:24});
+  const {scene}=S;
+
+  // Rocket body (capsule approximation using cylinder + cone)
+  const rocketGroup=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.6,3,16),new THREE.MeshPhongMaterial({color:0xc0c8d0,shininess:80}));
+  const nose=new THREE.Mesh(new THREE.ConeGeometry(0.6,1.5,16),new THREE.MeshPhongMaterial({color:0xd46b6b,shininess:80}));
+  nose.position.y=2.25;
+  const fin1=new THREE.Mesh(new THREE.BoxGeometry(0.1,1.2,0.8),new THREE.MeshLambertMaterial({color:0x888090}));
+  fin1.position.set(0.7,-1.2,0);
+  const fin2=fin1.clone(); fin2.position.set(-0.7,-1.2,0);
+  const fin3=fin1.clone(); fin3.position.set(0,-1.2,0.7); fin3.rotation.y=Math.PI/2;
+  const fin4=fin3.clone(); fin4.position.set(0,-1.2,-0.7);
+  rocketGroup.add(body,nose,fin1,fin2,fin3,fin4);
+  rocketGroup.position.set(0,1.5,0); scene.add(rocketGroup);
+  const rktLbl=makeDynamicLabel(scene,3.0);
+
+  // Thrust + exhaust arrow
+  let thrustArrow=null, exhaustArrow=null;
+  const exhaustParticles=[];
+  for(let i=0;i<60;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(0.08,6,6),new THREE.MeshLambertMaterial({color:0xff6600,transparent:true,opacity:0}));
+    scene.add(p); exhaustParticles.push({mesh:p,life:0,active:false});
+  }
+
+  let rState={vy:0,vx:0,y:1.5,x:0,running:false,trail:[]};
+  const trailDots=[];
+  for(let i=0;i<80;i++){
+    const td=new THREE.Mesh(new THREE.SphereGeometry(0.06,6,6),new THREE.MeshLambertMaterial({color:0xa855f7,transparent:true,opacity:0}));
+    scene.add(td); trailDots.push(td);
+  }
+  let tIdx=0;
+
+  S.update=function(dt){
+    const thrust=parseFloat(v('thr3').value)*1000;
+    const rm=parseFloat(v('rm3').value);
+    const na=parseFloat(v('na3').value)*Math.PI/180;
+    if(rState.running){
+      const a=thrust/rm*dt*0.0005;
+      rState.vy+=a*Math.cos(na); rState.vx+=a*Math.sin(na);
+      rState.y+=rState.vy*dt; rState.x+=rState.vx*dt;
+      rocketGroup.position.set(rState.x,rState.y,0);
+      rocketGroup.rotation.z=-rState.vx*0.1;
+      // trail
+      const rspd=Math.sqrt(rState.vy**2+rState.vx**2);
+      const racc=thrust/rm;
+      rktLbl.show();
+      rktLbl.update('v='+rspd.toFixed(2)+'  a='+racc.toFixed(1)+'m/s2', rocketGroup.position);
+      rState.trail.push({x:rState.x,y:rState.y});
+      if(rState.trail.length>80)rState.trail.shift();
+      rState.trail.forEach((pt,i)=>{
+        trailDots[i].position.set(pt.x,pt.y,0);
+        trailDots[i].material.opacity=(i/rState.trail.length)*0.5;
+      });
+      for(let i=rState.trail.length;i<trailDots.length;i++)trailDots[i].material.opacity=0;
+      // exhaust
+      exhaustParticles.forEach(p=>{
+        if(!p.active&&Math.random()<0.3){p.active=true;p.life=1;p.mesh.position.set(rState.x+Math.sin(na)*0.5,rState.y-1.5-Math.cos(na)*0.5,Math.random()*0.3-0.15);p.vy=-2-Math.random()*2;p.vx=(Math.random()-0.5)*0.5;}
+        if(p.active){p.life-=dt*2;p.mesh.position.y+=p.vy*dt;p.mesh.position.x+=p.vx*dt;p.mesh.material.opacity=Math.max(0,p.life*0.8);p.mesh.material.color.setHSL(p.life*0.1,1,0.5);if(p.life<=0)p.active=false;}
+      });
+      if(thrustArrow)scene.remove(thrustArrow);
+      if(exhaustArrow)scene.remove(exhaustArrow);
+      thrustArrow=new THREE.ArrowHelper(new THREE.Vector3(Math.sin(na),Math.cos(na),0),rocketGroup.position.clone(),3,0x7ec8a0,0.5,0.3);
+      exhaustArrow=new THREE.ArrowHelper(new THREE.Vector3(-Math.sin(na),-Math.cos(na),0),rocketGroup.position.clone(),3,0xe07b39,0.5,0.3);
+      scene.add(thrustArrow); scene.add(exhaustArrow);
+      if(rState.y>18)window.reset_rocket();
+    }
+    const acc=(thrust/rm).toFixed(2);
+    v('ro3_rocket').textContent=rState.running?`IGNITED 🔥 | Thrust=${v('thr3').value}kN | m=${rm}kg | a=${acc}m/s² | Exhaust↓=Thrust↑`:`Thrust=${v('thr3').value}kN | m=${rm}kg | a=${acc}m/s² (when fired)`;
+    v('thr3_v').textContent=v('thr3').value+' kN';
+    v('rm3_v').textContent=v('rm3').value;
+    v('na3_v').textContent=v('na3').value+'°';
+    S.renderer.render(S.scene,S.camera);
+  };
+
+  window.fire_rocket=()=>{rState.running=true;};
+  window.stop_rocket=()=>{rState.running=false;};
+  window.reset_rocket=()=>{rState={vy:0,vx:0,y:1.5,x:0,running:false,trail:[]};rocketGroup.position.set(0,1.5,0);rocketGroup.rotation.z=0;rktLbl.hide();if(thrustArrow)scene.remove(thrustArrow);if(exhaustArrow)scene.remove(exhaustArrow);trailDots.forEach(t=>t.material.opacity=0);exhaustParticles.forEach(p=>{p.active=false;p.mesh.material.opacity=0;});};
+  ['thr3','rm3','na3'].forEach(id=>v(id)&&(v(id).oninput=()=>{}));
+
+  return S;
+}
+
+// ===================== LAW 3 — CANNON RECOIL =====================
+function initL3_recoil(containerId){
+  const wrap=v(containerId);
+  const S=makeScene(wrap,{theta:0.4,phi:0.85,radius:24});
+  const {scene}=S;
+
+  const ground=new THREE.Mesh(new THREE.BoxGeometry(60,0.3,10),MAT_GROUND());
+  ground.position.y=-0.15; scene.add(ground);
+
+  // Cannon barrel
+  const cannonGroup=new THREE.Group();
+  const barrel=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.45,4,16),new THREE.MeshPhongMaterial({color:0x5a4030,shininess:40}));
+  barrel.rotation.z=Math.PI/2;
+  const body=new THREE.Mesh(new THREE.BoxGeometry(2,1.2,1.5),new THREE.MeshLambertMaterial({color:0x6a5040}));
+  body.position.y=-0.3;
+  const wheel1=new THREE.Mesh(new THREE.TorusGeometry(0.6,0.12,8,24),new THREE.MeshLambertMaterial({color:0x3a2818}));
+  wheel1.rotation.x=Math.PI/2; wheel1.position.set(-0.5,-0.8,0.7);
+  const wheel2=wheel1.clone(); wheel2.position.set(-0.5,-0.8,-0.7);
+  cannonGroup.add(barrel,body,wheel1,wheel2);
+  cannonGroup.position.set(0,1,0); scene.add(cannonGroup);
+
+  // Cannonball
+  const shell=new THREE.Mesh(new THREE.SphereGeometry(0.4,16,16),new THREE.MeshPhongMaterial({color:0x202020,shininess:100}));
+  shell.castShadow=true; shell.position.set(2,1,0); scene.add(shell);
+  // Explosion particles
+  const exParts=[];
+  for(let i=0;i<40;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(0.1,6,6),new THREE.MeshLambertMaterial({color:0xff8800,transparent:true,opacity:0}));
+    scene.add(p); exParts.push({mesh:p,vx:0,vy:0,vz:0,life:0,active:false});
+  }
+
+  const canLblC=makeDynamicLabel(scene,2.0), canLblS=makeDynamicLabel(scene,2.0);
+  let cState={cx:0,sx:2,cVel:0,sVel:0,running:false,exploded:false};
+  let forceArrowC=null,forceArrowS=null;
+
+  S.update=function(dt){
+    if(cState.running){
+      if(!cState.exploded){
+        cState.exploded=true;
+        const F=parseFloat(v('ef3').value), mc=parseFloat(v('cm3').value), ms=parseFloat(v('sm3').value);
+        cState.sVel=F/ms*0.3; cState.cVel=-F/mc*0.3;
+        // explosion
+        exParts.forEach(p=>{p.active=true;p.life=1;p.mesh.position.set(2,1,0);const a=Math.random()*Math.PI*2,e=Math.random()*Math.PI;p.vx=Math.cos(a)*Math.sin(e)*8;p.vy=Math.cos(e)*4+2;p.vz=Math.sin(a)*Math.sin(e)*8;});
+        if(forceArrowC)scene.remove(forceArrowC);
+        if(forceArrowS)scene.remove(forceArrowS);
+        forceArrowC=new THREE.ArrowHelper(new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),3,0xd46b6b,0.5,0.3);
+        forceArrowS=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(2,1,0),3,0x7ec8a0,0.5,0.3);
+        scene.add(forceArrowC); scene.add(forceArrowS);
+        const mc2=parseFloat(v('cm3').value),ms2=parseFloat(v('sm3').value),F2=parseFloat(v('ef3').value);
+        v('ro3_recoil').textContent=`FIRED! Shell: a=${(F2/ms2).toFixed(1)}m/s² → | Cannon: a=${(F2/mc2).toFixed(1)}m/s² ← | p conserved`;
+      }
+      cState.cx+=cState.cVel*dt*10; cState.sx+=cState.sVel*dt*10;
+      cannonGroup.position.x=cState.cx; shell.position.x=cState.sx;
+      canLblC.show(); canLblC.update('v='+Math.abs(cState.cVel).toFixed(2)+'m/s', cannonGroup.position);
+      canLblS.show(); canLblS.update('v='+Math.abs(cState.sVel).toFixed(2)+'m/s', shell.position);
+      if(forceArrowC)forceArrowC.position.x=cState.cx;
+      if(forceArrowS)forceArrowS.position.x=cState.sx;
+      exParts.forEach(p=>{if(p.active){p.life-=dt*1.5;p.mesh.position.x+=p.vx*dt;p.mesh.position.y+=p.vy*dt-4.9*dt*dt;p.mesh.position.z+=p.vz*dt;p.mesh.material.opacity=Math.max(0,p.life*0.9);p.mesh.material.color.setHSL(p.life*0.15,1,0.55);if(p.life<=0)p.active=false;}});
+      if(Math.abs(cState.cx)>25||Math.abs(cState.sx)>25)cState.running=false;
+    }
+    const mc=parseFloat(v('cm3').value),ms=parseFloat(v('sm3').value),F=parseFloat(v('ef3').value);
+    if(!cState.running&&!cState.exploded) v('ro3_recoil').textContent=`Shell(${ms}kg) a=${(F/ms).toFixed(1)}m/s² vs Cannon(${mc}kg) a=${(F/mc).toFixed(1)}m/s²`;
+    v('sm3_v').textContent=v('sm3').value; v('cm3_v').textContent=v('cm3').value; v('ef3_v').textContent=v('ef3').value+' N';
+    S.renderer.render(S.scene,S.camera);
+  };
+
+  window.fire_cannon=()=>{if(!cState.running){cState.running=true;}};
+  window.reset_cannon=()=>{cState={cx:0,sx:2,cVel:0,sVel:0,running:false,exploded:false};cannonGroup.position.x=0;shell.position.x=2;canLblC.hide();canLblS.hide();[forceArrowC,forceArrowS].forEach(a=>{if(a)scene.remove(a);});forceArrowC=null;forceArrowS=null;exParts.forEach(p=>{p.active=false;p.mesh.material.opacity=0;});};
+  ['sm3','cm3','ef3'].forEach(id=>v(id)&&(v(id).oninput=()=>{}));
+
+  return S;
+}
+
+// ===================== FULLSCREEN SYSTEM =====================
+const fsMapping={
+  fs1_inertia:{panelId:'p1_inertia',simKey:'l1_inertia',cwId:'cw1_inertia',fsCwId:'fscw1_inertia'},
+  fs1_vector:{panelId:'p1_vector',simKey:'l1_vector',cwId:'cw1_vector',fsCwId:'fscw1_vector'},
+  fs2_force:{panelId:'p2_force',simKey:'l2_force',cwId:'cw2_force',fsCwId:'fscw2_force'},
+  fs2_decomp:{panelId:'p2_decomp',simKey:'l2_decomp',cwId:'cw2_decomp',fsCwId:'fscw2_decomp'},
+  fs2_incline:{panelId:'p2_incline',simKey:'l2_incline',cwId:'cw2_incline',fsCwId:'fscw2_incline'},
+  fs3_collision:{panelId:'p3_collision',simKey:'l3_collision',cwId:'cw3_collision',fsCwId:'fscw3_collision'},
+  fs3_rocket:{panelId:'p3_rocket',simKey:'l3_rocket',cwId:'cw3_rocket',fsCwId:'fscw3_rocket'},
+  fs3_recoil:{panelId:'p3_recoil',simKey:'l3_recoil',cwId:'cw3_recoil',fsCwId:'fscw3_recoil'},
+};
+let currentFS=null;
+
+function openFS(fsId){
+  const cfg=fsMapping[fsId]; if(!cfg)return;
+  const sim=simulations[cfg.simKey]; if(!sim)return;
+  // Show overlay first so layout is computed
+  const overlay=v(fsId); overlay.classList.add('active');
+  const fsArea=v(cfg.fsCwId);
+  // Move renderer canvas into fullscreen area
+  const canvas=sim.renderer.domElement;
+  canvas.style.position='absolute';
+  canvas.style.top='0'; canvas.style.left='0';
+  canvas.style.width='100%'; canvas.style.height='100%';
+  fsArea.appendChild(canvas);
+  // Resize AFTER browser has laid out the overlay (two rAF ticks)
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const w=fsArea.clientWidth, h=fsArea.clientHeight;
+    sim.renderer.setSize(w, h);
+    sim.camera.aspect=w/h;
+    sim.camera.updateProjectionMatrix();
+  }));
+  currentFS={fsId,cfg,sim};
+  document._fsEscape=e=>{if(e.key==='Escape')closeFS(fsId);};
+  document.addEventListener('keydown',document._fsEscape);
+}
+
+function closeFS(fsId){
+  const cfg=fsMapping[fsId]; if(!cfg)return;
+  const sim=simulations[cfg.simKey]; if(!sim)return;
+  const overlay=v(fsId); overlay.classList.remove('active');
+  // Restore canvas to original panel wrap
+  const wrap=v(cfg.cwId);
+  const canvas=sim.renderer.domElement;
+  canvas.style.position='absolute';
+  canvas.style.top='0'; canvas.style.left='0';
+  canvas.style.width='100%'; canvas.style.height='100%';
+  wrap.appendChild(canvas);
+  // Resize back after layout settles
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const w=wrap.clientWidth, h=wrap.clientHeight;
+    if(w>0&&h>0){
+      sim.renderer.setSize(w,h);
+      sim.camera.aspect=w/h;
+      sim.camera.updateProjectionMatrix();
+    }
+  }));
+  currentFS=null;
+  document.removeEventListener('keydown',document._fsEscape);
+}
+
+// ===================== MAIN ANIMATION LOOP =====================
+let lastTime=0;
+function mainLoop(ts){
+  const dt=Math.min((ts-lastTime)/1000,0.05); lastTime=ts;
+  Object.values(simulations).forEach(s=>{if(s&&s.update)s.update(dt);});
+  requestAnimationFrame(mainLoop);
+}
+
+// ===================== INIT ON LOAD =====================
+window.addEventListener('load',()=>{
+  // Init all sims
+  simulations.l1_inertia = initL1_inertia('cw1_inertia');
+  simulations.l1_vector  = initL1_vector('cw1_vector');
+  simulations.l2_force   = initL2_force('cw2_force');
+  simulations.l2_decomp  = initL2_decomp('cw2_decomp');
+  simulations.l2_incline = initL2_incline('cw2_incline');
+  simulations.l3_collision=initL3_collision('cw3_collision');
+  simulations.l3_rocket  = initL3_rocket('cw3_rocket');
+  simulations.l3_recoil  = initL3_recoil('cw3_recoil');
+
+  // Initial resize
+  setTimeout(()=>Object.values(simulations).forEach(s=>s&&s.resize&&s.resize()),200);
+  requestAnimationFrame(mainLoop);
+});
+
+window.addEventListener('resize',()=>{
+  Object.values(simulations).forEach(s=>{
+    if(!s||!s.resize) return;
+    const canvas = s.renderer.domElement;
+    const parent = canvas.parentElement;
+    if(!parent) return;
+    const w = parent.clientWidth, h = parent.clientHeight;
+    if(w>0 && h>0){
+      s.renderer.setSize(w,h);
+      s.camera.aspect=w/h;
+      s.camera.updateProjectionMatrix();
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ladder Friction — JEE Physics</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0a0e14; --surface:#111720; --border:#1e2a3a;
+    --N1:#4ecdc4; --N2:#f7b731; --f1:#ff6b6b; --f2:#a29bfe; --W:#fd79a8;
+    --green:#00d2a0; --red:#ff4757; --text:#cdd6e8; --muted:#4a5a70; --accent:#4ecdc4;
+  }
+  body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:20px 14px; gap:16px; }
+  header { text-align:center; }
+  header h1 { font-size:1.05rem; font-weight:600; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--accent); }
+  header p { font-size:.75rem; color:var(--muted); margin-top:3px; font-family:'JetBrains Mono',monospace; }
+  .main { display:flex; gap:14px; width:100%; max-width:960px;
+    align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+  .canvas-card { background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:14px; flex:1 1 380px; max-width:460px; }
+  canvas { display:block; width:100%; border-radius:6px; background:#080c11; }
+  .status-row { display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+  .badge { font-size:.72rem; font-weight:600; padding:4px 12px; border-radius:20px;
+    letter-spacing:.08em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; }
+  .badge.ok   { background:#00d2a018; color:var(--green); border:1px solid #00d2a040; }
+  .badge.slip { background:#ff475718; color:var(--red);   border:1px solid #ff475740; }
+  .badge.none { background:#ff475718; color:var(--red);   border:1px solid #ff475740; }
+  .angle-display { font-family:'JetBrains Mono',monospace; font-size:.78rem; color:var(--muted); }
+  .angle-display span { color:var(--text); }
+  .controls { background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:14px; flex:1 1 240px; max-width:310px; display:flex; flex-direction:column; gap:12px; }
+  .ctrl-label { font-size:.63rem; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:3px; font-family:'JetBrains Mono',monospace; }
+  .slider-group { display:flex; flex-direction:column; gap:5px; }
+  .slider-row { display:flex; align-items:center; gap:7px; }
+  .slider-sym { font-family:'JetBrains Mono',monospace; font-size:.76rem; min-width:26px; color:var(--text); }
+  input[type=range] { flex:1; -webkit-appearance:none; height:4px; border-radius:2px;
+    background:var(--border); outline:none; cursor:pointer; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; height:13px;
+    border-radius:50%; background:var(--accent); cursor:grab; }
+  input[type=range].mu1::-webkit-slider-thumb { background:var(--f1); }
+  input[type=range].mu2::-webkit-slider-thumb { background:var(--f2); }
+  .val-badge { font-family:'JetBrains Mono',monospace; font-size:.73rem; min-width:34px;
+    text-align:right; color:var(--text); }
+  .mode-group { display:flex; flex-direction:column; gap:5px; }
+  .mode-btn { background:transparent; border:1px solid var(--border); border-radius:6px;
+    color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:.68rem;
+    padding:5px 9px; cursor:pointer; text-align:left; transition:all .15s; letter-spacing:.03em; }
+  .mode-btn.active { border-color:var(--accent); color:var(--accent); background:#4ecdc410; }
+  .mode-btn:hover:not(.active) { border-color:var(--muted); color:var(--text); }
+  .formula-panel { background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:14px; width:100%; max-width:960px; }
+  .formula-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:9px; margin-top:9px; }
+  .fcard { background:#080c11; border:1px solid var(--border); border-radius:8px;
+    padding:11px; position:relative; overflow:hidden; }
+  .fcard::before { content:''; position:absolute; top:0; left:0; width:3px; height:100%;
+    background:var(--c,var(--accent)); }
+  .fcard .ftitle { font-size:.63rem; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:5px; font-family:'JetBrains Mono',monospace; }
+  .fcard .feq { font-family:'JetBrains Mono',monospace; font-size:.77rem; color:var(--text); line-height:1.7; }
+  .fcard .feq em { color:var(--accent); font-style:normal; }
+  .fcard.active-case { border-color:var(--accent); }
+  .legend { display:flex; flex-wrap:wrap; gap:9px; margin-top:8px; }
+  .leg-item { display:flex; align-items:center; gap:5px; font-size:.66rem;
+    font-family:'JetBrains Mono',monospace; color:var(--muted); }
+  .leg-dot { width:9px; height:9px; border-radius:2px; }
+  .divider { font-size:.63rem; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);
+    font-family:'JetBrains Mono',monospace; display:flex; align-items:center; gap:7px; }
+  .divider::after { content:''; flex:1; height:1px; background:var(--border); }
+  .eq-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; margin-top:7px; }
+  .eq-cell { background:#080c11; border:1px solid var(--border); border-radius:6px;
+    padding:7px; text-align:center; }
+  .eq-cell .eq-label { font-size:.58rem; color:var(--muted); font-family:'JetBrains Mono',monospace; text-transform:uppercase; }
+  .eq-cell .eq-val { font-size:.82rem; font-family:'JetBrains Mono',monospace; font-weight:600; margin-top:2px; }
+  #resetBtn { background:#1e2a3a; border:1px solid var(--border); border-radius:6px;
+    color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:.68rem;
+    padding:5px 12px; cursor:pointer; width:100%; transition:all .15s; }
+  #resetBtn:hover { background:#2a3a50; }
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+<header>
+  <h1>Ladder Friction</h1>
+  <p>adjust θ · change μ · watch it slip</p>
+</header>
+
+<div class="main">
+  <div class="canvas-card">
+    <canvas id="c" width="420" height="380"></canvas>
+    <div class="status-row">
+      <div id="badge" class="badge ok">Equilibrium ✓</div>
+      <div class="angle-display">θ = <span id="angVal">60</span>°</div>
+    </div>
+    <div class="legend" style="margin-top:9px;">
+      <div class="leg-item"><div class="leg-dot" style="background:#4ecdc4"></div>N₁</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#f7b731"></div>N₂</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ff6b6b"></div>f₁</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#a29bfe"></div>f₂</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#fd79a8"></div>W</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="slider-group">
+      <div class="ctrl-label">Angle θ with floor</div>
+      <div class="slider-row">
+        <span class="slider-sym">θ</span>
+        <input type="range" id="slTheta" min="10" max="85" value="60" step="1">
+        <span class="val-badge" id="vTheta">60°</span>
+      </div>
+    </div>
+    <div class="slider-group">
+      <div class="ctrl-label">Floor friction μ₁</div>
+      <div class="slider-row">
+        <span class="slider-sym" style="color:#ff6b6b">μ₁</span>
+        <input type="range" id="slMu1" min="0" max="1" value="0.35" step="0.01" class="mu1">
+        <span class="val-badge" id="vMu1">0.35</span>
+      </div>
+    </div>
+    <div class="slider-group">
+      <div class="ctrl-label">Wall friction μ₂</div>
+      <div class="slider-row">
+        <span class="slider-sym" style="color:#a29bfe">μ₂</span>
+        <input type="range" id="slMu2" min="0" max="1" value="0.20" step="0.01" class="mu2">
+        <span class="val-badge" id="vMu2">0.20</span>
+      </div>
+    </div>
+    <div>
+      <div class="divider">Mode</div>
+      <div class="mode-group" style="margin-top:7px;">
+        <button class="mode-btn active" data-mode="both">Both rough (μ₁, μ₂)</button>
+        <button class="mode-btn" data-mode="wallsmooth">Wall smooth (μ₂=0)</button>
+        <button class="mode-btn" data-mode="same">Same friction (μ₁=μ₂)</button>
+        <button class="mode-btn" data-mode="floorsmooth">Floor smooth (μ₁=0)</button>
+      </div>
+    </div>
+    <div>
+      <div class="divider">Critical θ</div>
+      <div id="critInfo" style="font-family:'JetBrains Mono',monospace;font-size:.73rem;color:#4ecdc4;margin-top:7px;line-height:1.9;"></div>
+    </div>
+    <div>
+      <div class="divider">Forces (W=1)</div>
+      <div class="eq-row">
+        <div class="eq-cell"><div class="eq-label">N₁</div><div class="eq-val" id="vN1" style="color:#4ecdc4">—</div></div>
+        <div class="eq-cell"><div class="eq-label">N₂</div><div class="eq-val" id="vN2" style="color:#f7b731">—</div></div>
+        <div class="eq-cell"><div class="eq-label">f₁</div><div class="eq-val" id="vF1" style="color:#ff6b6b">—</div></div>
+      </div>
+    </div>
+    <button id="resetBtn">↺ Reset Ladder</button>
+  </div>
+</div>
+
+<div class="formula-panel">
+  <div class="divider">Formulas</div>
+  <div class="formula-grid">
+    <div class="fcard" id="fc0" style="--c:#4ecdc4">
+      <div class="ftitle">Both Rough</div>
+      <div class="feq">tan(θ) = <em>(1−μ₁μ₂)/(μ₁+μ₂)</em><br>cot(θ) = <em>(μ₁+μ₂)/(1−μ₁μ₂)</em></div>
+    </div>
+    <div class="fcard" id="fc1" style="--c:#f7b731">
+      <div class="ftitle">Wall Smooth (μ₂=0)</div>
+      <div class="feq">μ₁ = <em>(1/2)·cot(θ)</em></div>
+    </div>
+    <div class="fcard" id="fc2" style="--c:#a29bfe">
+      <div class="ftitle">Same Friction (μ₁=μ₂=μ)</div>
+      <div class="feq">μ = <em>(1−sin θ)/cos θ</em><br>μ = <em>sec θ − tan θ</em></div>
+    </div>
+    <div class="fcard" id="fc3" style="--c:#ff4757">
+      <div class="ftitle">Floor Smooth (μ₁=0)</div>
+      <div class="feq"><em>No equilibrium possible</em></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const CW = canvas.width, CH = canvas.height;
+
+const PAD = 42;
+const FLOOR_Y = CH - PAD;
+const WALL_X  = PAD;
+const LADDER_LEN = 255;
+
+let theta = 60, mu1 = 0.35, mu2 = 0.20, mode = 'both';
+
+// Slip simulation state
+let slipping = false;
+let slipTheta = 60;      // current animated angle during slip
+let slipVel   = 0;       // angular velocity (deg/s) — foot slides out → theta decreases
+let rafId     = null;
+let lastTime  = null;
+let fallen    = false;   // ladder hit floor
+
+// Dust particles
+let particles = [];
+
+function getEffectiveMu() {
+  if (mode === 'wallsmooth')  return { m1: mu1, m2: 0   };
+  if (mode === 'same')        return { m1: mu1, m2: mu1  };
+  if (mode === 'floorsmooth') return { m1: 0,   m2: mu2  };
+  return { m1: mu1, m2: mu2 };
+}
+
+function criticalTheta(m1, m2) {
+  if (m1 + m2 === 0) return null;
+  const num = 1 - m1 * m2;
+  if (num <= 0) return 0;
+  return Math.atan2(num, m1 + m2) * 180 / Math.PI;
+}
+
+function isEquilibrium() {
+  if (mode === 'floorsmooth') return false;
+  const { m1, m2 } = getEffectiveMu();
+  const tc = criticalTheta(m1, m2);
+  if (tc === null) return false;
+  return theta >= tc;
+}
+
+function computeForces() {
+  const { m1, m2 } = getEffectiveMu();
+  const N1 = 1 / (1 + m1 * m2);
+  const f1 = m1 * N1;
+  const N2 = f1;
+  const f2 = m2 * N2;
+  return { N1, N2, f1, f2 };
+}
+
+// ─── DRAWING ─────────────────────────────────────────────────────────────────
+
+function drawScene(animTheta) {
+  ctx.clearRect(0, 0, CW, CH);
+
+  const rad    = animTheta * Math.PI / 180;
+  const footX  = WALL_X + LADDER_LEN * Math.cos(rad);
+  const footY  = FLOOR_Y;
+  const topX   = WALL_X;
+  const topY   = FLOOR_Y - LADDER_LEN * Math.sin(rad);
+
+  // Grid
+  ctx.strokeStyle = '#1a2535'; ctx.lineWidth = 1;
+  for (let x = 0; x < CW; x += 30) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,CH); ctx.stroke(); }
+  for (let y = 0; y < CH; y += 30) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(CW,y); ctx.stroke(); }
+
+  // Wall
+  ctx.strokeStyle = '#2a3a50'; ctx.lineWidth = 7;
+  ctx.beginPath(); ctx.moveTo(WALL_X,0); ctx.lineTo(WALL_X,FLOOR_Y); ctx.stroke();
+  // Floor
+  ctx.beginPath(); ctx.moveTo(WALL_X,FLOOR_Y); ctx.lineTo(CW,FLOOR_Y); ctx.stroke();
+  // Hatching
+  ctx.strokeStyle = '#1e2a3a'; ctx.lineWidth = 1;
+  for (let i=0;i<15;i++) {
+    ctx.beginPath(); ctx.moveTo(WALL_X+i*12,FLOOR_Y); ctx.lineTo(WALL_X+i*12-10,FLOOR_Y+10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(WALL_X,i*22); ctx.lineTo(WALL_X-10,i*22+10); ctx.stroke();
+  }
+
+  // ── Draw particles (dust/debris on slip) ──
+  particles.forEach((p, i) => {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // ── Ladder ──
+  const eq = !slipping && isEquilibrium();
+  const color = fallen ? '#ff475760' : slipping ? '#ff6b4a' : eq ? '#c8a96e' : '#c8a96e';
+
+  if (slipping && !fallen) {
+    // red glow pulse
+    ctx.save();
+    ctx.shadowColor = '#ff4757';
+    ctx.shadowBlur = 18 + 10*Math.sin(Date.now()*0.01);
+    ctx.strokeStyle = '#ff4757';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(footX,footY); ctx.lineTo(topX,topY); ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.shadowColor = eq ? '#c8a96e30' : '#00000000';
+  ctx.shadowBlur = eq ? 10 : 0;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(footX,footY); ctx.lineTo(topX,topY); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Rungs
+  ctx.strokeStyle = fallen ? '#60202060' : slipping ? '#c05030' : eq ? '#a08050' : '#a08050';
+  ctx.lineWidth = 3;
+  for (let i=1;i<6;i++) {
+    const t = i/6;
+    const rx = footX+(topX-footX)*t, ry = footY+(topY-footY)*t;
+    const nx = -Math.sin(rad)*8, ny = -Math.cos(rad)*8;
+    ctx.beginPath(); ctx.moveTo(rx-nx,ry+ny); ctx.lineTo(rx+nx,ry-ny); ctx.stroke();
+  }
+
+  // Angle arc
+  ctx.strokeStyle = '#4ecdc460'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.arc(footX,footY,36,-Math.PI,-(Math.PI-rad),false); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#4ecdc4'; ctx.font='13px JetBrains Mono';
+  ctx.fillText('θ', footX-50, footY-11);
+
+  // ── Force arrows (only when not fully fallen) ──
+  if (!fallen) {
+    const { N1, N2, f1, f2 } = computeForces();
+    const FSCALE = 75;
+    const midX = (footX+topX)/2, midY = (footY+topY)/2;
+
+    function arrow(x,y,dx,dy,col,lbl) {
+      const len = Math.hypot(dx,dy);
+      if (len < 2) return;
+      // fade forces during slip
+      ctx.save();
+      if (slipping) ctx.globalAlpha = Math.max(0.15, 1 - (Math.abs(animTheta-theta)/40));
+      ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=2;
+      ctx.shadowColor=col+'50'; ctx.shadowBlur=7;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+dx,y+dy); ctx.stroke();
+      const ang=Math.atan2(dy,dx);
+      ctx.beginPath();
+      ctx.moveTo(x+dx,y+dy);
+      ctx.lineTo(x+dx-9*Math.cos(ang-.4),y+dy-9*Math.sin(ang-.4));
+      ctx.lineTo(x+dx-9*Math.cos(ang+.4),y+dy-9*Math.sin(ang+.4));
+      ctx.closePath(); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.font='12px JetBrains Mono'; ctx.fillStyle=col;
+      ctx.fillText(lbl,x+dx+5,y+dy+4);
+      ctx.restore();
+    }
+
+    arrow(footX,footY, 0,-N1*FSCALE, '#4ecdc4','N₁');
+    arrow(footX,footY, -f1*FSCALE,0, '#ff6b6b','f₁');
+    arrow(topX,topY,   N2*FSCALE,0,  '#f7b731','N₂');
+    if (mode!=='wallsmooth') arrow(topX,topY, 0,-f2*FSCALE,'#a29bfe','f₂');
+    arrow(midX,midY,   0,FSCALE*0.6, '#fd79a8','W');
+  }
+
+  // Contact dots
+  if (!fallen) {
+    [[footX,footY,'#4ecdc4'],[topX,topY,'#f7b731']].forEach(([x,y,c])=>{
+      ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2);
+      ctx.fillStyle=c+'40'; ctx.fill();
+      ctx.strokeStyle=c; ctx.lineWidth=1.5; ctx.stroke();
+    });
+  }
+
+  // "SLIPPING" warning overlay text
+  if (slipping && !fallen) {
+    ctx.save();
+    const alpha = 0.5 + 0.5*Math.sin(Date.now()*0.008);
+    ctx.globalAlpha = alpha;
+    ctx.font = 'bold 22px JetBrains Mono';
+    ctx.fillStyle = '#ff4757';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠ SLIPPING', CW/2, 38);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
+  if (fallen) {
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.font = 'bold 18px JetBrains Mono';
+    ctx.fillStyle = '#ff4757';
+    ctx.textAlign = 'center';
+    ctx.fillText('LADDER FELL', CW/2, 38);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+}
+
+// ─── SLIP PHYSICS LOOP ───────────────────────────────────────────────────────
+
+function spawnDust(footX, footY) {
+  for (let i = 0; i < 4; i++) {
+    particles.push({
+      x: footX + (Math.random()-0.5)*8,
+      y: footY + (Math.random()-0.5)*4,
+      vx: (Math.random()-0.5)*2.5,
+      vy: -Math.random()*1.5,
+      r: 2 + Math.random()*2.5,
+      life: 1,
+      color: ['#ff6b6b','#f7b731','#c8a96e','#aaaaaa'][Math.floor(Math.random()*4)]
+    });
+  }
+}
+
+function slipLoop(ts) {
+  if (!lastTime) lastTime = ts;
+  const dt = Math.min((ts - lastTime)/1000, 0.05);
+  lastTime = ts;
+
+  // Simple angular acceleration: the more below critical the angle, the faster it falls
+  // acceleration proportional to (critTheta - slipTheta) clamped
+  const { m1, m2 } = getEffectiveMu();
+  const tc = criticalTheta(m1, m2) ?? 0;
+  const excess = Math.max(tc - slipTheta, 0);
+  const accel = 12 + excess * 1.8;  // deg/s²
+  slipVel += accel * dt;
+  slipTheta -= slipVel * dt;
+
+  // Spawn dust at foot
+  const rad = slipTheta * Math.PI / 180;
+  const footX = WALL_X + LADDER_LEN * Math.cos(rad);
+  if (Math.random() < 0.4) spawnDust(footX, FLOOR_Y);
+
+  // Update particles
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.08;
+    p.life -= 0.03;
+  });
+  particles = particles.filter(p => p.life > 0);
+
+  if (slipTheta <= 4) {
+    slipTheta = 3;
+    slipping = false;
+    fallen = true;
+    // Big burst
+    const fx = WALL_X + LADDER_LEN * Math.cos(0.05);
+    for (let i=0;i<30;i++) spawnDust(fx + (Math.random()-0.5)*40, FLOOR_Y);
+    updateBadge();
+    drawScene(slipTheta);
+    // Keep animating particles briefly
+    setTimeout(()=>{ particles=[]; drawScene(slipTheta); }, 1200);
+    return;
+  }
+
+  drawScene(slipTheta);
+  rafId = requestAnimationFrame(slipLoop);
+}
+
+function startSlip() {
+  if (slipping) return;
+  cancelAnimationFrame(rafId);
+  slipping = true;
+  fallen   = false;
+  slipTheta = theta;
+  slipVel   = 0;
+  lastTime  = null;
+  particles = [];
+  updateBadge();
+  rafId = requestAnimationFrame(slipLoop);
+}
+
+function stopSlip() {
+  slipping = false;
+  fallen   = false;
+  cancelAnimationFrame(rafId);
+  particles = [];
+  slipTheta = theta;
+  drawScene(theta);
+}
+
+// ─── UI ──────────────────────────────────────────────────────────────────────
+
+function updateBadge() {
+  const badge = document.getElementById('badge');
+  if (fallen) {
+    badge.className = 'badge slip'; badge.textContent = 'Ladder Fell ✗';
+  } else if (slipping) {
+    badge.className = 'badge slip'; badge.textContent = 'Slipping… ⚠';
+  } else if (mode === 'floorsmooth') {
+    badge.className = 'badge none'; badge.textContent = 'No Equilibrium';
+  } else {
+    const eq = isEquilibrium();
+    badge.className = eq ? 'badge ok' : 'badge slip';
+    badge.textContent = eq ? 'Equilibrium ✓' : 'Will Slip ✗';
+  }
+}
+
+function updateUI() {
+  if (slipping || fallen) return; // don't interrupt animation with UI redraw
+
+  const { m1, m2 } = getEffectiveMu();
+  document.getElementById('angVal').textContent = theta;
+  updateBadge();
+
+  const tc = criticalTheta(m1, m2);
+  const critDiv = document.getElementById('critInfo');
+  if (mode === 'floorsmooth') {
+    critDiv.textContent = 'No equilibrium for any θ';
+  } else if (tc !== null) {
+    const safe = theta >= tc;
+    critDiv.innerHTML =
+      `θ_min = ${tc.toFixed(1)}°<br>Current θ = ${theta}°<br>` +
+      (safe
+        ? `<span style="color:#00d2a0">✓ Safe by ${(theta-tc).toFixed(1)}°</span>`
+        : `<span style="color:#ff4757">✗ Short by ${(tc-theta).toFixed(1)}°</span>`);
+  }
+
+  const { N1, N2, f1 } = computeForces();
+  document.getElementById('vN1').textContent = N1.toFixed(3)+'W';
+  document.getElementById('vN2').textContent = N2.toFixed(3)+'W';
+  document.getElementById('vF1').textContent = f1.toFixed(3)+'W';
+
+  ['fc0','fc1','fc2','fc3'].forEach(id => document.getElementById(id).classList.remove('active-case'));
+  const fcMap = {both:'fc0',wallsmooth:'fc1',same:'fc2',floorsmooth:'fc3'};
+  document.getElementById(fcMap[mode]).classList.add('active-case');
+
+  const slMu2 = document.getElementById('slMu2');
+  slMu2.disabled = (mode!=='both' && mode!=='floorsmooth');
+  slMu2.style.opacity = slMu2.disabled ? '0.3' : '1';
+
+  drawScene(theta);
+
+  // auto-start slip if not in equilibrium
+  if (!isEquilibrium()) {
+    setTimeout(startSlip, 400);
+  }
+}
+
+// Sliders
+document.getElementById('slTheta').addEventListener('input', e => {
+  stopSlip();
+  theta = +e.target.value;
+  document.getElementById('vTheta').textContent = theta+'°';
+  updateUI();
+});
+document.getElementById('slMu1').addEventListener('input', e => {
+  stopSlip();
+  mu1 = +e.target.value;
+  document.getElementById('vMu1').textContent = mu1.toFixed(2);
+  if (mode==='same') {
+    mu2=mu1;
+    document.getElementById('slMu2').value=mu1;
+    document.getElementById('vMu2').textContent=mu1.toFixed(2);
+  }
+  updateUI();
+});
+document.getElementById('slMu2').addEventListener('input', e => {
+  stopSlip();
+  mu2 = +e.target.value;
+  document.getElementById('vMu2').textContent = mu2.toFixed(2);
+  updateUI();
+});
+
+// Modes
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    stopSlip();
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    mode = btn.dataset.mode;
+    updateUI();
+  });
+});
+
+// Reset
+document.getElementById('resetBtn').addEventListener('click', () => {
+  stopSlip();
+  updateUI();
+});
+
+updateUI();
+</script>
+</body>
+</html>

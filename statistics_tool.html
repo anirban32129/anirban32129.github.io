@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dispersion Lab · Statistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EFF2ED;
+    --paper-line:#D3DACF;
+    --ink:#1B2420;
+    --ink-soft:#5B675E;
+    --teal:#12786A;
+    --teal-soft:#CFE7E2;
+    --plum:#6E4A82;
+    --plum-soft:#E4D9EB;
+    --gold:#B8860B;
+    --card:#FBFBF8;
+    --line:1px solid var(--paper-line);
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(var(--paper-line) 1px, transparent 1px) 0 0/100% 32px,
+      linear-gradient(90deg, var(--paper-line) 1px, transparent 1px) 0 0/32px 100%,
+      var(--paper);
+    background-blend-mode: normal;
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:0 0 80px;
+  }
+  .grid-fade{
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(ellipse at 50% 0%, rgba(239,242,237,0) 0%, var(--paper) 78%);
+  }
+  header.hero{
+    position:relative; z-index:1;
+    max-width:1180px; margin:0 auto; padding:56px 28px 34px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--teal); font-weight:600; margin-bottom:14px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{content:'';width:22px;height:1px;background:var(--teal);}
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:clamp(38px, 6vw, 64px);
+    line-height:1.02; margin:0 0 18px; font-weight:700;
+    letter-spacing:-0.02em;
+  }
+  h1 em{font-style:normal; color:var(--teal);}
+  .lede{max-width:640px; font-size:17px; line-height:1.55; color:var(--ink-soft); margin:0;}
+  .lede b{color:var(--ink); font-weight:600;}
+
+  .def-grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px 24px;
+    font-size:13.5px; line-height:1.5; color:var(--ink-soft);
+  }
+  .def-grid b{color:var(--ink); font-family:'IBM Plex Mono', monospace; font-size:12.5px;}
+  .def-grid code{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--teal);
+    background:var(--teal-soft); padding:1px 5px; border-radius:4px;
+  }
+
+  main{position:relative; z-index:1; max-width:1180px; margin:0 auto; padding:0 28px;}
+
+  section{margin-top:56px;}
+  .section-head{
+    display:flex; align-items:baseline; gap:14px; margin-bottom:6px; flex-wrap:wrap;
+  }
+  .section-num{
+    font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--ink-soft);
+    background:var(--card); border:var(--line); border-radius:6px; padding:2px 8px;
+  }
+  .section-head h2{
+    font-family:'Space Grotesk', sans-serif; font-size:26px; margin:0; font-weight:600;
+  }
+  .section-sub{color:var(--ink-soft); font-size:14.5px; margin:2px 0 22px; max-width:680px; line-height:1.5;}
+
+  .panel{
+    background:var(--card); border:var(--line); border-radius:var(--radius);
+    box-shadow:0 1px 0 rgba(27,36,32,0.03);
+  }
+
+  /* ===== Module 1: number line lab ===== */
+  .lab-grid{display:grid; grid-template-columns:300px 1fr; gap:20px;}
+  @media (max-width:860px){.lab-grid{grid-template-columns:1fr;}}
+  .control-panel{padding:20px;}
+  .control-panel label{
+    display:block; font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft); margin-bottom:8px;
+  }
+  textarea#dataInput{
+    width:100%; min-height:78px; resize:vertical; padding:10px;
+    font-family:'IBM Plex Mono', monospace; font-size:14px; border:var(--line);
+    border-radius:7px; background:#fff; color:var(--ink);
+  }
+  .btn-row{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .hint-row{
+    font-size:11.5px; color:var(--ink-soft); margin-top:8px;
+    font-family:'Inter', sans-serif;
+  }
+  kbd{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; background:var(--card);
+    border:var(--line); border-radius:4px; padding:1px 5px; color:var(--ink);
+  }
+  button{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    border:var(--line); background:#fff; color:var(--ink);
+    padding:8px 13px; border-radius:7px; cursor:pointer;
+    transition:all .15s ease;
+  }
+  button:hover{border-color:var(--teal); color:var(--teal);}
+  button.active{background:var(--teal); border-color:var(--teal); color:#fff;}
+  .toggle-row{display:flex; gap:0; margin:18px 0 4px; border:var(--line); border-radius:7px; overflow:hidden;}
+  .toggle-row button{border:none; border-radius:0; flex:1; background:#fff;}
+  .toggle-row button.active{background:var(--ink); color:#fff;}
+
+  .stat-mini{display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px dashed var(--paper-line); font-size:13.5px;}
+  .stat-mini:last-child{border-bottom:none;}
+  .stat-mini .k{color:var(--ink-soft);}
+  .stat-mini .v{font-family:'IBM Plex Mono', monospace; font-weight:600;}
+
+  .viz-panel{padding:20px; display:flex; flex-direction:column; gap:16px;}
+  canvas#numberLine{width:100%; height:236px; display:block;}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+
+  .stat-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px;}
+  .stat-card{
+    border:var(--line); border-radius:8px; padding:12px 14px; background:#fff;
+  }
+  .stat-card .label{font-family:'IBM Plex Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft);}
+  .stat-card .value{font-family:'Space Grotesk', sans-serif; font-size:24px; font-weight:600; margin-top:4px;}
+  .stat-card.accent-teal{border-color:var(--teal); background:var(--teal-soft);}
+  .stat-card.accent-plum{border-color:var(--plum); background:var(--plum-soft);}
+
+  /* ===== Module 2: grouped frequency table ===== */
+  .table-wrap{overflow-x:auto; padding:20px;}
+  table.freq{width:100%; border-collapse:collapse; font-size:13.5px; min-width:640px;}
+  table.freq th, table.freq td{
+    padding:8px 10px; text-align:center; border-bottom:1px solid var(--paper-line);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  table.freq th{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:12px; text-transform:uppercase;
+    letter-spacing:.05em; color:var(--ink-soft); border-bottom:2px solid var(--ink);
+  }
+  table.freq input{
+    width:64px; text-align:center; border:1px solid var(--paper-line); border-radius:5px;
+    padding:4px; font-family:'IBM Plex Mono', monospace; font-size:13px;
+  }
+  table.freq tr.total td{font-weight:700; border-top:2px solid var(--ink);}
+  .row-actions{display:flex; gap:8px; margin-top:12px;}
+
+  .assumed-mean-row{display:flex; gap:16px; align-items:center; flex-wrap:wrap; padding:0 20px 16px; font-size:13px; color:var(--ink-soft);}
+  .assumed-mean-row input{width:70px; font-family:'IBM Plex Mono',monospace; padding:5px; border:var(--line); border-radius:5px; text-align:center;}
+
+  .step-callout{
+    margin:0 20px 16px; padding:14px 18px; border-radius:9px;
+    background:#FBF3DD; border:1.5px solid var(--gold);
+    font-family:'IBM Plex Mono', monospace; font-size:13.5px; color:#5c4300;
+    line-height:1.9; transition:opacity .2s ease;
+  }
+  .step-callout .step-line{display:block;}
+  .step-callout .step-line b{color:#1B2420;}
+  .step-callout .formula-line{
+    font-family:'IBM Plex Mono', monospace; font-weight:600; color:#5c4300;
+  }
+
+  table.freq tbody tr{transition:background .35s ease, box-shadow .35s ease;}
+  table.freq tbody tr.active-row{
+    background:var(--teal-soft);
+    box-shadow:inset 3px 0 0 var(--teal);
+  }
+  table.freq tbody tr.done-row{background:#F4F6F2;}
+  @keyframes pulseIn{
+    0%{transform:scale(1.25); color:var(--teal);}
+    100%{transform:scale(1); color:inherit;}
+  }
+  .pulse{display:inline-block; animation:pulseIn .4s ease;}
+  tr.total td.building{color:var(--teal); font-weight:700;}
+
+  /* ===== Module 3: consistency comparison ===== */
+  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  @media (max-width:780px){.compare-grid{grid-template-columns:1fr;}}
+  .factory-card{padding:18px;}
+  .factory-card h3{font-family:'Space Grotesk',sans-serif; margin:0 0 10px; font-size:18px;}
+  canvas.hist{width:100%; height:140px; display:block; margin-top:10px;}
+  .verdict{
+    margin-top:18px; padding:16px 20px; border-radius:10px; text-align:center;
+    font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600;
+    border:1.5px solid var(--gold); background:#FBF3DD; color:#5c4300;
+  }
+  .verdict .sub{font-family:'Inter',sans-serif; font-weight:400; font-size:13px; color:#7a6320; margin-top:4px;}
+  .freq-edit-row{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;}
+  .freq-edit-cell{flex:1; min-width:52px; text-align:center;}
+  .freq-edit-cell .cls-label{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-soft);
+    display:block; margin-bottom:4px; white-space:nowrap;
+  }
+  .freq-edit-cell input{
+    width:100%; text-align:center; border:var(--line); border-radius:6px;
+    padding:5px 2px; font-family:'IBM Plex Mono', monospace; font-size:13px;
+    background:#fff; color:var(--ink);
+  }
+  .freq-edit-cell input:focus{outline:none; border-color:var(--teal);}
+  .chart-save{
+    display:block; margin:8px auto 0; font-size:11.5px; padding:6px 12px;
+    background:transparent; border:1px dashed var(--ink-soft); color:var(--ink-soft);
+  }
+  .chart-save:hover{border-color:var(--teal); color:var(--teal); background:transparent;}
+
+  footer{
+    position:relative; z-index:1; max-width:1180px; margin:70px auto 0; padding:22px 28px;
+    border-top:var(--line); font-size:12.5px; color:var(--ink-soft);
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  /* ===== mobile polish ===== */
+  @media (max-width:600px){
+    header.hero{padding:36px 16px 22px;}
+    main{padding:0 16px;}
+    h1{font-size:clamp(30px, 9vw, 42px);}
+    .lede{font-size:15px;}
+    section{margin-top:40px;}
+    .section-head h2{font-size:21px;}
+    .control-panel, .viz-panel, .factory-card, .table-wrap{padding:14px;}
+    canvas#numberLine{height:190px;}
+    canvas.hist{height:120px;}
+    .stat-cards{grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px;}
+    .stat-card{padding:10px 11px;}
+    .stat-card .value{font-size:20px;}
+    .freq-edit-row{gap:6px;}
+    .freq-edit-cell{min-width:44px;}
+    .freq-edit-cell input{padding:6px 2px; font-size:12px;}
+    .assumed-mean-row{padding:0 14px 14px; gap:12px 16px;}
+    button{padding:11px 14px; font-size:12.5px; min-height:44px;}
+    .chart-save{min-height:36px; padding:8px 14px;}
+    .step-callout{margin:0 14px 14px; font-size:12.5px; line-height:1.75;}
+    .verdict{font-size:14.5px; padding:14px 16px;}
+  }
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+<div class="grid-fade"></div>
+
+<header class="hero">
+  <div class="eyebrow">Class XI · Chapter 15</div>
+  <h1>Spread is the story<br><em>numbers don't tell alone.</em></h1>
+  <p class="lede">Edit real numbers and watch mean deviation, variance, and standard deviation take shape live — the measures from NCERT Exemplar 15.</p>
+  <button id="defToggle" style="margin-top:18px;">▸ Definitions</button>
+  <div id="defPanel" class="panel" style="display:none; margin-top:14px; padding:18px 22px;">
+    <div class="def-grid">
+      <div><b>Range</b> — largest − smallest observation.</div>
+      <div><b>Mean (x̄)</b> — <code>x̄ = Σxᵢ / n</code></div>
+      <div><b>Median (M)</b> — middle value when sorted (avg of two middles if n is even).</div>
+      <div><b>Mode</b> — most frequently occurring value.</div>
+      <div><b>Mean Deviation (M.D.)</b> — <code>M.D. = Σ|xᵢ − ref| / n</code></div>
+      <div><b>Variance (σ²)</b> — <code>σ² = Σ(xᵢ − x̄)² / n</code></div>
+      <div><b>Standard Deviation (σ)</b> — <code>σ = √[Σ(xᵢ − x̄)² / n]</code></div>
+      <div><b>Coefficient of Variation (C.V.)</b> — <code>C.V. = (σ / x̄) × 100%</code></div>
+      <div><b>Grouped Mean</b> — <code>x̄ = A + (Σfᵢyᵢ / N) × h</code>, yᵢ = (xᵢ−A)/h</div>
+      <div><b>Grouped Variance</b> — <code>σ² = (h²/N²)[N·Σfᵢyᵢ² − (Σfᵢyᵢ)²]</code></div>
+      <div><b>Mode (grouped)</b> — <code>l + [(f₁−f₀)/(2f₁−f₀−f₂)] × h</code></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- MODULE 1 -->
+  <section id="mod1">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2>The deviation strip</h2>
+    </div>
+    <p class="section-sub">Teal = above reference, plum = below. Bar length = deviation.</p>
+
+    <div class="panel lab-grid">
+      <div class="control-panel">
+        <label for="dataInput">Data (comma-separated)</label>
+        <textarea id="dataInput">57, 64, 43, 67, 49, 59, 44, 47, 61, 59</textarea>
+        <div class="btn-row">
+          <button id="applyData">Update</button>
+          <button id="sampleA">Try sample</button>
+          <button id="resetData">↺ Reset</button>
+        </div>
+        <div class="hint-row">Tip: press <kbd>Enter</kbd> to update · <kbd>Shift+Enter</kbd> for a new line</div>
+
+        <div class="toggle-row" style="margin-top:22px;">
+          <button id="refMean" class="active">About Mean</button>
+          <button id="refMedian">About Median</button>
+          <button id="refModeBtn">About Mode</button>
+        </div>
+
+        <div style="margin-top:18px;">
+          <div class="stat-mini"><span class="k">n</span><span class="v" id="stat-n">–</span></div>
+          <div class="stat-mini"><span class="k">Mean (x̄)</span><span class="v" id="stat-mean" style="color:#12786A">–</span></div>
+          <div class="stat-mini"><span class="k">Median (M)</span><span class="v" id="stat-median" style="color:#6E4A82">–</span></div>
+          <div class="stat-mini"><span class="k">Mode</span><span class="v" id="stat-mode" style="color:#3B6E8F">–</span></div>
+          <div class="stat-mini"><span class="k">Range</span><span class="v" id="stat-range">–</span></div>
+        </div>
+      </div>
+
+      <div class="viz-panel">
+        <canvas id="numberLine"></canvas>
+        <button class="chart-save" data-canvas="numberLine" data-name="number-line-plot">⬇ Save chart</button>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--teal)"></i>above reference</span>
+          <span><i class="dot" style="background:var(--plum)"></i>below reference</span>
+          <span><i class="dot" style="background:var(--gold)"></i>±1σ band</span>
+        </div>
+        <div class="stat-cards">
+          <div class="stat-card"><div class="label">M.D.</div><div class="value" id="stat-md">–</div></div>
+          <div class="stat-card accent-teal"><div class="label">Variance σ²</div><div class="value" id="stat-var">–</div></div>
+          <div class="stat-card accent-teal"><div class="label">Std. Dev. σ</div><div class="value" id="stat-sd">–</div></div>
+          <div class="stat-card accent-plum"><div class="label">Coeff. of Var.</div><div class="value" id="stat-cv">–</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px;">
+      <div class="table-wrap" style="padding-bottom:8px;">
+        <table class="freq" id="devTable">
+          <thead>
+            <tr><th>xᵢ</th><th>xᵢ − ref</th><th>|xᵢ − ref|</th><th>(xᵢ − ref)²</th></tr>
+          </thead>
+          <tbody id="devBody"></tbody>
+          <tfoot>
+            <tr class="total">
+              <td>Σ</td>
+              <td id="dev-sumRaw">–</td>
+              <td id="dev-sumAbs">–</td>
+              <td id="dev-sumSq">–</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p style="padding:0 20px 18px; font-size:13px; color:var(--ink-soft); line-height:1.5;">
+        Raw deviations sum to ≈0. |deviation| ÷ n = M.D. Squared deviation ÷ n = variance σ².
+      </p>
+    </div>
+  </section>
+
+  <!-- MODULE 1B: sample size convergence -->
+  <section id="mod1b">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2>What happens as n grows</h2>
+    </div>
+    <p class="section-sub">Watch mean, median, mode settle as n grows.</p>
+
+    <div class="panel" style="padding:20px;">
+      <div class="btn-row" style="margin-bottom:6px;">
+        <button id="regenSample">New random sample</button>
+        <button id="addOutlier">Inject one outlier</button>
+      </div>
+      <label for="nSlider" style="margin-top:16px;">Sample size drawn so far: n = <span id="nVal">–</span> of <span id="nMax">–</span></label>
+      <input type="range" id="nSlider" min="2" max="150" value="5" style="width:100%;">
+
+      <canvas id="convergeChart" style="width:100%; height:220px; display:block; margin-top:14px;"></canvas>
+      <canvas id="convergeStrip" style="width:100%; height:70px; display:block;"></canvas>
+      <div class="legend" style="margin-top:6px;">
+        <span><i class="dot" style="background:#12786A"></i>mean(n)</span>
+        <span><i class="dot" style="background:#6E4A82"></i>median(n)</span>
+        <span><i class="dot" style="background:#3B6E8F"></i>mode(n)</span>
+        <span><i class="dot" style="background:#B8860B"></i>current n</span>
+      </div>
+
+      <div class="stat-cards" style="margin-top:16px;">
+        <div class="stat-card"><div class="label">Mean at n</div><div class="value" id="c-mean" style="color:#12786A">–</div></div>
+        <div class="stat-card"><div class="label">Median at n</div><div class="value" id="c-median" style="color:#6E4A82">–</div></div>
+        <div class="stat-card"><div class="label">Mode at n</div><div class="value" id="c-mode" style="color:#3B6E8F">–</div></div>
+        <div class="stat-card accent-teal"><div class="label">S.D. at n</div><div class="value" id="c-sd">–</div></div>
+      </div>
+      <p style="margin-top:14px; font-size:13px; color:var(--ink-soft); line-height:1.5;">
+        Try "Inject one outlier": mean jumps, median barely moves.
+      </p>
+    </div>
+  </section>
+
+  <!-- MODULE 2 -->
+  <section id="mod2">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2>Step-deviation, grouped data</h2>
+    </div>
+    <p class="section-sub">Edit classes and frequencies. Applies formula (12), Example 5.</p>
+
+    <div class="panel">
+      <div class="assumed-mean-row">
+        <span>Assumed mean A = <input type="number" id="assumedMean" value="25.5" step="0.5"></span>
+        <span>Class width h = <input type="number" id="classWidth" value="10" step="1"></span>
+        <button id="walkThrough" style="margin-left:auto;">▶ Walk through steps</button>
+      </div>
+      <div id="stepCallout" class="step-callout" style="display:none;"></div>
+      <div class="table-wrap">
+        <table class="freq" id="freqTable">
+          <thead>
+            <tr><th>Class</th><th>xᵢ (mid)</th><th>fᵢ</th><th>yᵢ</th><th>fᵢyᵢ</th><th>fᵢyᵢ²</th><th></th></tr>
+          </thead>
+          <tbody id="freqBody"></tbody>
+          <tfoot>
+            <tr class="total"><td colspan="2">Total N</td><td id="sumF">–</td><td>–</td><td id="sumFY">–</td><td id="sumFY2">–</td><td></td></tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="row-actions" style="padding:0 20px 18px;">
+        <button id="addRow">+ Add class</button>
+        <button id="resetFreq">Reset to Example 5</button>
+      </div>
+      <div class="stat-cards" style="padding:0 20px 20px;">
+        <div class="stat-card"><div class="label">Mean x̄</div><div class="value" id="g-mean" style="color:#12786A">–</div></div>
+        <div class="stat-card"><div class="label">Mode</div><div class="value" id="g-mode" style="color:#3B6E8F">–</div></div>
+        <div class="stat-card accent-teal"><div class="label">Variance σ²</div><div class="value" id="g-var">–</div></div>
+        <div class="stat-card accent-teal"><div class="label">Std. Dev. σ</div><div class="value" id="g-sd">–</div></div>
+      </div>
+      <p style="padding:0 20px 4px; font-size:12.5px; color:var(--ink-soft); line-height:1.5;">
+        Mode = l + [(f₁−f₀)/(2f₁−f₀−f₂)]×h, on the modal class.
+      </p>
+    </div>
+  </section>
+
+  <!-- MODULE 3 -->
+  <section id="mod3">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2>Which one is more consistent?</h2>
+    </div>
+    <p class="section-sub">Lower C.V. = more consistent, even with similar means (Example 6).</p>
+
+    <div class="compare-grid">
+      <div class="panel factory-card">
+        <h3>Factory A</h3>
+        <canvas class="hist" id="histA"></canvas>
+        <button class="chart-save" data-canvas="histA" data-name="factory-a-histogram">⬇ Save chart</button>
+        <div class="freq-edit-row" id="freqEditA"></div>
+        <div class="stat-cards" style="margin-top:12px;">
+          <div class="stat-card"><div class="label">Mean</div><div class="value" id="a-mean" style="color:#12786A">–</div></div>
+          <div class="stat-card"><div class="label">S.D.</div><div class="value" id="a-sd">–</div></div>
+          <div class="stat-card accent-plum"><div class="label">C.V.</div><div class="value" id="a-cv">–</div></div>
+        </div>
+      </div>
+      <div class="panel factory-card">
+        <h3>Factory B</h3>
+        <canvas class="hist" id="histB"></canvas>
+        <button class="chart-save" data-canvas="histB" data-name="factory-b-histogram">⬇ Save chart</button>
+        <div class="freq-edit-row" id="freqEditB"></div>
+        <div class="stat-cards" style="margin-top:12px;">
+          <div class="stat-card"><div class="label">Mean</div><div class="value" id="b-mean" style="color:#12786A">–</div></div>
+          <div class="stat-card"><div class="label">S.D.</div><div class="value" id="b-sd">–</div></div>
+          <div class="stat-card accent-plum"><div class="label">C.V.</div><div class="value" id="b-cv">–</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button id="mod3Apply">Update</button>
+      <button id="mod3Reset">↺ Reset to example</button>
+    </div>
+    <div class="verdict" id="verdict">–</div>
+  </section>
+
+</main>
+
+
+<script>
+/* ============ helpers ============ */
+const $ = s => document.querySelector(s);
+
+$('#defToggle').addEventListener('click', () => {
+  const panel = $('#defPanel');
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  $('#defToggle').textContent = (open ? '▸' : '▾') + ' Definitions';
+});
+const fmt = (n, d=2) => Number.isFinite(n) ? n.toFixed(d) : '–';
+
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function median(arr){
+  const s=[...arr].sort((a,b)=>a-b); const n=s.length; const mid=Math.floor(n/2);
+  return n%2 ? s[mid] : (s[mid-1]+s[mid])/2;
+}
+function variance(arr, m){ return arr.reduce((a,b)=>a+(b-m)**2,0)/arr.length; }
+function mode(arr){
+  const freq = new Map();
+  arr.forEach(v => freq.set(v, (freq.get(v)||0)+1));
+  const maxCount = Math.max(...freq.values());
+  if(maxCount <= 1) return {values: [], count: 1, none: true};
+  const modes = [...freq.entries()].filter(([v,c]) => c===maxCount).map(([v])=>v);
+  return {values: modes, count: maxCount, none: false};
+}
+
+/* ============ MODULE 1 : number line lab ============ */
+const defaultData = [57, 64, 43, 67, 49, 59, 44, 47, 61, 59];
+const defaultDataText = '57, 64, 43, 67, 49, 59, 44, 47, 61, 59';
+let currentData = [...defaultData];
+let refMode = 'mean'; // or 'median'
+
+function renderModule1(){
+  const arr = currentData;
+  const n = arr.length;
+  const m = mean(arr);
+  const med = median(arr);
+  const modeInfo = mode(arr);
+  const modeLabel = modeInfo.none ? 'none (all unique)' : modeInfo.values.map(v=>fmt(v,1)).join(', ');
+  const modeRef = modeInfo.none ? m : modeInfo.values[0]; // fall back to mean if no mode exists
+  const ref = refMode === 'mean' ? m : refMode === 'median' ? med : modeRef;
+  const varc = variance(arr, m);
+  const sd = Math.sqrt(varc);
+  const mad = arr.reduce((a,b)=>a+Math.abs(b-ref),0)/n;
+  const cv = (sd/m)*100;
+
+  $('#stat-n').textContent = n;
+  $('#stat-mean').textContent = fmt(m);
+  $('#stat-median').textContent = fmt(med);
+  $('#stat-mode').textContent = modeLabel;
+  $('#stat-range').textContent = fmt(Math.max(...arr)-Math.min(...arr),1);
+  $('#stat-md').textContent = fmt(mad);
+  $('#stat-var').textContent = fmt(varc);
+  $('#stat-sd').textContent = fmt(sd);
+  $('#stat-cv').textContent = fmt(cv)+'%';
+
+  drawNumberLine(arr, ref, sd);
+  renderDeviationTable(arr, ref);
+}
+
+function renderDeviationTable(arr, ref){
+  const body = $('#devBody');
+  body.innerHTML = '';
+  let sumRaw=0, sumAbs=0, sumSq=0;
+  // show in original order, but cap very long lists for readability
+  arr.forEach(v => {
+    const raw = v - ref;
+    const abs = Math.abs(raw);
+    const sq = raw*raw;
+    sumRaw += raw; sumAbs += abs; sumSq += sq;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${fmt(v,1)}</td>
+      <td style="color:${raw>=0 ? '#12786A' : '#6E4A82'}">${raw>=0?'+':''}${fmt(raw,2)}</td>
+      <td>${fmt(abs,2)}</td>
+      <td>${fmt(sq,2)}</td>
+    `;
+    body.appendChild(tr);
+  });
+  $('#dev-sumRaw').textContent = fmt(sumRaw,2);
+  $('#dev-sumAbs').textContent = fmt(sumAbs,2);
+  $('#dev-sumSq').textContent = fmt(sumSq,2);
+}
+
+/* returns a smaller chart height on narrow/mobile viewports */
+function respH(desktop, mobile){ return window.innerWidth <= 600 ? mobile : desktop; }
+
+function setupCanvas(canvas, cssH){
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || 700;
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
+  canvas.style.height = cssH + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+  return {ctx, W: cssW, H: cssH};
+}
+
+/* rounds a raw step size to a "nice" 1 / 2 / 5 x 10^n value, ~targetCount gridlines across the range */
+function niceStep(range, targetCount=8){
+  if(!Number.isFinite(range) || range<=0) return 1;
+  const raw = range/targetCount;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw/mag;
+  let step;
+  if(norm < 1.5) step = 1;
+  else if(norm < 3) step = 2;
+  else if(norm < 7) step = 5;
+  else step = 10;
+  return step*mag;
+}
+
+/* draws graph-paper style vertical gridlines + axis tick marks + value labels along a number line.
+   x: value->pixel mapper. lo/hi: value range drawn. axisY: y of the horizontal axis line. */
+function drawNumberGrid(ctx, W, H, x, lo, hi, axisY, topPad, bottomPad, marginL, marginR){
+  marginL = marginL || 0; marginR = marginR || 0;
+  const step = niceStep(hi-lo);
+  const decimals = step < 1 ? 1 : 0;
+  const start = Math.ceil(lo/step)*step;
+  ctx.save();
+  ctx.font = '9px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'center';
+
+  // horizontal gridlines, evenly spaced across the vertical span
+  ctx.strokeStyle = 'rgba(27,36,32,0.07)';
+  ctx.lineWidth = 1;
+  const hSpacing = 24;
+  for(let py=topPad; py<=H-bottomPad+0.5; py+=hSpacing){
+    ctx.beginPath(); ctx.moveTo(marginL, py); ctx.lineTo(W-marginR, py); ctx.stroke();
+  }
+
+  // vertical gridlines + tick marks + value labels
+  for(let v=start; v<=hi+1e-9; v+=step){
+    const px = x(v);
+    ctx.strokeStyle = 'rgba(27,36,32,0.07)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, topPad); ctx.lineTo(px, H-bottomPad); ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(27,36,32,0.4)';
+    ctx.beginPath(); ctx.moveTo(px, axisY-4); ctx.lineTo(px, axisY+4); ctx.stroke();
+
+    ctx.fillStyle = '#8B948C';
+    ctx.fillText(fmt(v, decimals), px, H-bottomPad+11);
+  }
+  ctx.restore();
+}
+
+function drawNumberLine(arr, ref, sd){
+  const canvas = $('#numberLine');
+  const {ctx, W, H} = setupCanvas(canvas, 236);
+
+  const min = Math.min(...arr), max = Math.max(...arr);
+  const pad = (max-min)*0.15 || 5;
+  const lo = min-pad, hi = max+pad;
+  const marginX = 40;
+  const x = v => marginX + ( (v-lo)/(hi-lo) ) * (W - marginX*2);
+  const axisY = H/2 - 6;
+  const refX = x(ref);
+
+  // graph-paper grid + tick marks + value labels
+  drawNumberGrid(ctx, W, H, x, lo, hi, axisY, 8, 26, marginX, marginX);
+
+  // sd band
+  ctx.fillStyle = 'rgba(184,134,11,0.09)';
+  ctx.fillRect(x(ref-sd), axisY-56, x(ref+sd)-x(ref-sd), 112);
+
+  // axis
+  ctx.strokeStyle = '#1B2420'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(marginX, axisY); ctx.lineTo(W-marginX, axisY); ctx.stroke();
+
+  // reference dashed line
+  ctx.save();
+  ctx.setLineDash([4,3]); ctx.strokeStyle = '#1B2420'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(refX, 20); ctx.lineTo(refX, H-26); ctx.stroke();
+  ctx.restore();
+
+  // reference label sits directly on the horizontal axis, not floating above
+  const refText = (refMode==='mean' ? 'x̄ = ' : refMode==='median' ? 'M = ' : 'Mode = ') + fmt(ref,1);
+  const refColor = refMode==='mean' ? '#12786A' : refMode==='median' ? '#6E4A82' : '#3B6E8F';
+  ctx.font = 'bold 11px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'center';
+  const refTextW = ctx.measureText(refText).width;
+  ctx.fillStyle = '#FBFBF8';
+  ctx.fillRect(refX-refTextW/2-6, axisY-9, refTextW+12, 18);
+  ctx.fillStyle = refColor;
+  ctx.fillText(refText, refX, axisY+4);
+
+  // points + deviation bars: horizontal, on one row per side — points that would
+  // physically overlap get bumped to a nearby parallel track so nothing collides
+  const sorted = [...arr].map((v,i)=>({v,i})).sort((a,b)=>a.v-b.v);
+  const yAbove = axisY - 30;
+  const yBelow = axisY + 30;
+  const trackGap = 18;      // vertical distance between parallel tracks
+  const minDotGap = 24;     // min px between dot centres before we bump to a new track (wide enough to also clear 2-3 digit labels)
+
+  function assignTracks(points){
+    let lastPx = -Infinity, track = 0;
+    return points.map(p => {
+      if(p.px - lastPx < minDotGap) track += 1; else track = 0;
+      lastPx = p.px;
+      return {...p, track};
+    });
+  }
+
+  const abovePts = assignTracks(sorted.filter(d => d.v >= ref).map(d => ({...d, px: x(d.v)})));
+  const belowPts = assignTracks(sorted.filter(d => d.v < ref).map(d => ({...d, px: x(d.v)})));
+
+  [...abovePts.map(p=>({...p, above:true})), ...belowPts.map(p=>({...p, above:false}))].forEach(d => {
+    const baseY = d.above ? yAbove : yBelow;
+    const y = d.above ? baseY - d.track*trackGap : baseY + d.track*trackGap;
+    const color = d.above ? '#12786A' : '#6E4A82';
+    const px = d.px;
+
+    // horizontal deviation bar from the reference line to the point
+    ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(refX, y); ctx.lineTo(px, y); ctx.stroke();
+
+    ctx.beginPath(); ctx.arc(px, y, 4.5, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = '#FBFBF8'; ctx.lineWidth = 1.2; ctx.stroke();
+
+    ctx.fillStyle = '#1B2420';
+    ctx.font = '10.5px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(fmt(d.v,0), px, d.above ? y-7 : y+15);
+  });
+}
+
+$('#applyData').addEventListener('click', () => {
+  const raw = $('#dataInput').value;
+  const parsed = raw.split(',').map(s=>parseFloat(s.trim())).filter(v=>!isNaN(v));
+  if(parsed.length >= 2){ currentData = parsed; renderModule1(); }
+});
+$('#sampleA').addEventListener('click', () => {
+  $('#dataInput').value = '2, 9, 9, 3, 6, 9, 4';
+  currentData = [2,9,9,3,6,9,4];
+  renderModule1();
+});
+$('#resetData').addEventListener('click', () => {
+  $('#dataInput').value = defaultDataText;
+  currentData = [...defaultData];
+  renderModule1();
+});
+$('#dataInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    $('#applyData').click();
+  }
+});
+$('#refMean').addEventListener('click', () => {
+  refMode='mean';
+  $('#refMean').classList.add('active'); $('#refMedian').classList.remove('active'); $('#refModeBtn').classList.remove('active');
+  renderModule1();
+});
+$('#refMedian').addEventListener('click', () => {
+  refMode='median';
+  $('#refMedian').classList.add('active'); $('#refMean').classList.remove('active'); $('#refModeBtn').classList.remove('active');
+  renderModule1();
+});
+$('#refModeBtn').addEventListener('click', () => {
+  refMode='mode';
+  $('#refModeBtn').classList.add('active'); $('#refMean').classList.remove('active'); $('#refMedian').classList.remove('active');
+  renderModule1();
+});
+
+/* ============ MODULE 1B : sample size convergence ============ */
+const POOL_SIZE = 150;
+let convergePool = [];
+
+function randNormal(mu, sigma){
+  // sum of 6 uniforms approximates a bell shape, no library needed
+  let s = 0; for(let i=0;i<6;i++) s += Math.random();
+  return mu + (s-3) * sigma;
+}
+function genPool(){
+  return Array.from({length: POOL_SIZE}, () => Math.round(randNormal(50, 12)));
+}
+convergePool = genPool();
+
+function runningStatsChart(){
+  const slider = $('#nSlider');
+  const n = +slider.value;
+  $('#nVal').textContent = n;
+  $('#nMax').textContent = POOL_SIZE;
+
+  // compute mean, median & mode for every prefix 2..POOL_SIZE (cheap enough at this size)
+  const means = [], medians = [], modes = [];
+  for(let i=2;i<=POOL_SIZE;i++){
+    const slice = convergePool.slice(0,i);
+    means.push(mean(slice));
+    medians.push(median(slice));
+    const mi = mode(slice);
+    modes.push(mi.none ? null : mi.values[0]); // track the first mode value when it exists
+  }
+
+  drawConvergeChart(means, medians, modes, n);
+
+  const curSlice = convergePool.slice(0, n);
+  const m = mean(curSlice), med = median(curSlice), sd = Math.sqrt(variance(curSlice, m));
+  const modeInfo = mode(curSlice);
+  $('#c-mean').textContent = fmt(m);
+  $('#c-median').textContent = fmt(med);
+  $('#c-mode').textContent = modeInfo.none ? '—' : modeInfo.values.map(v=>fmt(v,0)).join(', ');
+  $('#c-sd').textContent = fmt(sd);
+  drawConvergeStrip(m, med, modeInfo.none ? null : modeInfo.values[0]);
+}
+
+function drawConvergeChart(means, medians, modes, n){
+  const canvas = $('#convergeChart');
+  const {ctx, W, H} = setupCanvas(canvas, 220);
+  const marginL=42, marginR=14, marginT=14, marginB=24;
+
+  const modeVals = modes.filter(v => v !== null);
+  const all = means.concat(medians, modeVals.length ? modeVals : means);
+  const yMin = Math.min(...all), yMax = Math.max(...all);
+  const yPad = (yMax-yMin)*0.12 || 2;
+  const lo = yMin-yPad, hi = yMax+yPad;
+
+  const xN = means.length; // index 0 => n=2
+  const xPos = i => marginL + (i/(xN-1)) * (W-marginL-marginR);
+  const yPos = v => H-marginB - ((v-lo)/(hi-lo)) * (H-marginT-marginB);
+
+  // graph-paper grid: horizontal at value ticks, vertical at n ticks
+  ctx.save();
+  ctx.strokeStyle = 'rgba(27,36,32,0.07)'; ctx.lineWidth = 1;
+  const yStep = niceStep(hi-lo, 5);
+  for(let v=Math.ceil(lo/yStep)*yStep; v<=hi; v+=yStep){
+    const py = yPos(v);
+    ctx.beginPath(); ctx.moveTo(marginL, py); ctx.lineTo(W-marginR, py); ctx.stroke();
+  }
+  const nStep = niceStep(xN, 6);
+  for(let vn=Math.ceil(2/nStep)*nStep; vn<=xN+1; vn+=nStep){
+    const px = xPos(vn-2);
+    ctx.beginPath(); ctx.moveTo(px, marginT); ctx.lineTo(px, H-marginB); ctx.stroke();
+  }
+  ctx.restore();
+
+  // axis
+  ctx.strokeStyle = '#1B2420'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(marginL, H-marginB); ctx.lineTo(W-marginR, H-marginB); ctx.stroke();
+
+  function pathFor(arr, color){
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    let started = false;
+    arr.forEach((v,i) => {
+      if(v === null || v === undefined){ started = false; return; }
+      if(started) ctx.lineTo(xPos(i), yPos(v)); else ctx.moveTo(xPos(i), yPos(v));
+      started = true;
+    });
+    ctx.stroke();
+  }
+  pathFor(means, '#12786A');
+  pathFor(medians, '#6E4A82');
+  pathFor(modes, '#3B6E8F');
+
+  // current n marker
+  const idx = Math.max(0, Math.min(xN-1, n-2));
+  const mx = xPos(idx);
+  ctx.save();
+  ctx.setLineDash([3,3]); ctx.strokeStyle = '#B8860B';
+  ctx.beginPath(); ctx.moveTo(mx, marginT); ctx.lineTo(mx, H-marginB); ctx.stroke();
+  ctx.restore();
+
+  // y axis labels
+  ctx.fillStyle = '#5B675E';
+  ctx.font = '10px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'left';
+  [lo, (lo+hi)/2, hi].forEach(v => ctx.fillText(fmt(v,0), 6, yPos(v)+4));
+
+  // x axis labels
+  ctx.textAlign = 'center';
+  [2, Math.round(xN/2)+2, xN+1].forEach(v => {
+    const i = v-2;
+    ctx.fillText('n='+v, xPos(Math.max(0,Math.min(xN-1,i))), H-6);
+  });
+}
+
+/* mini number-line strip: plots current mean/median/mode as dots on a shared axis */
+function drawConvergeStrip(m, med, modeVal){
+  const canvas = $('#convergeStrip');
+  if(!canvas) return;
+  const {ctx, W, H} = setupCanvas(canvas, 70);
+  const vals = [m, med].concat(modeVal!==null ? [modeVal] : []);
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const pad = (hi-lo)*0.4 || 5;
+  const x = v => 30 + ((v-(lo-pad))/((hi+pad)-(lo-pad))) * (W-60);
+  const y = H/2;
+
+  // faint background grid (no labels — strip is too small for them)
+  const step = niceStep(hi-lo);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(27,36,32,0.06)'; ctx.lineWidth = 1;
+  for(let v=Math.ceil((lo-pad)/step)*step; v<=hi+pad; v+=step){
+    const px = x(v);
+    ctx.beginPath(); ctx.moveTo(px, 4); ctx.lineTo(px, H-4); ctx.stroke();
+  }
+  for(let py=4; py<=H-4; py+=18){
+    ctx.beginPath(); ctx.moveTo(20, py); ctx.lineTo(W-20, py); ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.strokeStyle = '#1B2420'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(W-20, y); ctx.stroke();
+
+  const pts = [
+    {v:m, color:'#12786A', label:'mean', row:-1},
+    {v:med, color:'#6E4A82', label:'median', row:1},
+  ];
+  if(modeVal!==null) pts.push({v:modeVal, color:'#3B6E8F', label:'mode', row:-1.8});
+
+  pts.forEach(p => {
+    const px = x(p.v);
+    const py = y + p.row*14;
+    ctx.beginPath(); ctx.moveTo(px, y); ctx.lineTo(px, py); ctx.strokeStyle = p.color; ctx.lineWidth=1.4; ctx.stroke();
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2);
+    ctx.fillStyle = p.color; ctx.fill();
+    ctx.fillStyle = '#1B2420';
+    ctx.font = '10px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.label+' '+fmt(p.v,1), px, p.row < 0 ? py-8 : py+16);
+  });
+}
+
+$('#nSlider').addEventListener('input', runningStatsChart);
+$('#regenSample').addEventListener('click', () => {
+  convergePool = genPool();
+  runningStatsChart();
+});
+$('#addOutlier').addEventListener('click', () => {
+  convergePool.push(Math.round(randNormal(50,12)) + 250); // extreme outlier
+  // rotate it near the front so scrubbing n small still includes it
+  convergePool.splice(2, 0, convergePool.pop());
+  runningStatsChart();
+});
+
+/* ============ MODULE 2 : grouped step-deviation ============ */
+let freqRows = [
+  {lo:1, hi:10, f:11},
+  {lo:10, hi:20, f:29},
+  {lo:20, hi:30, f:18},
+  {lo:30, hi:40, f:4},
+  {lo:40, hi:50, f:5},
+  {lo:50, hi:60, f:3},
+];
+
+function renderFreqTable(){
+  const A = parseFloat($('#assumedMean').value) || 0;
+  const h = parseFloat($('#classWidth').value) || 1;
+  const body = $('#freqBody');
+  body.innerHTML = '';
+  let sumF=0, sumFY=0, sumFY2=0;
+
+  freqRows.forEach((row, idx) => {
+    const xi = (row.lo+row.hi)/2;
+    const yi = (xi-A)/h;
+    const fy = row.f*yi;
+    const fy2 = row.f*yi*yi;
+    sumF += row.f; sumFY += fy; sumFY2 += fy2;
+
+    const tr = document.createElement('tr');
+    tr.id = 'freqRow-'+idx;
+    tr.innerHTML = `
+      <td><input type="number" value="${row.lo}" data-idx="${idx}" data-field="lo" style="width:44px"> – <input type="number" value="${row.hi}" data-idx="${idx}" data-field="hi" style="width:44px"></td>
+      <td>${fmt(xi,1)}</td>
+      <td><input type="number" value="${row.f}" data-idx="${idx}" data-field="f"></td>
+      <td>${fmt(yi,2)}</td>
+      <td>${fmt(fy,2)}</td>
+      <td>${fmt(fy2,2)}</td>
+      <td><button data-del="${idx}" style="padding:4px 8px;">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+
+  $('#sumF').textContent = sumF;
+  $('#sumFY').textContent = fmt(sumFY,2);
+  $('#sumFY2').textContent = fmt(sumFY2,2);
+
+  const xbar = A + (sumFY/sumF)*h;
+  const varc = ((h*h)/(sumF*sumF)) * (sumF*sumFY2 - sumFY*sumFY);
+  const sd = Math.sqrt(varc);
+
+  $('#g-mean').textContent = fmt(xbar);
+  $('#g-var').textContent = fmt(varc);
+  $('#g-sd').textContent = fmt(sd);
+
+  // Modal class formula: l + [(f1-f0)/(2f1-f0-f2)] * h, using the widest-frequency class
+  if(freqRows.length >= 1){
+    let maxIdx = 0;
+    freqRows.forEach((r,i) => { if(r.f > freqRows[maxIdx].f) maxIdx = i; });
+    const modalClass = freqRows[maxIdx];
+    const f1 = modalClass.f;
+    const f0 = maxIdx > 0 ? freqRows[maxIdx-1].f : 0;
+    const f2 = maxIdx < freqRows.length-1 ? freqRows[maxIdx+1].f : 0;
+    const hw = modalClass.hi - modalClass.lo; // use this class's own width
+    const denom = (2*f1 - f0 - f2);
+    const modeVal = denom !== 0 ? modalClass.lo + ((f1-f0)/denom) * hw : NaN;
+    $('#g-mode').textContent = Number.isFinite(modeVal) ? fmt(modeVal) : '—';
+  } else {
+    $('#g-mode').textContent = '–';
+  }
+
+  body.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const idx = +e.target.dataset.idx, field = e.target.dataset.field;
+      freqRows[idx][field] = parseFloat(e.target.value) || 0;
+      renderFreqTable();
+    });
+  });
+  body.querySelectorAll('button[data-del]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      freqRows.splice(+e.target.dataset.del, 1);
+      renderFreqTable();
+    });
+  });
+}
+
+$('#addRow').addEventListener('click', () => {
+  const last = freqRows[freqRows.length-1];
+  const width = last ? last.hi-last.lo : 10;
+  freqRows.push({lo: last?last.hi:0, hi: (last?last.hi:0)+width, f: 1});
+  renderFreqTable();
+});
+$('#resetFreq').addEventListener('click', () => {
+  freqRows = [
+    {lo:1, hi:10, f:11},{lo:10, hi:20, f:29},{lo:20, hi:30, f:18},
+    {lo:30, hi:40, f:4},{lo:40, hi:50, f:5},{lo:50, hi:60, f:3},
+  ];
+  $('#assumedMean').value = 25.5; $('#classWidth').value = 10;
+  renderFreqTable();
+});
+$('#assumedMean').addEventListener('change', renderFreqTable);
+$('#classWidth').addEventListener('change', renderFreqTable);
+
+/* ---- animated step-by-step walkthrough ---- */
+let walkRunning = false;
+
+function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
+
+async function walkThroughSteps(){
+  if(walkRunning) return;
+  walkRunning = true;
+  const btn = $('#walkThrough');
+  btn.disabled = true; btn.textContent = '⏸ Running…';
+  const callout = $('#stepCallout');
+  callout.style.display = 'block';
+
+  const A = parseFloat($('#assumedMean').value) || 0;
+  const h = parseFloat($('#classWidth').value) || 1;
+
+  // show the general symbolic formulas first, before running numbers through them
+  callout.innerHTML = `
+    <span class="step-line formula-line">yᵢ = (xᵢ − A) / h &nbsp;·&nbsp; x̄ = A + (Σfᵢyᵢ / N) × h</span>
+    <span class="step-line formula-line">σ² = (h²/N²)·[N·Σfᵢyᵢ² − (Σfᵢyᵢ)²] &nbsp;·&nbsp; σ = √σ²</span>
+    <span class="step-line" style="margin-top:6px; opacity:.75;">Now working through each class with A = <b>${A}</b>, h = <b>${h}</b>…</span>
+  `;
+  await sleep(1400);
+
+  // clear any previous row states and totals
+  document.querySelectorAll('#freqBody tr').forEach(r => r.classList.remove('active-row','done-row'));
+  $('#sumF').textContent = '0'; $('#sumFY').textContent = '0.00'; $('#sumFY2').textContent = '0.00';
+  ['#sumF','#sumFY','#sumFY2'].forEach(sel => $(sel).classList.add('building'));
+
+  let runF=0, runFY=0, runFY2=0;
+
+  for(let idx=0; idx<freqRows.length; idx++){
+    const row = freqRows[idx];
+    const rowEl = document.getElementById('freqRow-'+idx);
+    document.querySelectorAll('#freqBody tr').forEach(r => r.classList.remove('active-row'));
+    if(rowEl){ rowEl.classList.add('active-row'); rowEl.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+
+    const xi = (row.lo+row.hi)/2;
+    callout.innerHTML = `
+      <span class="step-line">Class <b>${row.lo}–${row.hi}</b>, frequency fᵢ = <b>${row.f}</b></span>
+      <span class="step-line">Step 1 — midpoint: xᵢ = (${row.lo}+${row.hi})/2 = <b>${fmt(xi,1)}</b></span>
+    `;
+    await sleep(650);
+
+    const yi = (xi-A)/h;
+    callout.innerHTML += `<span class="step-line">Step 2 — code: yᵢ = (xᵢ−A)/h = (${fmt(xi,1)}−${A})/${h} = <b>${fmt(yi,2)}</b></span>`;
+    await sleep(650);
+
+    const fy = row.f*yi;
+    callout.innerHTML += `<span class="step-line">Step 3 — fᵢyᵢ = ${row.f} × ${fmt(yi,2)} = <b>${fmt(fy,2)}</b></span>`;
+    await sleep(600);
+
+    const fy2 = row.f*yi*yi;
+    callout.innerHTML += `<span class="step-line">Step 4 — fᵢyᵢ² = ${row.f} × ${fmt(yi,2)}² = <b>${fmt(fy2,2)}</b></span>`;
+    await sleep(700);
+
+    runF += row.f; runFY += fy; runFY2 += fy2;
+    const fCell = $('#sumF'), fyCell = $('#sumFY'), fy2Cell = $('#sumFY2');
+    fCell.textContent = runF; fyCell.textContent = fmt(runFY,2); fy2Cell.textContent = fmt(runFY2,2);
+    [fCell, fyCell, fy2Cell].forEach(c => { c.classList.remove('pulse'); void c.offsetWidth; c.classList.add('pulse'); });
+
+    if(rowEl){ rowEl.classList.remove('active-row'); rowEl.classList.add('done-row'); }
+    await sleep(350);
+  }
+
+  ['#sumF','#sumFY','#sumFY2'].forEach(sel => $(sel).classList.remove('building'));
+  const xbar = A + (runFY/runF)*h;
+  const varc = ((h*h)/(runF*runF)) * (runF*runFY2 - runFY*runFY);
+  const sd = Math.sqrt(varc);
+  callout.innerHTML = `
+    <span class="step-line">All classes done — N = <b>${runF}</b>, Σfᵢyᵢ = <b>${fmt(runFY,2)}</b>, Σfᵢyᵢ² = <b>${fmt(runFY2,2)}</b></span>
+    <span class="step-line">Mean x̄ = A + (Σfᵢyᵢ/N)×h = ${A} + (${fmt(runFY,2)}/${runF})×${h} = <b>${fmt(xbar,2)}</b></span>
+    <span class="step-line">Variance σ² = (h²/N²)[N·Σfᵢyᵢ² − (Σfᵢyᵢ)²] = <b>${fmt(varc,2)}</b>, so σ = <b>${fmt(sd,2)}</b></span>
+  `;
+
+  btn.disabled = false; btn.textContent = '▶ Walk through steps';
+  walkRunning = false;
+}
+
+$('#walkThrough').addEventListener('click', walkThroughSteps);
+
+/* ============ MODULE 3 : factory comparison ============ */
+const factoryA_default = [
+  {lo:550,hi:650,f:10},{lo:650,hi:750,f:22},{lo:750,hi:850,f:52},{lo:850,hi:950,f:20},{lo:950,hi:1050,f:16}
+];
+const factoryB_default = [
+  {lo:550,hi:650,f:8},{lo:650,hi:750,f:60},{lo:750,hi:850,f:24},{lo:850,hi:950,f:16},{lo:950,hi:1050,f:12}
+];
+let factoryA = factoryA_default.map(r => ({...r}));
+let factoryB = factoryB_default.map(r => ({...r}));
+
+function buildFreqEditor(containerId, rows, prefix){
+  const el = $(containerId);
+  el.innerHTML = rows.map((r,i) => `
+    <div class="freq-edit-cell">
+      <span class="cls-label">${r.lo}–${r.hi}</span>
+      <input type="number" min="0" step="1" id="${prefix}-f-${i}" value="${r.f}">
+    </div>
+  `).join('');
+}
+
+function readFreqEditor(rows, prefix){
+  rows.forEach((r,i) => {
+    const el = $('#'+prefix+'-f-'+i);
+    const v = parseInt(el.value, 10);
+    r.f = (Number.isFinite(v) && v >= 0) ? v : 0;
+  });
+}
+
+function groupedStats(rows, A, h){
+  let sumF=0, sumFY=0, sumFY2=0;
+  rows.forEach(r => {
+    const xi=(r.lo+r.hi)/2, yi=(xi-A)/h;
+    sumF+=r.f; sumFY+=r.f*yi; sumFY2+=r.f*yi*yi;
+  });
+  const mean = A + (sumFY/sumF)*h;
+  const varc = ((h*h)/(sumF*sumF))*(sumF*sumFY2 - sumFY*sumFY);
+  const sd = Math.sqrt(varc);
+  return {mean, sd, cv:(sd/mean)*100, sumF};
+}
+
+function drawHist(canvasId, rows, meanVal){
+  const canvas = $(canvasId);
+  const {ctx, W, H} = setupCanvas(canvas, 140);
+  const marginX = 24;
+  const lo = rows[0].lo, hi = rows[rows.length-1].hi;
+  const x = v => marginX + ((v-lo)/(hi-lo)) * (W-marginX*2);
+  const axisY = H-22;
+  const maxF = Math.max(...rows.map(r=>r.f));
+
+  // graph-paper grid: vertical at each class boundary, horizontal at even spacing
+  ctx.save();
+  ctx.strokeStyle = 'rgba(27,36,32,0.07)'; ctx.lineWidth = 1;
+  const boundaries = rows.map(r=>r.lo).concat([hi]);
+  boundaries.forEach(v => {
+    const px = x(v);
+    ctx.beginPath(); ctx.moveTo(px, 6); ctx.lineTo(px, axisY); ctx.stroke();
+  });
+  for(let py=6; py<=axisY; py+=20){
+    ctx.beginPath(); ctx.moveTo(marginX, py); ctx.lineTo(W-marginX, py); ctx.stroke();
+  }
+  ctx.restore();
+
+  // axis (the real number line, positioned by value — not by category index)
+  ctx.strokeStyle = '#1B2420'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(marginX, axisY); ctx.lineTo(W-marginX, axisY); ctx.stroke();
+
+  // mean marker
+  if(meanVal !== undefined){
+    const mx = x(meanVal);
+    ctx.save();
+    ctx.setLineDash([3,3]); ctx.strokeStyle = '#B8860B'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(mx, 10); ctx.lineTo(mx, axisY); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#B8860B'; ctx.font = '9px "IBM Plex Mono", monospace'; ctx.textAlign = 'center';
+    ctx.fillText('x̄', mx, 10);
+  }
+
+  rows.forEach((r,i) => {
+    const midX = x((r.lo+r.hi)/2);
+    const stemH = (r.f/maxF) * (H-42);
+    const color = i%2===0 ? '#12786A' : '#6E4A82';
+
+    // stem (lollipop) rooted on the number line, height = frequency
+    ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(midX, axisY); ctx.lineTo(midX, axisY-stemH); ctx.stroke();
+
+    ctx.beginPath(); ctx.arc(midX, axisY-stemH, 5, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = '#FBFBF8'; ctx.lineWidth = 1.2; ctx.stroke();
+
+    ctx.fillStyle = '#1B2420';
+    ctx.font = '9px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(r.f, midX, axisY-stemH-9);
+    ctx.fillStyle = '#5B675E';
+    ctx.fillText(r.lo, midX, axisY+13);
+  });
+  ctx.fillStyle = '#5B675E'; ctx.textAlign = 'center';
+  ctx.fillText(hi, x(hi), axisY+13);
+}
+
+function renderModule3(rebuildEditors){
+  if(rebuildEditors){
+    buildFreqEditor('#freqEditA', factoryA, 'a');
+    buildFreqEditor('#freqEditB', factoryB, 'b');
+  }
+  const A = groupedStats(factoryA, 800, 100);
+  const B = groupedStats(factoryB, 800, 100);
+  $('#a-mean').textContent = fmt(A.mean,1);
+  $('#a-sd').textContent = fmt(A.sd,2);
+  $('#a-cv').textContent = fmt(A.cv,2)+'%';
+  $('#b-mean').textContent = fmt(B.mean,1);
+  $('#b-sd').textContent = fmt(B.sd,2);
+  $('#b-cv').textContent = fmt(B.cv,2)+'%';
+  drawHist('#histA', factoryA, A.mean);
+  drawHist('#histB', factoryB, B.mean);
+
+  const winner = A.cv < B.cv ? 'A' : 'B';
+  const loser = winner === 'A' ? 'B' : 'A';
+  $('#verdict').innerHTML = `Factory ${winner} is more consistent — its C.V. (${fmt(winner==='A'?A.cv:B.cv,2)}%) is lower than Factory ${loser}'s (${fmt(loser==='A'?A.cv:B.cv,2)}%).
+    <div class="sub">Less relative spread around the mean.</div>`;
+}
+
+$('#mod3Apply').addEventListener('click', () => {
+  readFreqEditor(factoryA, 'a');
+  readFreqEditor(factoryB, 'b');
+  renderModule3(false);
+});
+$('#mod3Reset').addEventListener('click', () => {
+  factoryA = factoryA_default.map(r => ({...r}));
+  factoryB = factoryB_default.map(r => ({...r}));
+  renderModule3(true);
+});
+
+/* ============ chart PNG export ============ */
+document.querySelectorAll('.chart-save').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const canvas = document.getElementById(btn.dataset.canvas);
+    if(!canvas) return;
+    // paint onto an off-screen canvas with a solid background (canvas is transparent otherwise)
+    const out = document.createElement('canvas');
+    out.width = canvas.width; out.height = canvas.height;
+    const octx = out.getContext('2d');
+    octx.fillStyle = '#FBFBF8';
+    octx.fillRect(0, 0, out.width, out.height);
+    octx.drawImage(canvas, 0, 0);
+    const link = document.createElement('a');
+    link.download = (btn.dataset.name || 'chart') + '.png';
+    link.href = out.toDataURL('image/png');
+    link.click();
+  });
+});
+
+/* ============ init ============ */
+window.addEventListener('resize', () => { renderModule1(); runningStatsChart(); renderModule3(false); });
+renderModule1();
+runningStatsChart();
+renderFreqTable();
+renderModule3(true);
+</script>
+</body>
+</html>

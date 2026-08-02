@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Derivatives — Tap & Pipe</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=JetBrains+Mono:wght@400;600&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0f17;--panel:#141920;--border:#252d38;
+  --cyan:#2dd4e8;--blue:#4f9eff;--green:#34d058;
+  --orange:#ff7b5e;--yellow:#f0b429;--purple:#b06ff7;
+  --text:#dce8f5;--muted:#6a7a8e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden}
+header{text-align:center;padding:2.6rem 1rem 1.4rem}
+header h1{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,3rem);
+  background:linear-gradient(130deg,var(--cyan),var(--blue),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1}
+header p{color:var(--muted);margin-top:.45rem;font-size:.97rem}
+.hline{width:90px;height:3px;background:linear-gradient(90deg,var(--cyan),var(--blue));margin:.8rem auto 0;border-radius:2px}
+.page{max-width:1060px;margin:0 auto;padding:0 1.3rem 4rem}
+
+/* NOTATION BAR */
+.notebar{display:flex;gap:1.1rem;flex-wrap:wrap;justify-content:center;align-items:center;
+  background:linear-gradient(135deg,#0c1b2a,#160f28);border:1px solid var(--border);
+  border-radius:14px;padding:1.1rem 1.6rem;margin:1.6rem 0}
+.nitem{text-align:center}.nitem .sym{font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;line-height:1}
+.nitem .desc{font-size:.7rem;color:var(--muted);margin-top:.22rem}
+.nsep{color:var(--border);font-size:1.6rem}
+
+/* CONCEPT CARDS */
+.crow{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.8rem}
+@media(max-width:560px){.crow{grid-template-columns:1fr}}
+.ccard{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:1.2rem 1.4rem;position:relative;overflow:hidden;transition:transform .2s}
+.ccard:hover{transform:translateY(-3px)}
+.ccard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.ccard.ind::before{background:linear-gradient(90deg,var(--cyan),var(--blue))}
+.ccard.dep::before{background:linear-gradient(90deg,var(--orange),var(--yellow))}
+.badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.73rem;padding:.17rem .6rem;border-radius:99px;margin-bottom:.5rem;font-weight:600;letter-spacing:.04em}
+.ind .badge{background:#0b1e2c;color:var(--cyan);border:1px solid var(--cyan)}
+.dep .badge{background:#26160e;color:var(--orange);border:1px solid var(--orange)}
+.ccard h3{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:.3rem}
+.ccard p{color:var(--muted);font-size:.86rem;line-height:1.55}
+
+/* SIMULATOR */
+.simwrap{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:1.7rem;margin-bottom:2rem}
+.simwrap h2{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--cyan);margin-bottom:.28rem}
+.simwrap .sub{color:var(--muted);font-size:.86rem;margin-bottom:1.4rem}
+.simgrid{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;align-items:start}
+@media(max-width:660px){.simgrid{grid-template-columns:1fr}}
+#tapCanvas{display:block;width:100%;border-radius:12px;border:1px solid var(--border);background:#060b10}
+
+/* Controls */
+.controls{display:flex;flex-direction:column;gap:1.2rem}
+.sgroup label{display:flex;justify-content:space-between;align-items:center;font-size:.84rem;color:var(--muted);margin-bottom:.42rem}
+.sgroup label span{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700}
+.xlbl{color:var(--cyan)!important}.ylbl{color:var(--orange)!important}
+input[type=range]{width:100%;-webkit-appearance:none;height:6px;border-radius:3px;background:var(--border);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:19px;height:19px;border-radius:50%;background:var(--cyan);box-shadow:0 0 9px var(--cyan);cursor:pointer;transition:transform .15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.25)}
+
+/* Math panel */
+.mpanel{background:#060b10;border:1px solid var(--border);border-radius:12px;padding:1rem 1.2rem}
+.mpanel h4{font-family:'JetBrains Mono',monospace;color:var(--green);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.8rem}
+.mrow{display:flex;align-items:center;gap:.6rem;font-family:'JetBrains Mono',monospace;font-size:.92rem;margin-bottom:.42rem;flex-wrap:wrap}
+.mrow .lbl{color:var(--muted);font-size:.8rem;min-width:52px}
+.mrow .val{font-weight:700;font-size:1rem;transition:color .35s}
+.dxbox{margin-top:.85rem;background:#0e1f16;border:1px solid var(--green);border-radius:10px;padding:.75rem .95rem;text-align:center}
+.dxbox .fracs{display:inline-flex;flex-direction:column;align-items:center;gap:1px;font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--green);vertical-align:middle}
+.dxbox .fracs .fl{width:100%;min-width:20px;height:2px;background:var(--green);border-radius:1px}
+.dxbox .eq{font-size:1.1rem;margin:0 .35rem;color:var(--text)}
+.dxbox .res{font-size:1.3rem;font-weight:800;font-family:'JetBrains Mono';transition:all .3s;display:inline-block}
+.dxbox .hint{color:var(--muted);font-size:.77rem;margin-top:.4rem;transition:all .3s}
+.tip{margin-top:.85rem;padding:.7rem;background:#0c1219;border-radius:8px;font-size:.78rem;color:var(--muted);line-height:1.5;border-left:3px solid var(--blue)}
+
+/* FORMULA */
+.fmtsec{margin-bottom:1.8rem}
+.fmtsec h2{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--purple);margin-bottom:.28rem}
+.fmtsec .sub{color:var(--muted);font-size:.86rem;margin-bottom:1.1rem}
+.tabs{display:flex;gap:.42rem;margin-bottom:1rem;flex-wrap:wrap}
+.tbtn{padding:.38rem .95rem;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.8rem;cursor:pointer;transition:all .2s}
+.tbtn:hover{border-color:var(--purple);color:var(--purple)}
+.tbtn.active{background:var(--purple);border-color:var(--purple);color:#fff}
+.tcontent{display:none}.tcontent.active{display:block;animation:fadeUp .3s ease}
+.fcard{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:1.4rem}
+.fcard .eq{font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:600;background:#060b10;padding:.65rem 1rem;border-radius:8px;border-left:3px solid var(--purple);margin:.65rem 0;color:var(--yellow);display:inline-block}
+.fcard p{color:var(--muted);font-size:.86rem;line-height:1.6;margin-top:.42rem}
+.examples{margin-top:.85rem;display:flex;gap:.7rem;flex-wrap:wrap}
+.ex{background:#060b10;border-radius:8px;padding:.55rem .85rem;font-family:'JetBrains Mono',monospace;font-size:.82rem}
+
+/* FUNCTION SELECTOR */
+.fnsel{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.6rem;align-items:center}
+.fnsel-label{color:var(--muted);font-size:.82rem;font-family:'JetBrains Mono',monospace;margin-right:.2rem}
+.fnbtn{padding:.42rem 1.1rem;border-radius:10px;border:1.5px solid var(--border);background:transparent;
+  color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.84rem;cursor:pointer;
+  transition:all .22s;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:80px}
+.fnbtn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.fnbtn .fn-formula{font-size:.9rem;font-weight:700}
+.fnbtn .fn-deriv{font-size:.68rem;opacity:.7}
+.fnbtn.active{box-shadow:0 0 0 2px currentColor, 0 4px 20px rgba(0,0,0,.5)}
+.fnbtn[data-fn="quad"]{color:#4f9eff}.fnbtn[data-fn="quad"].active{background:#0a1624;border-color:#4f9eff}
+.fnbtn[data-fn="cubic"]{color:#b06ff7}.fnbtn[data-fn="cubic"].active{background:#160f28;border-color:#b06ff7}
+.fnbtn[data-fn="linear"]{color:#34d058}.fnbtn[data-fn="linear"].active{background:#0a1a0f;border-color:#34d058}
+.fnbtn[data-fn="exp"]{color:#f0b429}.fnbtn[data-fn="exp"].active{background:#1a1205;border-color:#f0b429}
+.fnbtn[data-fn="sqrt"]{color:#2dd4e8}.fnbtn[data-fn="sqrt"].active{background:#071518;border-color:#2dd4e8}
+.fn-info-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:1.1rem 1.4rem;margin-bottom:1.2rem;display:flex;gap:1.4rem;flex-wrap:wrap;align-items:center}
+.fn-info-card .fi-rule{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700}
+.fn-info-card .fi-deriv{font-family:'JetBrains Mono',monospace;font-size:.92rem;color:var(--green)}
+.fn-info-card .fi-desc{font-size:.82rem;color:var(--muted);line-height:1.5;flex:1;min-width:160px}
+
+/* GRAPH */
+.gsec{margin-bottom:1.8rem}
+.gsec h2{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--blue);margin-bottom:.28rem}
+.gsec .sub{color:var(--muted);font-size:.86rem;margin-bottom:.9rem}
+#graphCanvas{width:100%;border-radius:12px;border:1px solid var(--border);background:#060b10;display:block}
+
+/* INVERSE PROPORTION SECTION */
+.invsec{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:1.7rem;margin-bottom:2rem}
+.invsec h2{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--orange);margin-bottom:.28rem}
+.invsec .sub{color:var(--muted);font-size:.86rem;margin-bottom:1.3rem}
+.inv-tabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.3rem}
+.inv-tbtn{padding:.38rem .9rem;border-radius:10px;border:1.5px solid var(--border);background:transparent;
+  color:var(--muted);font-family:'Nunito',sans-serif;font-size:.82rem;cursor:pointer;transition:all .2s;font-weight:600}
+.inv-tbtn:hover{border-color:var(--orange);color:var(--orange)}
+.inv-tbtn.active{background:#1f1008;border-color:var(--orange);color:var(--orange)}
+.inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;align-items:start}
+@media(max-width:660px){.inv-grid{grid-template-columns:1fr}}
+.inv-canvas-wrap{border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#060b10}
+#invCanvas{display:block;width:100%}
+.inv-controls{display:flex;flex-direction:column;gap:1.1rem}
+.inv-context-card{background:#0e0c06;border:1px solid #2a2010;border-radius:10px;padding:.9rem 1.1rem}
+.inv-ctx-title{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--yellow);margin-bottom:.35rem}
+.inv-ctx-body{color:var(--muted);font-size:.83rem;line-height:1.55}
+.inv-slider-group label{display:flex;justify-content:space-between;align-items:center;font-size:.83rem;color:var(--muted);margin-bottom:.4rem}
+input.inv-range{width:100%;-webkit-appearance:none;height:6px;border-radius:3px;background:var(--border);outline:none;cursor:pointer}
+input.inv-range::-webkit-slider-thumb{-webkit-appearance:none;width:19px;height:19px;border-radius:50%;background:var(--orange);box-shadow:0 0 9px var(--orange);cursor:pointer;transition:transform .15s}
+input.inv-range::-webkit-slider-thumb:hover{transform:scale(1.25)}
+.inv-range-labels{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-top:.25rem}
+.inv-math-box{background:#060b10;border:1px solid var(--border);border-radius:12px;padding:1rem 1.2rem}
+.inv-math-row{display:flex;align-items:center;gap:.6rem;font-family:'JetBrains Mono',monospace;font-size:.9rem;margin-bottom:.4rem;flex-wrap:wrap}
+.inv-lbl{color:var(--muted);font-size:.78rem;min-width:45px}
+.inv-val{font-weight:700;font-size:1rem;transition:color .35s}
+.inv-unit{color:var(--muted);font-size:.75rem;font-family:'Nunito',sans-serif}
+.inv-deriv-box{margin-top:.8rem;background:#1a0e06;border:1px solid var(--orange);border-radius:10px;padding:.75rem .95rem}
+.inv-deriv-title{font-size:.74rem;color:var(--muted);margin-bottom:.4rem;font-family:'Nunito'}
+.inv-deriv-eq{display:flex;align-items:center;justify-content:center;gap:.3rem;flex-wrap:wrap}
+.inv-deriv-note{color:var(--muted);font-size:.75rem;margin-top:.4rem;text-align:center;font-family:'Nunito'}
+
+/* QUIZ */
+.qsec{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:1.7rem}
+.qsec h2{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--yellow);margin-bottom:.28rem}
+.qsec .sub{color:var(--muted);font-size:.86rem;margin-bottom:1.3rem}
+.qq{margin-bottom:1.3rem}.qq p{font-weight:700;margin-bottom:.65rem;font-size:.93rem}
+.qopts{display:flex;gap:.45rem;flex-wrap:wrap}
+.qopt{padding:.42rem .95rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-family:'Nunito',sans-serif;font-size:.85rem;cursor:pointer;transition:all .2s}
+.qopt:hover{border-color:var(--yellow)}
+.qopt.correct{background:#0f2218;border-color:var(--green);color:var(--green)}
+.qopt.wrong{background:#221010;border-color:var(--orange);color:var(--orange)}
+.qfb{font-size:.8rem;margin-top:.38rem;color:var(--muted);min-height:1em}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.page>*{animation:fadeUp .48s ease both}
+.page>*:nth-child(1){animation-delay:.04s}.page>*:nth-child(2){animation-delay:.09s}
+.page>*:nth-child(3){animation-delay:.14s}.page>*:nth-child(4){animation-delay:.19s}
+.page>*:nth-child(5){animation-delay:.24s}.page>*:nth-child(6){animation-delay:.29s}
+.page>*:nth-child(7){animation-delay:.34s}
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+
+<header>
+  <h1>Understanding Derivatives</h1>
+  <p>Independent &amp; Dependent Variables · dy/dx · The Tap &amp; Pipe Analogy</p>
+  <div class="hline"></div>
+</header>
+
+<div class="page">
+
+<!-- NOTATION BAR -->
+<div class="notebar">
+  <div class="nitem"><div class="sym" style="color:var(--cyan)">x</div><div class="desc">Independent<br>Variable</div></div>
+  <div class="nsep">→</div>
+  <div class="nitem"><div class="sym" style="color:var(--orange)">y = f(x)</div><div class="desc">Dependent<br>Function</div></div>
+  <div class="nsep">→</div>
+  <div class="nitem"><div class="sym" style="color:var(--green)">dy/dx</div><div class="desc">Rate of Change<br>(Derivative)</div></div>
+  <div class="nsep">→</div>
+  <div class="nitem"><div class="sym" style="color:var(--purple)">f′(x)</div><div class="desc">Prime<br>Notation</div></div>
+</div>
+
+<!-- CONCEPT CARDS -->
+<div class="crow">
+  <div class="ccard ind">
+    <div class="badge">x — Independent</div>
+    <h3>The Tap (You Control It)</h3>
+    <p>An <strong>independent variable</strong> is one you <em>freely choose or control</em>. It doesn't react to anything else. Think of the <strong>tap handle</strong> — you turn it wherever you like. In math: <strong style="color:var(--cyan)">x</strong>. A tiny change in x is called <strong style="color:var(--cyan)">dx</strong>.</p>
+  </div>
+  <div class="ccard dep">
+    <div class="badge">y — Dependent</div>
+    <h3>The Water Flow (It Reacts)</h3>
+    <p>A <strong>dependent variable</strong> is determined by x — it cannot decide its own value. Think of the <strong>water flowing from the pipe</strong>: open the tap more (↑x) → more water (↑y). In math: <strong style="color:var(--orange)">y = f(x)</strong>. A tiny change in y is called <strong style="color:var(--orange)">dy</strong>.</p>
+  </div>
+</div>
+
+<!-- TAP SIMULATOR -->
+<div class="simwrap">
+  <h2>🚰 Interactive Tap Simulator</h2>
+  <p class="sub">Drag the slider to open or close the tap (x). The water stream and pool react instantly — that's y = x² responding to x.</p>
+  <div class="simgrid">
+    <canvas id="tapCanvas" width="300" height="400"></canvas>
+    <div class="controls">
+      <div class="sgroup">
+        <label>Tap Opening — <strong style="color:var(--cyan)">x</strong> (independent)<span class="xlbl" id="xDisp">5.0</span></label>
+        <input type="range" min="0" max="10" value="5" step="0.05" id="xSlider" oninput="setX(+this.value)">
+        <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-top:.26rem"><span>0 — Closed</span><span>10 — Fully Open</span></div>
+      </div>
+      <div class="mpanel">
+        <h4>📐 Live Calculation</h4>
+        <div class="mrow"><span class="lbl">Function:</span><span class="val" style="color:var(--yellow)" id="mFnLabel">y = x²</span></div>
+        <div class="mrow"><span class="lbl" style="color:var(--cyan)">x =</span><span class="val xlbl" id="mX">5.0</span><span style="color:var(--muted);font-size:.76rem;font-family:'Nunito'">← you set this</span></div>
+        <div class="mrow"><span class="lbl" style="color:var(--orange)">y =</span><span class="val ylbl" id="mY">25.0</span><span style="color:var(--muted);font-size:.76rem;font-family:'Nunito'">← reacts to x</span></div>
+        <div class="dxbox">
+          <div style="font-size:.75rem;color:var(--muted);margin-bottom:.38rem;font-family:'Nunito'">Derivative at current x :</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:.3rem;flex-wrap:wrap">
+            <div class="fracs"><span>dy</span><div class="fl"></div><span>dx</span></div>
+            <span class="eq">=</span>
+            <span style="font-family:'JetBrains Mono',monospace;color:var(--yellow);font-size:1rem" id="mDerivFormula">2x</span>
+            <span class="eq">=</span>
+            <span class="res" style="color:var(--green)" id="mDydx">10.0</span>
+          </div>
+          <div class="hint" id="hint">Every +1 tap → +10.0 more flow</div>
+        </div>
+        <div class="tip">💡 <strong style="color:var(--text)">dy/dx</strong> = "How much does flow change when I nudge the tap by dx?" That ratio is the <em>derivative</em> — the <strong>rate of change</strong>.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FORMULA TABS -->
+<div class="fmtsec">
+  <h2>📖 Derivative Rules</h2>
+  <p class="sub">Click a rule — see how it connects to the tap analogy.</p>
+  <div class="tabs">
+    <button class="tbtn active" onclick="switchTab(this,'power')">Power Rule</button>
+    <button class="tbtn" onclick="switchTab(this,'linear2')">Linear</button>
+    <button class="tbtn" onclick="switchTab(this,'cubic2')">Cubic x³</button>
+    <button class="tbtn" onclick="switchTab(this,'exp2')">Exponential eˣ</button>
+    <button class="tbtn" onclick="switchTab(this,'sqrt2')">Square Root</button>
+    <button class="tbtn" onclick="switchTab(this,'const2')">Constant</button>
+  </div>
+  <div id="tc-power" class="tcontent active">
+    <div class="fcard">
+      <div style="color:var(--muted);font-size:.82rem">General Power Rule — if y = xⁿ, then:</div>
+      <div class="eq">dy/dx = n · x<sup>n−1</sup></div>
+      <p>Bring the exponent down as a multiplier, then reduce the power by 1. This covers y = x², y = x³, y = x⁵ and beyond. Opening the tap wider causes increasingly rapid flow increases.</p>
+      <div class="examples">
+        <div class="ex"><span style="color:var(--muted)">y = x²</span><br><span style="color:var(--green)">dy/dx = 2x</span></div>
+        <div class="ex"><span style="color:var(--muted)">y = x³</span><br><span style="color:var(--green)">dy/dx = 3x²</span></div>
+        <div class="ex"><span style="color:var(--muted)">y = x⁵</span><br><span style="color:var(--green)">dy/dx = 5x⁴</span></div>
+        <div class="ex"><span style="color:var(--muted)">y = x</span><br><span style="color:var(--green)">dy/dx = 1</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="tc-linear2" class="tcontent">
+    <div class="fcard">
+      <div style="color:var(--muted);font-size:.82rem">Linear function — y = mx + b :</div>
+      <div class="eq">dy/dx = m</div>
+      <p>A straight-line tap: every equal nudge to x gives exactly <strong style="color:var(--green)">m</strong> more units of flow — always the same, no acceleration. The constant b (starting offset) vanishes because d/dx(constant) = 0. The tangent line IS the curve itself.</p>
+      <div class="examples">
+        <div class="ex"><span style="color:var(--muted)">y = 2x + 1</span><br><span style="color:var(--green)">dy/dx = 2</span></div>
+        <div class="ex"><span style="color:var(--muted)">y = 5x − 3</span><br><span style="color:var(--green)">dy/dx = 5</span></div>
+        <div class="ex"><span style="color:var(--muted)">y = −x + 7</span><br><span style="color:var(--green)">dy/dx = −1</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="tc-cubic2" class="tcontent">
+    <div class="fcard">
+      <div style="color:var(--muted);font-size:.82rem">Cubic — y = x³ :</div>
+      <div class="eq">dy/dx = 3x²</div>
+      <p>A rapidly accelerating tap. At x = 2 the rate is 12, at x = 5 the rate is 75. The derivative 3x² is itself a function of x — the rate of change keeps changing. Opening a nearly-full tap even slightly causes a huge surge in flow.</p>
+      <div class="examples">
+        <div class="ex"><span style="color:var(--muted)">At x = 1</span><br><span style="color:var(--green)">dy/dx = 3</span></div>
+        <div class="ex"><span style="color:var(--muted)">At x = 3</span><br><span style="color:var(--green)">dy/dx = 27</span></div>
+        <div class="ex"><span style="color:var(--muted)">At x = 5</span><br><span style="color:var(--green)">dy/dx = 75</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="tc-exp2" class="tcontent">
+    <div class="fcard">
+      <div style="color:var(--muted);font-size:.82rem">Exponential — y = eˣ :</div>
+      <div class="eq">dy/dx = eˣ</div>
+      <p>The most magical function in calculus: <strong style="color:var(--yellow)">its derivative equals itself!</strong> The flow rate equals the current flow. The more water that flows, the faster it grows. This self-referential property makes eˣ appear in compound growth, population models, and physics everywhere.</p>
+      <div class="examples">
+        <div class="ex"><span style="color:var(--muted)">At x = 0</span><br><span style="color:var(--green)">dy/dx = 1.000</span></div>
+        <div class="ex"><span style="color:var(--muted)">At x = 1</span><br><span style="color:var(--green)">dy/dx = 2.718</span></div>
+        <div class="ex"><span style="color:var(--muted)">At x = 2</span><br><span style="color:var(--green)">dy/dx = 7.389</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="tc-sqrt2" class="tcontent">
+    <div class="fcard">
+      <div style="color:var(--muted);font-size:.82rem">Square Root — y = √x = x<sup>½</sup> :</div>
+      <div class="eq">dy/dx = 1 / (2√x)</div>
+      <p>A diminishing-returns tap: fast at first, then slowing down. Opening from x = 0→1 adds 1 unit of flow, but x = 9→10 adds only 0.16. This is the Power Rule with n = ½: dy/dx = ½ · x<sup>−½</sup> = 1/(2√x). The derivative shrinks as x grows.</p>
+      <div class="examples">
+        <div class="ex"><span style="color:var(--muted)">At x = 1</span><br><span style="color:var(--green)">dy/dx = 0.500</span></div>
+        <div class="ex"><span style="color:var(--muted)">At x = 4</span><br><span style="color:var(--green)">dy/dx = 0.250</span></div>
+        <div class="ex"><span style="color:var(--muted)">At x = 9</span><br><span style="color:var(--green)">dy/dx = 0.167</span></div>
+      </div>
+    </div>
+  </div>
+  <div id="tc-const2" class="tcontent">
+    <div class="fcard">
+      <div style="color:var(--muted);font-size:.82rem">Constant — y = c :</div>
+      <div class="eq">dy/dx = 0</div>
+      <p>A constant doesn't react to x at all — the tap is welded shut. y stays the same no matter what x is. Rate of change = zero. On a graph: a perfectly flat horizontal line with slope 0. Shifting a function up or down (adding a constant) never changes its derivative.</p>
+    </div>
+  </div>
+</div>
+
+<!-- GRAPH -->
+<div class="gsec">
+  <h2>📈 Interactive Graph Explorer</h2>
+  <p class="sub">Choose a function below. Orange dot = your current (x, y). Green dashed = tangent — its slope IS dy/dx.</p>
+  <div class="fnsel">
+    <span class="fnsel-label">Function:</span>
+    <button class="fnbtn active" data-fn="quad" onclick="selectFn('quad',this)">
+      <span class="fn-formula">y = x²</span><span class="fn-deriv">dy/dx = 2x</span>
+    </button>
+    <button class="fnbtn" data-fn="cubic" onclick="selectFn('cubic',this)">
+      <span class="fn-formula">y = x³</span><span class="fn-deriv">dy/dx = 3x²</span>
+    </button>
+    <button class="fnbtn" data-fn="linear" onclick="selectFn('linear',this)">
+      <span class="fn-formula">y = 2x+1</span><span class="fn-deriv">dy/dx = 2</span>
+    </button>
+    <button class="fnbtn" data-fn="exp" onclick="selectFn('exp',this)">
+      <span class="fn-formula">y = eˣ</span><span class="fn-deriv">dy/dx = eˣ</span>
+    </button>
+    <button class="fnbtn" data-fn="sqrt" onclick="selectFn('sqrt',this)">
+      <span class="fn-formula">y = √x</span><span class="fn-deriv">dy/dx = 1/(2√x)</span>
+    </button>
+  </div>
+  <div class="fn-info-card" id="fnInfoCard">
+    <div>
+      <div class="fi-rule" id="fiRule" style="color:#4f9eff">y = x²</div>
+      <div class="fi-deriv" id="fiDeriv">dy/dx = 2x</div>
+    </div>
+    <div class="fi-desc" id="fiDesc">A quadratic: flow accelerates as you open the tap. The rate of change grows linearly — every extra unit of tap opening adds 2 more units of rate.</div>
+  </div>
+  <canvas id="graphCanvas" width="1000" height="340"></canvas>
+</div>
+
+<!-- INVERSE PROPORTION SECTION -->
+<div class="invsec">
+  <h2>🔄 Inverse Proportion — y = k/x</h2>
+  <p class="sub">When one quantity goes up, the other goes down — but their <em>product stays constant</em>. Drag the slider and watch the geometry.</p>
+
+  <!-- EXAMPLE TABS -->
+  <div class="inv-tabs">
+    <button class="inv-tbtn active" data-inv="speed"   onclick="switchInv('speed',this)">🚗 Speed & Time</button>
+    <button class="inv-tbtn"        data-inv="pipe"    onclick="switchInv('pipe',this)">🔧 Pipe Width & Speed</button>
+    <button class="inv-tbtn"        data-inv="rect"    onclick="switchInv('rect',this)">📐 Rectangle Area</button>
+    <button class="inv-tbtn"        data-inv="gear"    onclick="switchInv('gear',this)">⚙️ Gears</button>
+    <button class="inv-tbtn"        data-inv="light"   onclick="switchInv('light',this)">💡 Light Intensity</button>
+  </div>
+
+  <div class="inv-grid">
+    <!-- Left: animated canvas -->
+    <div class="inv-canvas-wrap">
+      <canvas id="invCanvas" width="420" height="340"></canvas>
+    </div>
+    <!-- Right: controls + math -->
+    <div class="inv-controls">
+      <div class="inv-context-card" id="invContextCard">
+        <div class="inv-ctx-title" id="invCtxTitle">🚗 Speed &amp; Travel Time</div>
+        <div class="inv-ctx-body" id="invCtxBody">A car must travel a fixed distance of <strong>120 km</strong>. The faster you drive, the less time the journey takes. Speed (x) and time (y) are inversely proportional: <strong>y = 120/x</strong>.</div>
+      </div>
+      <div class="inv-slider-group">
+        <label>
+          <span id="invXLabel" style="color:var(--cyan);font-family:'JetBrains Mono',monospace;font-weight:700">Speed x</span>
+          <span style="color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:800" id="invXDisp">4.0</span>
+        </label>
+        <input type="range" min="0.5" max="10" value="4" step="0.1" id="invSlider" oninput="setInvX(+this.value)" class="inv-range">
+        <div class="inv-range-labels"><span id="invMin">Min</span><span id="invMax">Max</span></div>
+      </div>
+      <div class="inv-math-box">
+        <div class="inv-math-row">
+          <span class="inv-lbl">Function:</span>
+          <span class="inv-val" style="color:var(--yellow)" id="invFnLabel">y = 120 / x</span>
+        </div>
+        <div class="inv-math-row">
+          <span class="inv-lbl" style="color:var(--cyan)">x =</span>
+          <span class="inv-val" style="color:var(--cyan)" id="invMX">4.0</span>
+          <span class="inv-unit" id="invXUnit">km/h</span>
+        </div>
+        <div class="inv-math-row">
+          <span class="inv-lbl" style="color:var(--orange)">y =</span>
+          <span class="inv-val" style="color:var(--orange)" id="invMY">30.0</span>
+          <span class="inv-unit" id="invYUnit">hours</span>
+        </div>
+        <div class="inv-math-row">
+          <span class="inv-lbl" style="color:var(--green)">x·y =</span>
+          <span class="inv-val" style="color:var(--green)" id="invProduct">120</span>
+          <span class="inv-unit" style="color:var(--green)" id="invProductLabel">= constant k</span>
+        </div>
+        <div class="inv-deriv-box">
+          <div class="inv-deriv-title">Derivative (dy/dx):</div>
+          <div class="inv-deriv-eq">
+            <div class="fracs"><span>dy</span><div class="fl"></div><span>dx</span></div>
+            <span class="eq">=</span>
+            <span style="color:var(--yellow);font-family:'JetBrains Mono',monospace">−k/x²</span>
+            <span class="eq">=</span>
+            <span style="color:var(--orange);font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:800" id="invDydx">−7.50</span>
+          </div>
+          <div class="inv-deriv-note" id="invDerivNote">Negative: as speed ↑, time ↓ (they move opposite)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hyperbola graph -->
+  <div style="margin-top:1.4rem">
+    <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--purple);margin-bottom:.5rem">The Hyperbola — y = k/x</div>
+    <p style="color:var(--muted);font-size:.84rem;margin-bottom:.8rem">The curve never touches the axes — as x→∞, y→0 and as x→0, y→∞. The shaded rectangle always has the same area = k.</p>
+    <canvas id="invGraphCanvas" width="1000" height="280" style="width:100%;border-radius:12px;border:1px solid var(--border);background:#060b10;display:block"></canvas>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="qsec">
+  <h2>🎯 Quick Check</h2>
+  <p class="sub">Click the correct answer for each question.</p>
+  <div class="qq"><p>1. In the tap analogy, what is the <em>independent</em> variable?</p>
+    <div class="qopts">
+      <button class="qopt" onclick="ans(this,true)">Tap setting (x)</button>
+      <button class="qopt" onclick="ans(this,false)">Water flow (y)</button>
+      <button class="qopt" onclick="ans(this,false)">Pipe material</button>
+    </div><div class="qfb"></div></div>
+  <div class="qq"><p>2. If y = x², what is dy/dx?</p>
+    <div class="qopts">
+      <button class="qopt" onclick="ans(this,false)">x²</button>
+      <button class="qopt" onclick="ans(this,true)">2x</button>
+      <button class="qopt" onclick="ans(this,false)">2</button>
+      <button class="qopt" onclick="ans(this,false)">x/2</button>
+    </div><div class="qfb"></div></div>
+  <div class="qq"><p>3. If y = x³, what is dy/dx?</p>
+    <div class="qopts">
+      <button class="qopt" onclick="ans(this,false)">3x</button>
+      <button class="qopt" onclick="ans(this,false)">x³</button>
+      <button class="qopt" onclick="ans(this,true)">3x²</button>
+      <button class="qopt" onclick="ans(this,false)">2x³</button>
+    </div><div class="qfb"></div></div>
+  <div class="qq"><p>4. If y = 2x + 1, what is dy/dx?</p>
+    <div class="qopts">
+      <button class="qopt" onclick="ans(this,false)">2x</button>
+      <button class="qopt" onclick="ans(this,true)">2</button>
+      <button class="qopt" onclick="ans(this,false)">1</button>
+      <button class="qopt" onclick="ans(this,false)">2x + 1</button>
+    </div><div class="qfb"></div></div>
+  <div class="qq"><p>5. What is special about the derivative of y = eˣ?</p>
+    <div class="qopts">
+      <button class="qopt" onclick="ans(this,false)">It is always 0</button>
+      <button class="qopt" onclick="ans(this,false)">It is always 1</button>
+      <button class="qopt" onclick="ans(this,true)">It equals the function itself (eˣ)</button>
+      <button class="qopt" onclick="ans(this,false)">It is x · eˣ</button>
+    </div><div class="qfb"></div></div>
+  <div class="qq"><p>6. If y = √x, what is dy/dx at x = 4?</p>
+    <div class="qopts">
+      <button class="qopt" onclick="ans(this,false)">1</button>
+      <button class="qopt" onclick="ans(this,false)">0.5</button>
+      <button class="qopt" onclick="ans(this,true)">0.25</button>
+      <button class="qopt" onclick="ans(this,false)">2</button>
+    </div><div class="qfb"></div></div>
+  <div class="qq"><p>7. dy/dx = 0 at a point means the function is…</p>
+    <div class="qopts">
+      <button class="qopt" onclick="ans(this,false)">Equal to zero</button>
+      <button class="qopt" onclick="ans(this,true)">Flat — not changing at that instant</button>
+      <button class="qopt" onclick="ans(this,false)">Negative</button>
+    </div><div class="qfb"></div></div>
+</div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────
+//  TAP CANVAS — full particle + stream engine
+// ─────────────────────────────────────────────────────
+const tc=document.getElementById('tapCanvas');
+const tx=tc.getContext('2d');
+const CW=300,CH=400;
+tc.width=CW;tc.height=CH;
+
+let tapX=5;
+let currentFn='quad';
+let particles=[];
+let splashes=[];
+const POOL_Y=CH-50;
+
+class Drop{
+  constructor(of){
+    const sp=of*6;
+    this.x=CW/2+(Math.random()-.5)*sp;
+    this.y=CH*0.50;
+    this.vy=2+of*7*Math.random();
+    this.vx=(Math.random()-.5)*of*1.2;
+    this.r=2+of*2.8*Math.random();
+    this.a=0.8+Math.random()*.2;
+    this.life=0;
+    this.max=45+Math.random()*35;
+  }
+  update(){this.vy+=0.25;this.x+=this.vx;this.y+=this.vy;this.life++;}
+  draw(c){
+    const prog=this.life/this.max;
+    c.save();
+    c.globalAlpha=Math.max(0,this.a*(1-prog));
+    const elong=Math.min(this.vy*.3,5);
+    const g=c.createRadialGradient(this.x,this.y,0,this.x,this.y+elong,this.r+elong);
+    g.addColorStop(0,'#c8f0ff');
+    g.addColorStop(.45,'#29b8e0');
+    g.addColorStop(1,'rgba(15,70,110,0)');
+    c.fillStyle=g;
+    c.beginPath();
+    c.ellipse(this.x,this.y+elong/2,this.r,this.r+elong,0,0,Math.PI*2);
+    c.fill();
+    c.restore();
+  }
+}
+
+class Splash{
+  constructor(x,y){
+    this.x=x;this.y=y;
+    this.vx=(Math.random()-.5)*4.5;
+    this.vy=-Math.random()*3.5-1;
+    this.r=1.2+Math.random()*2;
+    this.life=0;this.max=18+Math.random()*14;
+  }
+  update(){this.vy+=0.22;this.x+=this.vx;this.y+=this.vy;this.life++;}
+  draw(c){
+    const a=.75*(1-this.life/this.max);
+    c.save();c.globalAlpha=Math.max(0,a);
+    c.fillStyle='#80deff';
+    c.beginPath();c.arc(this.x,this.y,this.r,0,Math.PI*2);c.fill();
+    c.restore();
+  }
+}
+
+function drawScene(of,ts){
+  tx.clearRect(0,0,CW,CH);
+
+  // subtle background glow
+  if(of>.03){
+    const bg=tx.createRadialGradient(CW/2,CH*.6,0,CW/2,CH*.6,100*of);
+    bg.addColorStop(0,`rgba(41,184,224,${.07*of})`);
+    bg.addColorStop(1,'transparent');
+    tx.fillStyle=bg;tx.fillRect(0,CH*.42,CW,CH);
+  }
+
+  // ── vertical supply pipe ──
+  const px=CW/2-16,pw=32;
+  tx.shadowColor='rgba(0,0,0,.55)';tx.shadowBlur=14;
+  const pg=tx.createLinearGradient(px,0,px+pw,0);
+  pg.addColorStop(0,'#182836');pg.addColorStop(.35,'#28455a');pg.addColorStop(.65,'#28455a');pg.addColorStop(1,'#0e1c25');
+  tx.fillStyle=pg;tx.beginPath();tx.roundRect(px,8,pw,CH*.40,[6,6,0,0]);tx.fill();
+  tx.shadowBlur=0;
+  // pipe highlight
+  tx.fillStyle='rgba(255,255,255,.05)';tx.fillRect(px+4,8,5,CH*.40);
+  // water column inside pipe
+  const wfill=Math.min(1,of+.18);
+  const wh=(CH*.40-8)*wfill;
+  const wg=tx.createLinearGradient(0,0,0,wh);
+  wg.addColorStop(0,`rgba(41,184,224,.18)`);wg.addColorStop(1,`rgba(41,184,224,${.55*of})`);
+  tx.fillStyle=wg;tx.fillRect(px+4,8+(CH*.40-8-wh),pw-8,wh);
+
+  // ── tap body ──
+  const tbY=CH*.375,tbH=32,tbX=CW/2-46;
+  tx.shadowColor='rgba(0,0,0,.45)';tx.shadowBlur=10;
+  const tg=tx.createLinearGradient(tbX,tbY,tbX,tbY+tbH);
+  tg.addColorStop(0,'#243444');tg.addColorStop(1,'#111e28');
+  tx.fillStyle=tg;tx.beginPath();tx.roundRect(tbX,tbY,92,tbH,8);tx.fill();
+  tx.shadowBlur=0;
+  tx.strokeStyle='rgba(255,255,255,.05)';tx.lineWidth=1;
+  tx.beginPath();tx.roundRect(tbX,tbY,92,tbH,8);tx.stroke();
+
+  // ── tap handle (rotates with x) ──
+  const angle=of*Math.PI*.75-Math.PI*.37;
+  const hcx=CW/2,hcy=tbY+2;
+  tx.save();tx.translate(hcx,hcy);tx.rotate(angle);
+  tx.shadowColor=of>.05?'rgba(45,212,232,.55)':'rgba(0,0,0,.3)';tx.shadowBlur=of>.05?14:4;
+  const hg=tx.createLinearGradient(-5,-32,5,-32);
+  hg.addColorStop(0,of>.05?'#22f0ff':'#4a6a7a');hg.addColorStop(1,of>.05?'#18b5c8':'#2a4a5a');
+  tx.fillStyle=hg;tx.beginPath();tx.roundRect(-5,-32,10,34,4);tx.fill();
+  tx.beginPath();tx.arc(0,-32,7.5,0,Math.PI*2);
+  tx.fillStyle=of>.05?'#2dd4e8':'#3a5a6a';tx.fill();
+  tx.shadowBlur=0;tx.restore();
+
+  // handle x label
+  tx.fillStyle='rgba(45,212,232,.75)';tx.font='bold 10px JetBrains Mono,monospace';
+  tx.textAlign='right';tx.fillText('x = '+tapX.toFixed(1),hcx-14,tbY-36);
+
+  // ── nozzle ──
+  const nw=10+of*22,nx=CW/2-nw/2,ny=tbY+tbH;
+  tx.shadowColor='rgba(0,0,0,.35)';tx.shadowBlur=6;
+  tx.fillStyle='#182836';tx.beginPath();tx.roundRect(nx,ny,nw,13,[0,0,5,5]);tx.fill();
+  tx.shadowBlur=0;
+  if(of>.02){
+    const wng=tx.createLinearGradient(0,ny,0,ny+13);
+    wng.addColorStop(0,'rgba(41,184,224,.95)');wng.addColorStop(1,'rgba(41,184,224,.35)');
+    tx.fillStyle=wng;tx.fillRect(nx+2,ny+2,nw-4,10);
+  }
+
+  // ── wavy water stream ──
+  if(of>.02){
+    const streamTop=ny+13,streamBot=POOL_Y;
+    const segments=4;
+    for(let s=0;s<segments;s++){
+      const sy=streamTop+s*(streamBot-streamTop)/segments;
+      const ey=streamTop+(s+1)*(streamBot-streamTop)/segments;
+      const t=ts/450+s*.9;
+      const wx=Math.sin(t)*2.5*of;
+      const sw=nw*.45*(1+s*.1);
+      tx.save();
+      const sg=tx.createLinearGradient(0,sy,0,ey);
+      sg.addColorStop(0,`rgba(41,184,224,${.72-s*.06})`);
+      sg.addColorStop(1,`rgba(41,184,224,${.52-s*.07})`);
+      tx.strokeStyle=sg;tx.lineWidth=sw;tx.lineCap='round';
+      tx.shadowColor=`rgba(41,184,224,${.25*of})`;tx.shadowBlur=8*of;
+      tx.beginPath();
+      tx.moveTo(CW/2+wx,sy);
+      tx.bezierCurveTo(
+        CW/2+wx+of*2.5,sy+(ey-sy)*.33,
+        CW/2-wx-of*2.5,ey-(ey-sy)*.33,
+        CW/2-wx,ey
+      );
+      tx.stroke();tx.restore();
+    }
+  }
+
+  // ── pool ──
+  const pw2=100+of*70,ph=14+of*16,px2=CW/2-pw2/2;
+  const pg2=tx.createRadialGradient(CW/2,POOL_Y+ph/2,0,CW/2,POOL_Y+ph/2,pw2/2);
+  pg2.addColorStop(0,`rgba(41,184,224,${.3+of*.4})`);
+  pg2.addColorStop(.6,`rgba(20,80,110,${.4+of*.3})`);
+  pg2.addColorStop(1,'rgba(10,25,35,0)');
+  tx.fillStyle=pg2;
+  tx.beginPath();tx.ellipse(CW/2,POOL_Y+ph/2,pw2/2,ph/2+5,0,0,Math.PI*2);tx.fill();
+  // shimmer
+  tx.fillStyle='rgba(255,255,255,.07)';
+  tx.beginPath();tx.ellipse(CW/2-8,POOL_Y+4,pw2*.28,3.5,-.15,0,Math.PI*2);tx.fill();
+  // y label
+  const fn=FUNCTIONS[currentFn];
+  const yTap=fn?fn.f(tapX):tapX*tapX;
+  tx.fillStyle='rgba(255,123,94,.9)';tx.font='bold 10px JetBrains Mono,monospace';
+  tx.textAlign='left';tx.fillText('y = '+(isFinite(yTap)?yTap.toFixed(2):'…'),CW/2+pw2/2*.5+4,POOL_Y+ph/2+2);
+
+  // pipe label
+  tx.fillStyle='rgba(255,255,255,.13)';tx.font='10px JetBrains Mono,monospace';tx.textAlign='center';
+  tx.fillText('SUPPLY PIPE',CW/2,30);
+}
+
+function tapLoop(ts){
+  const of=tapX/10;
+  // spawn drops
+  const rate=Math.ceil(of*9);
+  for(let i=0;i<rate;i++) if(of>.02) particles.push(new Drop(of));
+  // update & remove
+  particles=particles.filter(p=>{
+    if(p.y>=POOL_Y&&p.life<p.max-2&&Math.random()<.3*of) splashes.push(new Splash(p.x,POOL_Y));
+    return p.y<POOL_Y+50&&p.life<p.max;
+  });
+  splashes=splashes.filter(s=>s.life<s.max);
+  // draw
+  drawScene(of,ts);
+  particles.forEach(p=>{p.update();p.draw(tx)});
+  splashes.forEach(s=>{s.update();s.draw(tx)});
+  requestAnimationFrame(tapLoop);
+}
+requestAnimationFrame(tapLoop);
+
+// ─────────────────────────────────────────────────────
+//  FUNCTION REGISTRY
+// ─────────────────────────────────────────────────────
+const FUNCTIONS = {
+  quad: {
+    label:'y = x²', derivLabel:'2x', color:'#4f9eff', shadowColor:'rgba(79,158,255,.35)',
+    yMin:-3, yMax:112, xMin:-.3, xMax:10.4,
+    f: x=>x*x,
+    df: x=>2*x,
+    desc:'A quadratic: flow accelerates as you open the tap. The rate of change grows linearly — every extra unit of tap opening adds 2 more units of rate.',
+    hintFn: (x,d)=> x===0?'Tap closed — zero flow!':`Every +1 tap → +${d.toFixed(2)} more flow`
+  },
+  cubic: {
+    label:'y = x³', derivLabel:'3x²', color:'#b06ff7', shadowColor:'rgba(176,111,247,.35)',
+    yMin:-5, yMax:400, xMin:-.3, xMax:7.5,
+    f: x=>x*x*x,
+    df: x=>3*x*x,
+    desc:'A cubic: exponentially accelerating flow. Small tap changes at high x cause massive increases. The derivative itself grows as x² — the rate of the rate!',
+    hintFn: (x,d)=> x===0?'Tap closed — zero flow!':`Flow growing at ${d.toFixed(2)} units per tap-unit`
+  },
+  linear: {
+    label:'y = 2x + 1', derivLabel:'2', color:'#34d058', shadowColor:'rgba(52,208,88,.35)',
+    yMin:-2, yMax:22, xMin:-.3, xMax:10.4,
+    f: x=>2*x+1,
+    df: x=>2,
+    desc:'A linear tap: constant slope everywhere. Every unit you open the tap gives exactly 2 more units of flow — no acceleration, no slowdown. Derivative = constant.',
+    hintFn: (x,d)=>`Always: every +1 tap → +${d.toFixed(1)} more flow (constant rate)`
+  },
+  exp: {
+    label:'y = eˣ', derivLabel:'eˣ', color:'#f0b429', shadowColor:'rgba(240,180,41,.35)',
+    yMin:-2, yMax:160, xMin:-.3, xMax:5.2,
+    f: x=>Math.exp(x),
+    df: x=>Math.exp(x),
+    desc:'The magical exponential: its derivative equals itself! The rate of flow equals the current flow — the more water, the faster it grows. Unique to y = eˣ.',
+    hintFn: (x,d)=>`Current flow = rate of change = ${d.toFixed(2)} (that\'s the magic of eˣ!)`
+  },
+  sqrt: {
+    label:'y = √x', derivLabel:'1/(2√x)', color:'#2dd4e8', shadowColor:'rgba(45,212,232,.35)',
+    yMin:-.2, yMax:3.5, xMin:-.05, xMax:10.4,
+    f: x=>Math.sqrt(Math.max(0,x)),
+    df: x=>x<=0?Infinity:1/(2*Math.sqrt(x)),
+    desc:'A square root: fast at first, then slowing down. The derivative shrinks as x grows — opening the tap wider gives diminishing returns on flow.',
+    hintFn: (x,d)=> x<=0?'Tap closed — zero flow!':`Rate slowing: only +${d.toFixed(3)} per tap-unit now`
+  }
+};
+
+function selectFn(id, btn){
+  currentFn = id;
+  document.querySelectorAll('.fnbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const fn = FUNCTIONS[id];
+  document.getElementById('fiRule').textContent = fn.label;
+  document.getElementById('fiRule').style.color = fn.color;
+  document.getElementById('fiDeriv').textContent = 'dy/dx = ' + fn.derivLabel;
+  document.getElementById('fiDesc').textContent = fn.desc;
+  // update math panel labels
+  document.getElementById('mFnLabel').textContent = fn.label;
+  document.getElementById('mDerivFormula').textContent = fn.derivLabel;
+  setX(tapX);
+}
+
+// ─────────────────────────────────────────────────────
+//  SLIDER
+// ─────────────────────────────────────────────────────
+function setX(v){
+  tapX=v;
+  const fn = FUNCTIONS[currentFn];
+  const y = fn.f(v);
+  const d = fn.df(v);
+  document.getElementById('xDisp').textContent=v.toFixed(1);
+  flashEl('mX',v.toFixed(1));
+  flashEl('mY', isFinite(y)?y.toFixed(3):'∞');
+  flashEl('mDydx', isFinite(d)?d.toFixed(3):'∞');
+  document.getElementById('hint').textContent = fn.hintFn(v, isFinite(d)?d:0);
+  drawGraph(v);
+}
+function flashEl(id,val){
+  const el=document.getElementById(id);
+  el.textContent=val;
+  el.style.transition='none';
+  el.style.color='#f0b429';
+  setTimeout(()=>{el.style.transition='color .4s';el.style.color='';},20);
+}
+
+// ─────────────────────────────────────────────────────
+//  GRAPH CANVAS — multi-function
+// ─────────────────────────────────────────────────────
+const gc=document.getElementById('graphCanvas');
+const gctx=gc.getContext('2d');
+gc.width=1000;gc.height=340;
+
+function drawGraph(xv){
+  const fn = FUNCTIONS[currentFn];
+  const W=gc.width,H=gc.height;
+  gctx.clearRect(0,0,W,H);
+  gctx.fillStyle='#060b10';gctx.fillRect(0,0,W,H);
+  const pl=62,pr=24,pt=22,pb=40;
+  const gW=W-pl-pr,gH=H-pt-pb;
+  const {xMin,xMax,yMin,yMax} = fn;
+  function cv(x,y){return{cx:pl+(x-xMin)/(xMax-xMin)*gW,cy:pt+(1-(y-yMin)/(yMax-yMin))*gH}}
+
+  // grid
+  gctx.strokeStyle='#12191f';gctx.lineWidth=1;
+  const xStep = xMax<=7.5?1:2, yRange=yMax-yMin, yStep=yRange>300?50:yRange>100?20:yRange>20?5:1;
+  for(let i=Math.ceil(xMin);i<=xMax;i+=xStep){const{cx}=cv(i,0),{cy:c0}=cv(0,yMin),{cy:c1}=cv(0,yMax);gctx.beginPath();gctx.moveTo(cx,c1);gctx.lineTo(cx,c0);gctx.stroke();}
+  for(let i=Math.ceil(yMin/yStep)*yStep;i<=yMax;i+=yStep){const{cy}=cv(0,i),{cx:cx0}=cv(xMin,0),{cx:cx1}=cv(xMax,0);gctx.beginPath();gctx.moveTo(cx0,cy);gctx.lineTo(cx1,cy);gctx.stroke();}
+
+  // axes
+  gctx.strokeStyle='#283848';gctx.lineWidth=2;
+  {const{cx:ax,cy:ay0}=cv(0,yMin),{cy:ay1}=cv(0,yMax);gctx.beginPath();gctx.moveTo(ax,ay0);gctx.lineTo(ax,ay1);gctx.stroke();}
+  {const{cx:bx0,cy:by}=cv(xMin,0),{cx:bx1}=cv(xMax,0);gctx.beginPath();gctx.moveTo(bx0,by);gctx.lineTo(bx1,by);gctx.stroke();}
+
+  // axis tick labels
+  gctx.fillStyle='#3a4e60';gctx.font='11px JetBrains Mono,monospace';gctx.textAlign='center';
+  for(let i=Math.ceil(xMin);i<=xMax;i+=xStep){const{cx,cy}=cv(i,yMin);gctx.fillText(i,cx,cy+16)}
+  gctx.textAlign='right';
+  for(let i=Math.ceil(yMin/yStep)*yStep;i<=yMax;i+=yStep){const{cx,cy}=cv(xMin,i);if(cy>pt&&cy<H-pb/2)gctx.fillText(i,cx-5,cy+4)}
+  gctx.fillStyle='#4f9eff';gctx.font='bold 12px JetBrains Mono,monospace';
+  gctx.textAlign='center';gctx.fillText('x →',W-pr-6,cv(0,0).cy-9);
+  gctx.fillStyle='#ff7b5e';gctx.textAlign='left';gctx.fillText('y ↑',6,pt+8);
+
+  // function label top-right
+  gctx.fillStyle=fn.color+'cc';gctx.font='bold 13px JetBrains Mono,monospace';gctx.textAlign='right';
+  gctx.fillText(fn.label, W-pr-2, pt+16);
+
+  // shaded area under curve to current x
+  const yc = fn.f(xv);
+  const {cy:baseY}=cv(0,0);
+  gctx.save();gctx.globalAlpha=.08;
+  gctx.fillStyle=fn.color;gctx.beginPath();
+  const{cx:ax0}=cv(Math.max(xMin,0),0);gctx.moveTo(ax0,baseY);
+  const sStart=currentFn==='sqrt'?0:Math.max(xMin,0);
+  for(let p=sStart;p<=xv;p+=0.04){
+    const fv=fn.f(p); if(!isFinite(fv))continue;
+    const{cx,cy}=cv(p,fv);gctx.lineTo(cx,cy);
+  }
+  const{cx:axE}=cv(xv,Math.max(yMin,Math.min(yMax,yc)));gctx.lineTo(axE,baseY);
+  gctx.closePath();gctx.fill();gctx.restore();
+
+  // curve with gradient glow
+  gctx.save();
+  const cg=gctx.createLinearGradient(0,0,W,0);
+  cg.addColorStop(0,fn.color);cg.addColorStop(1,fn.color+'aa');
+  gctx.strokeStyle=cg;gctx.lineWidth=3;
+  gctx.shadowColor=fn.color;gctx.shadowBlur=11;
+  gctx.beginPath();let first=true;
+  for(let p=xMin;p<=xMax;p+=0.03){
+    const fv=fn.f(p);
+    if(!isFinite(fv)||fv>yMax*1.1||fv<yMin*1.1){first=true;continue;}
+    const{cx,cy}=cv(p,fv);
+    first?gctx.moveTo(cx,cy):gctx.lineTo(cx,cy);first=false;
+  }
+  gctx.stroke();gctx.restore();
+
+  // tangent line
+  const sl=fn.df(xv);
+  if(isFinite(sl)&&isFinite(yc)){
+    const tx0=Math.max(xMin,xv-1.8),tx1=Math.min(xMax,xv+1.8);
+    const{cx:tp0x,cy:tp0y}=cv(tx0,yc+sl*(tx0-xv));
+    const{cx:tp1x,cy:tp1y}=cv(tx1,yc+sl*(tx1-xv));
+    gctx.save();gctx.setLineDash([8,5]);
+    gctx.strokeStyle='#34d058';gctx.lineWidth=2.5;
+    gctx.shadowColor='#34d058';gctx.shadowBlur=9;
+    gctx.beginPath();gctx.moveTo(tp0x,tp0y);gctx.lineTo(tp1x,tp1y);gctx.stroke();
+    gctx.restore();
+  }
+
+  // current point
+  if(isFinite(yc)&&yc>=yMin&&yc<=yMax){
+    const{cx:dotX,cy:dotY}=cv(xv,yc);
+    gctx.save();
+    gctx.beginPath();gctx.arc(dotX,dotY,13,0,Math.PI*2);
+    gctx.fillStyle='rgba(255,123,94,.15)';gctx.fill();
+    gctx.strokeStyle='rgba(255,123,94,.45)';gctx.lineWidth=1.5;gctx.stroke();
+    gctx.beginPath();gctx.arc(dotX,dotY,6,0,Math.PI*2);
+    gctx.fillStyle='#ff7b5e';gctx.shadowColor='#ff7b5e';gctx.shadowBlur=15;gctx.fill();
+    gctx.restore();
+    // labels
+    const lx=dotX+13,ly=Math.max(pt+14,dotY-13);
+    gctx.font='bold 11.5px JetBrains Mono,monospace';
+    gctx.fillStyle='rgba(255,123,94,.95)';gctx.textAlign='left';
+    gctx.fillText(`(${xv.toFixed(2)}, ${yc.toFixed(3)})`,lx,ly);
+    if(isFinite(sl)){
+      gctx.fillStyle='rgba(52,208,88,.9)';
+      gctx.fillText(`slope = ${sl.toFixed(3)}`,lx,ly+15);
+    }
+  }
+  // tangent slope badge on bottom-right
+  if(isFinite(sl)){
+    const badgeX=W-pr-4, badgeY=H-pb+10;
+    gctx.fillStyle='rgba(52,208,88,.18)';
+    gctx.beginPath();gctx.roundRect(badgeX-130,badgeY-14,130,20,5);gctx.fill();
+    gctx.fillStyle='#34d058';gctx.font='bold 11px JetBrains Mono,monospace';
+    gctx.textAlign='right';gctx.fillText(`dy/dx at x=${xv.toFixed(1)} → ${sl.toFixed(3)}`,badgeX,badgeY);
+  }
+}
+
+// ─────────────────────────────────────────────────────
+//  TABS & QUIZ
+// ─────────────────────────────────────────────────────
+function switchTab(btn,id){
+  document.querySelectorAll('.tcontent').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tc-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+function ans(btn,correct){
+  const g=btn.closest('.qq');
+  if(g.querySelector('.correct,.wrong'))return;
+  const fb=g.querySelector('.qfb');
+  btn.classList.add(correct?'correct':'wrong');
+  fb.textContent=correct?'✅ Correct!':'❌ Not quite — think about what you control vs what reacts.';
+  fb.style.color=correct?'var(--green)':'var(--orange)';
+}
+
+// ═══════════════════════════════════════════════════════
+//  INVERSE PROPORTION ENGINE
+// ═══════════════════════════════════════════════════════
+const INV_SCENARIOS = {
+  speed:{
+    title:'🚗 Speed &amp; Travel Time',
+    body:'A car must travel a fixed distance of <strong>120 km</strong>. The faster you drive, the less time the journey takes. Speed (x) and time (y) are inversely proportional: <strong>y = 120/x</strong>.',
+    k:120, xLabel:'Speed x', yLabel:'Time y',
+    xUnit:'km/h', yUnit:'hours',
+    xMin:2, xMax:20, xDef:4,
+    minLabel:'2 km/h', maxLabel:'20 km/h',
+    productLabel:'= distance (km)',
+    hintFn:(x,y,d)=>`At ${x.toFixed(1)} km/h, journey takes ${y.toFixed(2)} hrs. Speeding up 1 km/h saves ${Math.abs(d).toFixed(2)} hrs.`,
+    drawFn: drawSpeed
+  },
+  pipe:{
+    title:'🔧 Pipe Width &amp; Flow Speed',
+    body:'Water flows through a pipe at a <strong>fixed volume rate</strong> (k=100 m³/s). A narrow pipe forces water to rush faster. Cross-section area (x) and flow speed (y) are inversely proportional.',
+    k:100, xLabel:'Area x', yLabel:'Speed y',
+    xUnit:'m²', yUnit:'m/s',
+    xMin:1, xMax:10, xDef:5,
+    minLabel:'1 m²', maxLabel:'10 m²',
+    productLabel:'= flow rate (m³/s)',
+    hintFn:(x,y,d)=>`Area ${x.toFixed(1)} m² → speed ${y.toFixed(1)} m/s. Widening by 1 m² reduces speed by ${Math.abs(d).toFixed(2)} m/s.`,
+    drawFn: drawPipe
+  },
+  rect:{
+    title:'📐 Rectangle — Fixed Area',
+    body:'A rectangle has a <strong>fixed area of 60 units²</strong>. If you make it wider (increase width x), the height y must shrink to keep area constant: <strong>y = 60/x</strong>.',
+    k:60, xLabel:'Width x', yLabel:'Height y',
+    xUnit:'units', yUnit:'units',
+    xMin:1, xMax:12, xDef:5,
+    minLabel:'1', maxLabel:'12',
+    productLabel:'= area (units²)',
+    hintFn:(x,y,d)=>`Width ${x.toFixed(1)} → height ${y.toFixed(2)}. Increasing width by 1 shrinks height by ${Math.abs(d).toFixed(2)}.`,
+    drawFn: drawRect
+  },
+  gear:{
+    title:'⚙️ Gear Teeth &amp; Rotation Speed',
+    body:'Two meshed gears — the <strong>driver gear has 80 teeth</strong>. A gear with fewer teeth (x) must spin faster (y) to stay meshed: <strong>y = 80/x</strong> rotations per revolution of driver.',
+    k:80, xLabel:'Teeth x', yLabel:'Speed ratio y',
+    xUnit:'teeth', yUnit:'× faster',
+    xMin:2, xMax:16, xDef:5,
+    minLabel:'2 teeth', maxLabel:'16 teeth',
+    productLabel:'= driver teeth (80)',
+    hintFn:(x,y,d)=>`${x.toFixed(0)} teeth → spins ${y.toFixed(2)}× faster. Add 1 tooth → speed ratio drops ${Math.abs(d).toFixed(2)}.`,
+    drawFn: drawGear
+  },
+  light:{
+    title:'💡 Light Intensity &amp; Distance',
+    body:'A light source emits <strong>constant total power (k=200)</strong>. The further you stand (x), the dimmer it appears. Intensity y falls as 1/x (simplified model): <strong>y = 200/x</strong>.',
+    k:200, xLabel:'Distance x', yLabel:'Intensity y',
+    xUnit:'m', yUnit:'lux',
+    xMin:1, xMax:20, xDef:5,
+    minLabel:'1 m', maxLabel:'20 m',
+    productLabel:'= power (lux·m)',
+    hintFn:(x,y,d)=>`At ${x.toFixed(1)}m, brightness = ${y.toFixed(1)} lux. Moving 1m further reduces brightness by ${Math.abs(d).toFixed(2)} lux.`,
+    drawFn: drawLight
+  }
+};
+
+let invScenario = 'speed';
+let invX = 4;
+
+const icanvas = document.getElementById('invCanvas');
+const ictx = icanvas.getContext('2d');
+icanvas.width=420; icanvas.height=340;
+
+const igc = document.getElementById('invGraphCanvas');
+const igctx = igc.getContext('2d');
+igc.width=1000; igc.height=280;
+
+let invAnimT = 0;
+function invLoop(ts){
+  invAnimT = ts * 0.001;
+  const sc = INV_SCENARIOS[invScenario];
+  ictx.clearRect(0,0,420,340);
+  sc.drawFn(ictx, invX, sc, invAnimT);
+  drawInvGraph(invX);
+  requestAnimationFrame(invLoop);
+}
+requestAnimationFrame(invLoop);
+
+function setInvX(v){
+  invX = v;
+  const sc = INV_SCENARIOS[invScenario];
+  const y = sc.k / v;
+  const d = -sc.k / (v*v);
+  const flashOrange = el => {
+    el.style.transition='none'; el.style.color='#f0b429';
+    setTimeout(()=>{el.style.transition='color .4s'; el.style.color='';}, 20);
+  };
+  ['invMX','invMY','invProduct','invDydx'].forEach(id=>flashOrange(document.getElementById(id)));
+  document.getElementById('invXDisp').textContent = v.toFixed(1);
+  document.getElementById('invMX').textContent = v.toFixed(2);
+  document.getElementById('invMY').textContent = y.toFixed(3);
+  document.getElementById('invProduct').textContent = (v*y).toFixed(1);
+  document.getElementById('invDydx').textContent = d.toFixed(3);
+  document.getElementById('invDerivNote').textContent = sc.hintFn(v, y, d);
+}
+
+function switchInv(id, btn){
+  invScenario = id;
+  document.querySelectorAll('.inv-tbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const sc = INV_SCENARIOS[id];
+  document.getElementById('invContextCard').querySelector('.inv-ctx-title').innerHTML = sc.title;
+  document.getElementById('invContextCard').querySelector('.inv-ctx-body').innerHTML = sc.body;
+  document.getElementById('invXLabel').textContent = sc.xLabel;
+  document.getElementById('invXUnit').textContent = sc.xUnit;
+  document.getElementById('invYUnit').textContent = sc.yUnit;
+  document.getElementById('invFnLabel').textContent = `y = ${sc.k} / x`;
+  document.getElementById('invProductLabel').textContent = sc.productLabel;
+  document.getElementById('invMin').textContent = sc.minLabel;
+  document.getElementById('invMax').textContent = sc.maxLabel;
+  const sl = document.getElementById('invSlider');
+  sl.min = sc.xMin; sl.max = sc.xMax; sl.value = sc.xDef;
+  invX = sc.xDef;
+  document.getElementById('invXDisp').textContent = invX.toFixed(1);
+  setInvX(invX);
+}
+
+// ─── DRAW FUNCTIONS ───────────────────────────────────
+
+function drawSpeed(ctx, x, sc, t){
+  const W=420, H=340;
+  const speed = x; // km/h (scaled: 2–20)
+  const timeFrac = sc.k / (sc.xMax * sc.k / sc.xMax) * (1/(x)); // normalised
+  const carSpeed = x / sc.xMax; // 0–1
+
+  // road background
+  const roadGrad = ctx.createLinearGradient(0,H*0.55,0,H);
+  roadGrad.addColorStop(0,'#1a2030'); roadGrad.addColorStop(1,'#0d1118');
+  ctx.fillStyle = roadGrad; ctx.fillRect(0, H*0.55, W, H*0.45);
+  // road surface
+  ctx.fillStyle = '#1e2535'; ctx.fillRect(0, H*0.58, W, H*0.32);
+  // lane markings — scroll with speed
+  ctx.strokeStyle = '#f0b429'; ctx.lineWidth = 3; ctx.setLineDash([30,25]);
+  ctx.lineDashOffset = -(t * carSpeed * 200) % 55;
+  ctx.beginPath(); ctx.moveTo(0, H*0.74); ctx.lineTo(W, H*0.74); ctx.stroke();
+  ctx.setLineDash([]);
+  // road edges
+  ctx.strokeStyle = '#ffffff22'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0,H*0.59); ctx.lineTo(W,H*0.59); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,H*0.89); ctx.lineTo(W,H*0.89); ctx.stroke();
+
+  // sky
+  const skyG = ctx.createLinearGradient(0,0,0,H*0.55);
+  skyG.addColorStop(0,'#060d1a'); skyG.addColorStop(1,'#0e1e35');
+  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H*0.55);
+  // stars
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  [[30,20],[80,50],[150,15],[220,40],[300,25],[370,55],[410,18],[60,80],[200,70],[340,35]].forEach(([sx,sy])=>{
+    ctx.beginPath(); ctx.arc(sx,sy,1.2,0,Math.PI*2); ctx.fill();
+  });
+  // horizon glow
+  const hg=ctx.createLinearGradient(0,H*0.42,0,H*0.58);
+  hg.addColorStop(0,'transparent'); hg.addColorStop(0.5,`rgba(255,123,94,${0.05+carSpeed*0.1})`); hg.addColorStop(1,'transparent');
+  ctx.fillStyle=hg; ctx.fillRect(0,H*0.42,W,H*0.16);
+  // trees silhouette
+  [50,110,180,250,310,375].forEach((tx2,i)=>{
+    const h=40+i%3*15;
+    // move trees: fast speed = faster parallax
+    const parallaxOff = -(t * carSpeed * 60 * (0.5+i*.1)) % (W+60);
+    const tx3 = ((tx2 + parallaxOff) % (W+60) + W+60) % (W+60) - 30;
+    ctx.fillStyle='#0a1520';
+    ctx.beginPath(); ctx.moveTo(tx3,H*0.58); ctx.lineTo(tx3-14,H*0.58-h); ctx.lineTo(tx3+14,H*0.58-h); ctx.closePath(); ctx.fill();
+  });
+
+  // car body
+  const carX = W*0.35;
+  const carY = H*0.67;
+  // motion blur shadow at high speed
+  if(carSpeed>0.3){
+    ctx.save();
+    for(let b=1;b<=4;b++){
+      ctx.globalAlpha = 0.05 * carSpeed * (5-b);
+      ctx.fillStyle='#ff7b5e';
+      ctx.beginPath();
+      ctx.roundRect(carX - 55 - b*8*carSpeed, carY-22, 90, 28, 6);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  // car shadow
+  ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.beginPath(); ctx.ellipse(carX+10,carY+18,52,8,0,0,Math.PI*2); ctx.fill();
+  // body
+  const bodyGrad=ctx.createLinearGradient(carX-50,carY-22,carX-50,carY+8);
+  bodyGrad.addColorStop(0,'#e03830'); bodyGrad.addColorStop(1,'#8a1a14');
+  ctx.fillStyle=bodyGrad;
+  ctx.beginPath(); ctx.roundRect(carX-55, carY-10, 90, 24, 6); ctx.fill();
+  // roof
+  const roofGrad=ctx.createLinearGradient(carX-30,carY-30,carX-30,carY-10);
+  roofGrad.addColorStop(0,'#c42e28'); roofGrad.addColorStop(1,'#8a1a14');
+  ctx.fillStyle=roofGrad;
+  ctx.beginPath(); ctx.roundRect(carX-30, carY-28, 52, 20, [8,8,0,0]); ctx.fill();
+  // windows
+  ctx.fillStyle='rgba(150,220,255,0.55)';
+  ctx.beginPath(); ctx.roundRect(carX-26,carY-26,20,14,[3,3,0,0]); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(carX-2,carY-26,20,14,[3,3,0,0]); ctx.fill();
+  // wheels
+  const wheelY=carY+14;
+  [carX-30, carX+22].forEach(wx=>{
+    ctx.fillStyle='#1a1a1a'; ctx.beginPath(); ctx.arc(wx,wheelY,11,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#333'; ctx.beginPath(); ctx.arc(wx,wheelY,7,0,Math.PI*2); ctx.fill();
+    // spinning spokes
+    const wAngle = t * carSpeed * 8;
+    ctx.strokeStyle='#888'; ctx.lineWidth=1.5;
+    for(let s=0;s<4;s++){
+      const a=wAngle+s*Math.PI/2;
+      ctx.beginPath(); ctx.moveTo(wx,wheelY); ctx.lineTo(wx+Math.cos(a)*6,wheelY+Math.sin(a)*6); ctx.stroke();
+    }
+    ctx.fillStyle='#555'; ctx.beginPath(); ctx.arc(wx,wheelY,2.5,0,Math.PI*2); ctx.fill();
+  });
+  // headlights
+  ctx.fillStyle='rgba(255,240,150,0.9)';
+  ctx.beginPath(); ctx.ellipse(carX+37, carY-2, 5, 4, 0, 0, Math.PI*2); ctx.fill();
+  const hg2=ctx.createRadialGradient(carX+42,carY-2,0,carX+42,carY-2,35);
+  hg2.addColorStop(0,`rgba(255,240,150,${0.2+carSpeed*0.2})`); hg2.addColorStop(1,'transparent');
+  ctx.fillStyle=hg2; ctx.beginPath(); ctx.ellipse(carX+55,carY-2,35,14,0,0,Math.PI*2); ctx.fill();
+
+  // Speedometer HUD
+  const hudX=W-110, hudY=20;
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.beginPath(); ctx.roundRect(hudX,hudY,100,70,10); ctx.fill();
+  ctx.strokeStyle='rgba(255,123,94,0.5)'; ctx.lineWidth=1; ctx.beginPath(); ctx.roundRect(hudX,hudY,100,70,10); ctx.stroke();
+  ctx.fillStyle='var(--cyan)'; ctx.font='bold 10px JetBrains Mono,monospace'; ctx.textAlign='center';
+  ctx.fillText('SPEED (x)',hudX+50,hudY+14);
+  ctx.fillStyle='#ff7b5e'; ctx.font='bold 22px JetBrains Mono,monospace';
+  ctx.fillText(x.toFixed(1),hudX+50,hudY+38);
+  ctx.fillStyle='#6a7a8e'; ctx.font='10px Nunito,sans-serif';
+  ctx.fillText('km/h',hudX+50,hudY+52);
+  // time display
+  const tDisp = sc.k/x;
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.beginPath(); ctx.roundRect(hudX,hudY+76,100,52,10); ctx.fill();
+  ctx.strokeStyle='rgba(255,123,94,0.4)'; ctx.lineWidth=1; ctx.beginPath(); ctx.roundRect(hudX,hudY+76,100,52,10); ctx.stroke();
+  ctx.fillStyle='var(--orange)'; ctx.font='bold 9px JetBrains Mono,monospace'; ctx.textAlign='center';
+  ctx.fillText('TIME (y)',hudX+50,hudY+89);
+  ctx.fillStyle='#f0b429'; ctx.font='bold 18px JetBrains Mono,monospace';
+  ctx.fillText(tDisp.toFixed(2),hudX+50,hudY+108);
+  ctx.fillStyle='#6a7a8e'; ctx.font='9px Nunito,sans-serif';
+  ctx.fillText('hours',hudX+50,hudY+120);
+
+  // x·y = k label
+  ctx.fillStyle='rgba(52,208,88,0.9)'; ctx.font='bold 11px JetBrains Mono,monospace'; ctx.textAlign='left';
+  ctx.fillText(`x × y = ${(x*(sc.k/x)).toFixed(0)} km (constant)`,14,H-12);
+}
+
+function drawRect(ctx, x, sc, t){
+  const W=420, H=340;
+  ctx.fillStyle='#060b10'; ctx.fillRect(0,0,W,H);
+  const k=sc.k, y=k/x;
+  const maxDim=200;
+  const scale=maxDim/Math.max(x,y,8);
+  const rw=x*scale, rh=y*scale;
+  const rx=W/2-rw/2, ry=H/2-rh/2+10;
+
+  // grid dots
+  ctx.fillStyle='rgba(255,255,255,0.04)';
+  for(let gx=20;gx<W;gx+=20) for(let gy=20;gy<H;gy+=20){ctx.beginPath();ctx.arc(gx,gy,1.2,0,Math.PI*2);ctx.fill();}
+
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  ctx.beginPath(); ctx.roundRect(rx+6,ry+6,rw,rh,3); ctx.fill();
+
+  // rectangle fill — gradient
+  const rg=ctx.createLinearGradient(rx,ry,rx+rw,ry+rh);
+  rg.addColorStop(0,'rgba(176,111,247,0.4)'); rg.addColorStop(1,'rgba(79,158,255,0.25)');
+  ctx.fillStyle=rg; ctx.beginPath(); ctx.roundRect(rx,ry,rw,rh,3); ctx.fill();
+  // border
+  ctx.strokeStyle='#b06ff7'; ctx.lineWidth=2.5;
+  ctx.shadowColor='#b06ff7'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.roundRect(rx,ry,rw,rh,3); ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // area fill grid
+  const cellSize=Math.max(4,Math.min(20,rw/5,rh/5));
+  ctx.fillStyle='rgba(176,111,247,0.06)';
+  for(let cx2=rx;cx2<rx+rw;cx2+=cellSize) for(let cy2=ry;cy2<ry+rh;cy2+=cellSize){
+    ctx.fillRect(cx2,cy2,cellSize-1,cellSize-1);
+  }
+
+  // width arrow & label
+  ctx.strokeStyle='var(--cyan)'; ctx.lineWidth=1.5;
+  const arY=ry+rh+22;
+  ctx.beginPath(); ctx.moveTo(rx,arY); ctx.lineTo(rx+rw,arY); ctx.stroke();
+  [rx,rx+rw].forEach(ax=>{ctx.beginPath();ctx.moveTo(ax,arY-5);ctx.lineTo(ax,arY+5);ctx.stroke();});
+  ctx.fillStyle='var(--cyan)'; ctx.font='bold 12px JetBrains Mono,monospace'; ctx.textAlign='center';
+  ctx.fillText(`w = ${x.toFixed(1)}`,rx+rw/2,arY+16);
+
+  // height arrow & label
+  const arX2=rx-22;
+  ctx.strokeStyle='var(--orange)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(arX2,ry); ctx.lineTo(arX2,ry+rh); ctx.stroke();
+  [ry,ry+rh].forEach(ay=>{ctx.beginPath();ctx.moveTo(arX2-5,ay);ctx.lineTo(arX2+5,ay);ctx.stroke();});
+  ctx.fillStyle='var(--orange)'; ctx.font='bold 12px JetBrains Mono,monospace'; ctx.textAlign='center';
+  ctx.save(); ctx.translate(arX2-14,ry+rh/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText(`h = ${y.toFixed(1)}`,0,0); ctx.restore();
+
+  // area badge
+  ctx.fillStyle='rgba(52,208,88,0.12)';
+  ctx.beginPath(); ctx.roundRect(W/2-70,H-34,140,24,6); ctx.fill();
+  ctx.fillStyle='#34d058'; ctx.font='bold 11px JetBrains Mono,monospace'; ctx.textAlign='center';
+  ctx.fillText(`Area = ${x.toFixed(1)} × ${y.toFixed(2)} = ${k}`,W/2,H-17);
+
+  // diagonal decoration
+  ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.setLineDash([4,6]);
+  ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx+rw,ry+rh); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // title
+  ctx.fillStyle='rgba(176,111,247,0.8)'; ctx.font='bold 12px JetBrains Mono,monospace'; ctx.textAlign='left';
+  ctx.fillText(`Area = w × h = ${k} (fixed)`,14,22);
+}
+
+function drawPipe(ctx, x, sc, t){
+  const W=420, H=340;
+  ctx.fillStyle='#060b10'; ctx.fillRect(0,0,W,H);
+  const speed=sc.k/x; // water speed inside
+  const area=x; // cross section area (1–10)
+  const radius=12+area*10; // visual radius of pipe cross section
+  const pipeR=Math.min(radius,80);
+  const flowSpd=speed/sc.k*10; // normalised 0–1
+
+  // pipe body (side view)
+  const pipeY=H/2, pipeLeft=40, pipeRight=W-40;
+  // outer pipe
+  ctx.fillStyle='#1e3040';
+  ctx.beginPath(); ctx.roundRect(pipeLeft,pipeY-pipeR-6,pipeRight-pipeLeft,pipeR*2+12,8); ctx.fill();
+  ctx.strokeStyle='#2a4560'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(pipeLeft,pipeY-pipeR-6,pipeRight-pipeLeft,pipeR*2+12,8); ctx.stroke();
+  // inner pipe opening
+  ctx.fillStyle='#080e16';
+  ctx.beginPath(); ctx.roundRect(pipeLeft+6,pipeY-pipeR,pipeRight-pipeLeft-12,pipeR*2,6); ctx.fill();
+
+  // flowing water particles inside pipe
+  const numDrops=Math.ceil(flowSpd*12)+3;
+  for(let i=0;i<numDrops;i++){
+    const phase=((t*flowSpd*3+i*0.72)%1);
+    const px2=pipeLeft+10+(pipeRight-pipeLeft-20)*phase;
+    const spread=pipeR*0.7;
+    const py2=pipeY+(Math.sin(i*2.1+phase*3.14)*spread*0.7);
+    const dropR=2.5+flowSpd*2.5;
+    const dg=ctx.createRadialGradient(px2,py2,0,px2,py2,dropR+3);
+    dg.addColorStop(0,'rgba(180,230,255,0.95)');dg.addColorStop(.4,'rgba(41,184,224,0.8)');dg.addColorStop(1,'transparent');
+    ctx.fillStyle=dg;ctx.beginPath();ctx.arc(px2,py2,dropR+2,0,Math.PI*2);ctx.fill();
+  }
+
+  // pipe cross-section diagram (right)
+  const csX=W-85, csY=pipeY;
+  ctx.strokeStyle='#2a4560'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(csX,csY,pipeR+6,0,Math.PI*2); ctx.fillStyle='#1e3040'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(csX,csY,pipeR,0,Math.PI*2); ctx.fillStyle='#080e16'; ctx.fill();
+  // water circle inside
+  const waterG=ctx.createRadialGradient(csX,csY,0,csX,csY,pipeR);
+  waterG.addColorStop(0,`rgba(41,184,224,${0.2+flowSpd*0.4})`);waterG.addColorStop(1,`rgba(10,80,120,0.3)`);
+  ctx.fillStyle=waterG;ctx.beginPath();ctx.arc(csX,csY,pipeR,0,Math.PI*2);ctx.fill();
+  // cross-section arrows
+  ctx.strokeStyle='var(--cyan)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(csX,csY); ctx.lineTo(csX+pipeR,csY); ctx.stroke();
+  ctx.fillStyle='var(--cyan)'; ctx.font='10px JetBrains Mono'; ctx.textAlign='left';
+  ctx.fillText(`A=${x.toFixed(1)}m²`,csX+pipeR+4,csY+4);
+
+  // speed arrows in pipe
+  const arrowCount=Math.ceil(flowSpd*5)+2;
+  for(let i=0;i<arrowCount;i++){
+    const ax2=pipeLeft+40+i*(pipeRight-pipeLeft-80)/(arrowCount);
+    const ay2=pipeY+(i%2===0?-pipeR*0.35:pipeR*0.35);
+    const alen=15+flowSpd*25;
+    ctx.strokeStyle=`rgba(41,184,224,${0.4+flowSpd*0.5})`; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(ax2,ay2); ctx.lineTo(ax2+alen,ay2); ctx.stroke();
+    ctx.fillStyle=`rgba(41,184,224,${0.6+flowSpd*0.4})`;
+    ctx.beginPath(); ctx.moveTo(ax2+alen+8,ay2); ctx.lineTo(ax2+alen,ay2-5); ctx.lineTo(ax2+alen,ay2+5); ctx.closePath(); ctx.fill();
+  }
+  // speed label
+  ctx.fillStyle='rgba(255,123,94,.9)'; ctx.font='bold 13px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText(`Flow speed = ${(sc.k/x).toFixed(1)} m/s`,W/2,pipeY-pipeR-20);
+  ctx.fillStyle='rgba(45,212,232,.7)'; ctx.font='11px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText(`Cross-section area = ${x.toFixed(1)} m²`,W/2,pipeY+pipeR+28);
+  ctx.fillStyle='rgba(52,208,88,.8)'; ctx.font='bold 10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText(`Area × Speed = ${sc.k} m³/s (constant)`,W/2,H-12);
+}
+
+function drawGear(ctx, x, sc, t){
+  const W=420, H=340;
+  ctx.fillStyle='#070c12'; ctx.fillRect(0,0,W,H);
+  const teeth1=sc.k, teeth2=Math.round(x); // driver: 80, driven: x
+  const speedRatio=teeth1/teeth2;
+  const R1=75, R2=R1*teeth2/teeth1; // radii proportional to teeth
+  const cx1=W*0.33, cy=H/2;
+  const gap=8;
+  const cx2=cx1+R1+R2+gap;
+
+  // ground shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)';
+  ctx.beginPath(); ctx.ellipse(cx1,cy+R1+10,R1*0.9,8,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx2,cy+R2+10,R2*0.9,8,0,0,Math.PI*2); ctx.fill();
+
+  const drawOneGear=(cx,cy,R,nTeeth,angleOff,col1,col2,label,spd)=>{
+    const toothH=R*0.22, toothW=(2*Math.PI*R/(nTeeth*2.2));
+    // gear body gradient
+    const gg=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+    gg.addColorStop(0,col1); gg.addColorStop(0.7,col2); gg.addColorStop(1,'#0d1520');
+    // teeth path
+    ctx.save();
+    ctx.beginPath();
+    for(let i=0;i<nTeeth;i++){
+      const a=angleOff+i*(2*Math.PI/nTeeth);
+      const a1=a-toothW/(R), a2=a+toothW/(R);
+      const a1o=a-(toothW*0.7)/(R+toothH), a2o=a+(toothW*0.7)/(R+toothH);
+      ctx.lineTo(Math.cos(a1)*R+cx, Math.sin(a1)*R+cy);
+      ctx.lineTo(Math.cos(a1o)*(R+toothH)+cx, Math.sin(a1o)*(R+toothH)+cy);
+      ctx.lineTo(Math.cos(a2o)*(R+toothH)+cx, Math.sin(a2o)*(R+toothH)+cy);
+      ctx.lineTo(Math.cos(a2)*R+cx, Math.sin(a2)*R+cy);
+    }
+    ctx.closePath();
+    ctx.fillStyle=gg; ctx.fill();
+    ctx.strokeStyle=col1+'cc'; ctx.lineWidth=1.5;
+    ctx.shadowColor=col1; ctx.shadowBlur=8; ctx.stroke(); ctx.shadowBlur=0;
+    ctx.restore();
+    // inner circle
+    ctx.beginPath(); ctx.arc(cx,cy,R*0.45,0,Math.PI*2);
+    const ig=ctx.createRadialGradient(cx,cy,0,cx,cy,R*0.45);
+    ig.addColorStop(0,'#1e2838');ig.addColorStop(1,'#0d1520');
+    ctx.fillStyle=ig; ctx.fill();
+    ctx.strokeStyle=col1+'66'; ctx.lineWidth=1.5; ctx.stroke();
+    // spokes
+    ctx.strokeStyle=col2+'99'; ctx.lineWidth=2.5;
+    for(let s=0;s<4;s++){
+      const sa=angleOff+s*Math.PI/2;
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(sa)*R*0.12,cy+Math.sin(sa)*R*0.12);
+      ctx.lineTo(cx+Math.cos(sa)*R*0.42,cy+Math.sin(sa)*R*0.42);
+      ctx.stroke();
+    }
+    // hub
+    ctx.beginPath(); ctx.arc(cx,cy,R*0.1,0,Math.PI*2);
+    ctx.fillStyle=col1; ctx.shadowColor=col1; ctx.shadowBlur=6; ctx.fill(); ctx.shadowBlur=0;
+    // label
+    ctx.fillStyle=col1+'ee'; ctx.font=`bold ${R>40?12:10}px JetBrains Mono,monospace`; ctx.textAlign='center';
+    ctx.fillText(label,cx,cy+R+22);
+    ctx.fillStyle=col2+'aa'; ctx.font='10px Nunito,sans-serif';
+    ctx.fillText(`${nTeeth} teeth`,cx,cy+R+36);
+  };
+
+  // driver gear (fixed 80 teeth, slower)
+  const angle1 = t * 0.8;
+  drawOneGear(cx1,cy,R1, teeth1, angle1, '#4f9eff','#1a3a60','DRIVER\n(x=80)',1);
+  // driven gear (x teeth, faster) — rotates opposite direction
+  const angle2 = -(t * 0.8 * teeth1/teeth2);
+  drawOneGear(cx2,cy,R2, teeth2, angle2, '#f0b429','#3a2800',`DRIVEN`,1);
+
+  // mesh point indicator
+  const meshX=cx1+R1+gap/2;
+  ctx.fillStyle='rgba(52,208,88,0.6)'; ctx.beginPath(); ctx.arc(meshX,cy,5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(52,208,88,0.3)'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(meshX,cy,10,0,Math.PI*2); ctx.stroke();
+
+  // HUD top
+  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.beginPath(); ctx.roundRect(10,10,190,50,8); ctx.fill();
+  ctx.fillStyle='var(--cyan)'; ctx.font='bold 11px JetBrains Mono'; ctx.textAlign='left';
+  ctx.fillText(`Driver: 80 teeth → 1× speed`,20,28);
+  ctx.fillStyle='var(--yellow)'; ctx.font='bold 11px JetBrains Mono';
+  ctx.fillText(`Driven: ${teeth2} teeth → ${speedRatio.toFixed(2)}× speed`,20,46);
+  ctx.fillStyle='rgba(52,208,88,.8)'; ctx.font='bold 10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText(`80 × 1 = ${teeth2} × ${speedRatio.toFixed(2)} = 80 (constant)`,W/2,H-10);
+}
+
+function drawLight(ctx, x, sc, t){
+  const W=420, H=340;
+  ctx.fillStyle='#030508'; ctx.fillRect(0,0,W,H);
+  const intensity=sc.k/x; // lux
+  const maxI=sc.k/sc.xMin;
+  const bright=Math.min(1,intensity/maxI);
+  const bulbX=60, bulbY=H/2;
+  const personX=Math.min(W-50, 60+x*((W-120)/sc.xMax));
+  const personY=H/2;
+
+  // light rays (emanate outward)
+  const numRays=12;
+  for(let i=0;i<numRays;i++){
+    const ra=i*(2*Math.PI/numRays)+(t*0.3);
+    const rLen=30+bright*160;
+    const alpha=bright*0.35;
+    const rg=ctx.createLinearGradient(bulbX,bulbY,bulbX+Math.cos(ra)*rLen,bulbY+Math.sin(ra)*rLen);
+    rg.addColorStop(0,`rgba(255,240,150,${alpha})`); rg.addColorStop(1,'transparent');
+    ctx.strokeStyle=rg; ctx.lineWidth=2.5+bright*2;
+    ctx.beginPath(); ctx.moveTo(bulbX+Math.cos(ra)*18,bulbY+Math.sin(ra)*18);
+    ctx.lineTo(bulbX+Math.cos(ra)*rLen,bulbY+Math.sin(ra)*rLen); ctx.stroke();
+  }
+  // ambient glow
+  const aGlow=ctx.createRadialGradient(bulbX,bulbY,0,bulbX,bulbY,bright*200+40);
+  aGlow.addColorStop(0,`rgba(255,240,150,${bright*0.25})`);aGlow.addColorStop(0.4,`rgba(255,200,80,${bright*0.08})`);aGlow.addColorStop(1,'transparent');
+  ctx.fillStyle=aGlow; ctx.fillRect(0,0,W,H);
+
+  // bulb
+  const bg=ctx.createRadialGradient(bulbX,bulbY,0,bulbX,bulbY,22);
+  bg.addColorStop(0,`rgba(255,255,200,${0.5+bright*0.5})`);bg.addColorStop(0.6,`rgba(255,220,80,${0.4+bright*0.4})`);bg.addColorStop(1,`rgba(200,140,20,0.5)`);
+  ctx.beginPath(); ctx.arc(bulbX,bulbY,18,0,Math.PI*2);
+  ctx.fillStyle=bg; ctx.shadowColor=`rgba(255,240,120,${bright})`; ctx.shadowBlur=30*bright; ctx.fill(); ctx.shadowBlur=0;
+  ctx.strokeStyle='rgba(255,220,100,0.6)'; ctx.lineWidth=2; ctx.stroke();
+  // filament
+  ctx.strokeStyle=`rgba(255,200,50,${0.4+bright*0.6})`; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(bulbX-5,bulbY+3); ctx.quadraticCurveTo(bulbX,bulbY-6,bulbX+5,bulbY+3); ctx.stroke();
+  // bulb stand
+  ctx.fillStyle='#2a3040';
+  ctx.beginPath(); ctx.roundRect(bulbX-5,bulbY+18,10,22,3); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(bulbX-14,bulbY+36,28,8,4); ctx.fill();
+
+  // distance line
+  ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1; ctx.setLineDash([5,8]);
+  ctx.beginPath(); ctx.moveTo(bulbX+20,H*0.78); ctx.lineTo(personX,H*0.78); ctx.stroke();
+  ctx.setLineDash([]);
+  // distance label
+  ctx.fillStyle='rgba(45,212,232,0.8)'; ctx.font='bold 11px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText(`x = ${x.toFixed(1)} m`,bulbX/2+personX/2,H*0.78+16);
+
+  // person silhouette
+  const pScale=0.8;
+  ctx.fillStyle=`rgba(200,210,230,${0.3+bright*(1/(1+x*0.2))*1.5})`;
+  // head
+  ctx.beginPath(); ctx.arc(personX,personY-28*pScale,10*pScale,0,Math.PI*2); ctx.fill();
+  // body
+  ctx.beginPath(); ctx.roundRect(personX-8*pScale,personY-18*pScale,16*pScale,28*pScale,4); ctx.fill();
+  // legs
+  ctx.beginPath(); ctx.roundRect(personX-7*pScale,personY+8*pScale,7*pScale,20*pScale,3); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(personX+1*pScale,personY+8*pScale,7*pScale,20*pScale,3); ctx.fill();
+  // intensity glow on person
+  const pGlow=ctx.createRadialGradient(personX,personY,0,personX,personY,40);
+  pGlow.addColorStop(0,`rgba(255,240,150,${bright*0.15/(x*0.2+0.5)})`);pGlow.addColorStop(1,'transparent');
+  ctx.fillStyle=pGlow; ctx.beginPath(); ctx.arc(personX,personY,40,0,Math.PI*2); ctx.fill();
+
+  // intensity meter
+  const mX=W-110,mY=20,mH=200,mW=28;
+  ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.roundRect(mX,mY,mW+40,mH+30,8); ctx.fill();
+  ctx.fillStyle='rgba(255,240,150,0.15)'; ctx.beginPath(); ctx.roundRect(mX+10,mY+20,mW,mH,4); ctx.fill();
+  const fillH=mH*Math.min(1,intensity/(sc.k/sc.xMin));
+  const mGrad=ctx.createLinearGradient(0,mY+mH,0,mY+mH-fillH);
+  mGrad.addColorStop(0,'#f0b429'); mGrad.addColorStop(1,'rgba(255,255,200,0.6)');
+  ctx.fillStyle=mGrad;
+  ctx.beginPath(); ctx.roundRect(mX+10,mY+mH+20-fillH,mW,fillH,3); ctx.fill();
+  ctx.strokeStyle='rgba(255,240,150,0.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(mX+10,mY+20,mW,mH,4); ctx.stroke();
+  ctx.fillStyle='var(--yellow)'; ctx.font='bold 9px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText('y',mX+24,mY+14);
+  ctx.fillText(intensity.toFixed(0),mX+24,mY+mH+42);
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='9px Nunito';
+  ctx.fillText('lux',mX+24,mY+mH+52);
+  ctx.fillStyle='rgba(52,208,88,.8)'; ctx.font='bold 10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText(`x × y = ${(x*intensity).toFixed(0)} (constant)`,W/2,H-10);
+}
+
+// ─── INVERSE HYPERBOLA GRAPH ───────────────────────────
+function drawInvGraph(xv){
+  const sc = INV_SCENARIOS[invScenario];
+  const W=igc.width, H=igc.height;
+  igctx.clearRect(0,0,W,H);
+  igctx.fillStyle='#060b10'; igctx.fillRect(0,0,W,H);
+
+  const pl=62,pr=24,pt=22,pb=38;
+  const gW=W-pl-pr, gH=H-pt-pb;
+  const xs=sc.xMin*0.8, xe=sc.xMax*1.1;
+  const yv=sc.k/xv;
+  const ys=0, ye=sc.k/sc.xMin*1.05;
+  function cv(x,y){return{cx:pl+(x-xs)/(xe-xs)*gW, cy:pt+(1-(y-ys)/(ye-ys))*gH}}
+
+  // grid
+  igctx.strokeStyle='#12191f';igctx.lineWidth=1;
+  for(let i=Math.ceil(xs);i<=xe;i++){const{cx}=cv(i,0),{cy:c0}=cv(0,ys),{cy:c1}=cv(0,ye);igctx.beginPath();igctx.moveTo(cx,c1);igctx.lineTo(cx,c0);igctx.stroke();}
+  const yStep=ye>500?100:ye>100?50:ye>20?10:5;
+  for(let i=0;i<=ye;i+=yStep){const{cy}=cv(0,i),{cx:cx0}=cv(xs,0),{cx:cx1}=cv(xe,0);igctx.beginPath();igctx.moveTo(cx0,cy);igctx.lineTo(cx1,cy);igctx.stroke();}
+
+  // axes
+  igctx.strokeStyle='#283848';igctx.lineWidth=2;
+  {const{cx:ax,cy:ay0}=cv(xs,ys),{cy:ay1}=cv(xs,ye);igctx.beginPath();igctx.moveTo(ax,ay0);igctx.lineTo(ax,ay1);igctx.stroke();}
+  {const{cx:bx0,cy:by}=cv(xs,0),{cx:bx1}=cv(xe,0);igctx.beginPath();igctx.moveTo(bx0,by);igctx.lineTo(bx1,by);igctx.stroke();}
+
+  // tick labels
+  igctx.fillStyle='#3a4e60';igctx.font='11px JetBrains Mono,monospace';igctx.textAlign='center';
+  for(let i=Math.ceil(xs);i<=xe;i+=Math.ceil((xe-xs)/8)){const{cx,cy}=cv(i,ys);igctx.fillText(i,cx,cy+16)}
+  igctx.textAlign='right';
+  for(let i=0;i<=ye;i+=yStep){const{cx,cy}=cv(xs,i);if(cy>pt&&cy<H-pb/2)igctx.fillText(i,cx-5,cy+4)}
+
+  // shaded rectangle at current x — area = k
+  const{cx:rx0,cy:ry0}=cv(0,0);
+  const{cx:rxE,cy:ryE}=cv(xv,yv);
+  igctx.save(); igctx.globalAlpha=0.15;
+  igctx.fillStyle='#ff7b5e';
+  igctx.fillRect(Math.min(rx0,rxE),Math.min(ry0,ryE),Math.abs(rxE-rx0),Math.abs(ryE-ry0));
+  igctx.restore();
+  igctx.strokeStyle='rgba(255,123,94,0.4)'; igctx.lineWidth=1.5; igctx.setLineDash([4,4]);
+  igctx.strokeRect(Math.min(rx0,rxE),Math.min(ry0,ryE),Math.abs(rxE-rx0),Math.abs(ryE-ry0));
+  igctx.setLineDash([]);
+  // area label in rectangle
+  igctx.fillStyle='rgba(255,123,94,0.7)'; igctx.font='bold 11px JetBrains Mono'; igctx.textAlign='center';
+  igctx.fillText(`k=${sc.k}`, (Math.min(rx0,rxE)+Math.abs(rxE-rx0)/2), (Math.min(ry0,ryE)+Math.abs(ryE-ry0)/2)+4);
+
+  // hyperbola curve
+  igctx.save();
+  igctx.strokeStyle='#ff7b5e'; igctx.lineWidth=3;
+  igctx.shadowColor='#ff7b5e'; igctx.shadowBlur=10;
+  igctx.beginPath(); let first=true;
+  for(let p=sc.xMin*0.5;p<=xe;p+=0.05){
+    const fv=sc.k/p; if(fv>ye*1.1||fv<ys){first=true;continue;}
+    const{cx,cy}=cv(p,fv);
+    first?igctx.moveTo(cx,cy):igctx.lineTo(cx,cy); first=false;
+  }
+  igctx.stroke(); igctx.restore();
+
+  // tangent
+  const sl=-sc.k/(xv*xv);
+  const tx0=Math.max(sc.xMin*0.7,xv-1.5),tx1=Math.min(xe,xv+1.5);
+  const{cx:tp0x,cy:tp0y}=cv(tx0,yv+sl*(tx0-xv));
+  const{cx:tp1x,cy:tp1y}=cv(tx1,yv+sl*(tx1-xv));
+  igctx.save(); igctx.setLineDash([7,5]);
+  igctx.strokeStyle='#34d058'; igctx.lineWidth=2.2;
+  igctx.shadowColor='#34d058'; igctx.shadowBlur=8;
+  igctx.beginPath(); igctx.moveTo(tp0x,tp0y); igctx.lineTo(tp1x,tp1y); igctx.stroke();
+  igctx.restore();
+
+  // current point
+  const{cx:dotX,cy:dotY}=cv(xv,yv);
+  igctx.save();
+  igctx.beginPath();igctx.arc(dotX,dotY,12,0,Math.PI*2);
+  igctx.fillStyle='rgba(255,123,94,.15)';igctx.fill();
+  igctx.strokeStyle='rgba(255,123,94,.5)';igctx.lineWidth=1.5;igctx.stroke();
+  igctx.beginPath();igctx.arc(dotX,dotY,6,0,Math.PI*2);
+  igctx.fillStyle='#ff7b5e';igctx.shadowColor='#ff7b5e';igctx.shadowBlur=14;igctx.fill();
+  igctx.restore();
+  igctx.fillStyle='rgba(255,123,94,.95)';igctx.font='bold 11px JetBrains Mono';igctx.textAlign='left';
+  igctx.fillText(`(${xv.toFixed(1)}, ${yv.toFixed(2)})`,dotX+10,dotY-10);
+  igctx.fillStyle='rgba(52,208,88,.9)';
+  igctx.fillText(`dy/dx = ${sl.toFixed(3)}`,dotX+10,dotY+6);
+
+  // axes labels
+  igctx.fillStyle='#4f9eff'; igctx.font='bold 12px JetBrains Mono'; igctx.textAlign='center';
+  igctx.fillText('x →', W-pr-6, cv(0,0).cy-9);
+  igctx.fillStyle='#ff7b5e'; igctx.textAlign='left'; igctx.fillText('y ↑',6,pt+8);
+  igctx.fillStyle='rgba(255,123,94,0.7)'; igctx.font='bold 12px JetBrains Mono'; igctx.textAlign='right';
+  igctx.fillText(sc.xLabel+' ↑ → '+sc.yLabel+' ↓ (inverse)', W-pr-2, pt+16);
+}
+
+// init
+setX(5);
+setInvX(4);
+
+</script>
+</body>
+</html>

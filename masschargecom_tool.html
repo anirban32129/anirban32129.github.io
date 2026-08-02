@@ -1,0 +1,4127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Centre of Mass — 3D Space Lab</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
+  :root {
+    --bg: #00001a;
+    --accent: #00ffcc;
+    --accent2: #ff6b35;
+    --accent3: #a78bfa;
+    --com-sys: #ffd700;
+    --com-sub: #ff4dff;
+    --text: #c8d8e8;
+    --border: rgba(0,255,204,0.18);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); font-family:'Space Mono',monospace; color:var(--text); overflow:hidden; height:100vh; width:100vw; user-select:none; }
+  #three-canvas { position:fixed; inset:0; z-index:1; }
+  #ui { position:fixed; inset:0; z-index:10; pointer-events:none; }
+
+  .panel {
+    pointer-events:all;
+    position:absolute;
+    background:rgba(0,8,28,0.92);
+    border:1px solid var(--border);
+    backdrop-filter:blur(16px);
+    border-radius:14px;
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    max-height:calc(100vh - 28px);
+    will-change:left,top;
+    touch-action:none;
+  }
+  .panel.dragging { opacity:.92; box-shadow:0 8px 40px rgba(0,255,204,.18); }
+  .panel-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px;
+    border-bottom:1px solid var(--border);
+    cursor:grab; flex-shrink:0; user-select:none;
+  }
+  .panel-header:active { cursor:grabbing; }
+  .panel-header:hover { background:rgba(0,255,204,.05); }
+  .panel.collapsed .panel-header { border-bottom-color:transparent; }
+  .panel-title { font-family:'Orbitron',monospace; font-size:.62rem; font-weight:700; letter-spacing:.12em; color:var(--accent); pointer-events:none; }
+  .toggle-icon { font-size:.7rem; color:var(--accent); transition:transform .3s; line-height:1; width:16px; text-align:center; cursor:pointer; pointer-events:all; flex-shrink:0; padding:2px 4px; }
+  .panel.collapsed .toggle-icon { transform:rotate(-90deg); }
+  .panel-body {
+    overflow-y:auto; overflow-x:hidden;
+    transition: max-height .35s cubic-bezier(.4,0,.2,1), opacity .25s, padding .3s;
+    max-height:calc(100vh - 120px);
+    padding:12px 14px;
+    font-size:.64rem; line-height:1.85;
+    scrollbar-width:thin; scrollbar-color: rgba(0,255,204,.25) transparent;
+  }
+  .panel-body::-webkit-scrollbar { width:4px; }
+  .panel-body::-webkit-scrollbar-thumb { background:rgba(0,255,204,.25); border-radius:4px; }
+  .panel.collapsed .panel-body { max-height:0!important; opacity:0; padding-top:0; padding-bottom:0; overflow:hidden; }
+
+  #top-bar {
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:14px; padding:9px 22px;
+    white-space:nowrap; pointer-events:all;
+    background:rgba(0,8,28,0.88); border:1px solid var(--border);
+    backdrop-filter:blur(16px); border-radius:14px;
+  }
+  #top-bar h1 { font-family:'Orbitron',monospace; font-size:.9rem; font-weight:900; letter-spacing:.13em; color:var(--accent); text-shadow:0 0 18px rgba(0,255,204,.45); }
+  #mode-tag { font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; color:var(--accent3); padding:3px 10px; border:1px solid rgba(167,139,250,.3); border-radius:20px; background:rgba(167,139,250,.07); transition:all .2s; }
+  #mode-tag.sel-mode { color:var(--com-sub); border-color:rgba(255,77,255,.4); background:rgba(255,77,255,.09); }
+
+  #info-panel { top:74px; left:14px; width:210px; }
+  #ctrl-panel  { top:74px; right:14px; width:210px; }
+
+  .plabel { font-weight:700; text-transform:uppercase; letter-spacing:.1em; font-size:.57rem; border-bottom:1px solid var(--border); padding-bottom:3px; margin-bottom:6px; color:var(--accent); }
+  .val { font-weight:700; }
+  .v-sys { color:var(--com-sys); }
+  .v-sub { color:var(--com-sub); }
+
+  .btn {
+    display:block; width:100%; margin:4px 0; padding:10px 11px;
+    background:rgba(0,255,204,.06); border:1px solid var(--border); border-radius:7px;
+    color:var(--accent); font-family:'Space Mono',monospace; font-size:.6rem;
+    letter-spacing:.04em; cursor:pointer; transition:all .15s; text-align:left; pointer-events:all;
+    min-height:44px; display:flex; align-items:center;
+  }
+  .btn:hover { background:rgba(0,255,204,.15); border-color:var(--accent); }
+  .btn.active { background:rgba(0,255,204,.22); border-color:var(--accent); color:#fff; box-shadow:0 0 10px rgba(0,255,204,.2); }
+  .btn.danger { color:var(--accent2); border-color:rgba(255,107,53,.28); background:rgba(255,107,53,.05); }
+  .btn.danger:hover { background:rgba(255,107,53,.16); border-color:var(--accent2); }
+
+  .sec-label { font-weight:700; text-transform:uppercase; letter-spacing:.1em; font-size:.56rem; color:var(--accent); border-bottom:1px solid var(--border); padding-bottom:3px; margin:10px 0 5px; }
+  .sec-label:first-child { margin-top:0; }
+
+  .mass-input-row { display:flex; gap:5px; margin-top:5px; align-items:center; }
+  .mass-input { flex:1; background:rgba(0,255,204,.06); border:1px solid var(--border); border-radius:7px; color:var(--accent); font-family:'Space Mono',monospace; font-size:.6rem; padding:6px 8px; pointer-events:all; outline:none; transition:border-color .15s; }
+  .mass-input:focus { border-color:var(--accent); background:rgba(0,255,204,.12); }
+  .mass-input::placeholder { color:rgba(0,255,204,.35); }
+  .mass-set-btn { background:rgba(0,255,204,.15); border:1px solid var(--border); border-radius:7px; color:var(--accent); font-family:'Space Mono',monospace; font-size:.6rem; padding:6px 10px; cursor:pointer; pointer-events:all; white-space:nowrap; transition:all .15s; }
+  .mass-set-btn:hover { background:rgba(0,255,204,.28); border-color:var(--accent); }
+
+  .quick-mass-row { display:flex; gap:4px; margin-top:5px; flex-wrap:wrap; }
+  .qm-btn { flex:1; min-width:30px; background:rgba(0,255,204,.06); border:1px solid var(--border); border-radius:6px; color:var(--accent); font-family:'Space Mono',monospace; font-size:.55rem; padding:5px 3px; cursor:pointer; pointer-events:all; text-align:center; transition:all .15s; }
+  .qm-btn:hover { background:rgba(0,255,204,.18); border-color:var(--accent); }
+  .qm-btn.active { background:rgba(0,255,204,.25); border-color:var(--accent); color:#fff; }
+
+  #hint { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); font-size:.6rem; color:rgba(200,216,232,.4); letter-spacing:.05em; text-align:center; pointer-events:none; max-width:92vw; }
+
+  #sel-badge { position:absolute; top:74px; left:50%; transform:translateX(-50%); font-family:'Orbitron',monospace; font-size:.66rem; font-weight:700; color:var(--com-sub); padding:5px 16px; border:1px solid rgba(255,77,255,.35); border-radius:20px; background:rgba(255,77,255,.08); pointer-events:none; opacity:0; transition:opacity .3s; }
+  #sel-badge.show { opacity:1; }
+
+  /* Force Lab */
+  #force-panel { bottom:80px; left:14px; width:272px; border-color:rgba(251,191,36,.28); }
+  #force-panel .panel-header { border-color:rgba(251,191,36,.2); }
+  #force-panel .panel-title { color:#fbbf24; }
+  #force-panel .toggle-icon { color:#fbbf24; }
+
+  .fsec { font-weight:700; text-transform:uppercase; letter-spacing:.1em; font-size:.56rem; color:#fbbf24; border-bottom:1px solid rgba(251,191,36,.2); padding-bottom:3px; margin:10px 0 6px; }
+  .fsec:first-child { margin-top:0; }
+  .axis-row { display:flex; align-items:center; gap:6px; margin:5px 0; }
+  .axis-label { font-family:'Orbitron',monospace; font-weight:900; font-size:.7rem; min-width:18px; text-align:center; }
+  .axis-label.fx { color:#f87171; }
+  .axis-label.fy { color:#4ade80; }
+  .axis-label.fz { color:#60a5fa; }
+  .f-impulse-btn { flex:1; padding:7px 0; border-radius:8px; border:2px solid; font-family:'Orbitron',monospace; font-size:.72rem; font-weight:900; cursor:pointer; text-align:center; transition:all .15s; pointer-events:all; }
+  .f-impulse-btn.fx-neg,.f-impulse-btn.fx-pos { border-color:rgba(248,113,113,.45); color:#f87171; background:rgba(248,113,113,.07); }
+  .f-impulse-btn.fx-neg:hover,.f-impulse-btn.fx-pos:hover { background:rgba(248,113,113,.22); border-color:#f87171; color:#fff; }
+  .f-impulse-btn.fy-neg,.f-impulse-btn.fy-pos { border-color:rgba(74,222,128,.35); color:#4ade80; background:rgba(74,222,128,.07); }
+  .f-impulse-btn.fy-neg:hover,.f-impulse-btn.fy-pos:hover { background:rgba(74,222,128,.22); border-color:#4ade80; color:#fff; }
+  .f-impulse-btn.fz-neg,.f-impulse-btn.fz-pos { border-color:rgba(96,165,250,.35); color:#60a5fa; background:rgba(96,165,250,.07); }
+  .f-impulse-btn.fz-neg:hover,.f-impulse-btn.fz-pos:hover { background:rgba(96,165,250,.22); border-color:#60a5fa; color:#fff; }
+  .f-axis-val { font-family:'Space Mono',monospace; font-size:.58rem; min-width:52px; text-align:center; letter-spacing:.03em; }
+  .f-axis-val.fx { color:#f87171; }
+  .f-axis-val.fy { color:#4ade80; }
+  .f-axis-val.fz { color:#60a5fa; }
+  .fmag-row { display:flex; align-items:center; gap:8px; margin:6px 0; font-size:.55rem; }
+  .fmag-row label { color:rgba(251,191,36,.7); white-space:nowrap; }
+  .fmag-row input[type=range] { flex:1; accent-color:#fbbf24; pointer-events:all; cursor:pointer; }
+  .fmag-row span { color:#fbbf24; min-width:32px; }
+  .acc-grid { display:grid; grid-template-columns:auto 1fr auto 1fr; gap:3px 8px; font-size:.57rem; margin-top:4px; }
+  .acc-lbl { color:rgba(200,216,232,.45); }
+  .acc-val { font-weight:700; }
+  .acc-val.ax { color:#f87171; }
+  .acc-val.ay { color:#4ade80; }
+  .acc-val.az { color:#60a5fa; }
+  .acc-val.am { color:#fbbf24; }
+  .fbtn { display:block; width:100%; margin:4px 0; padding:7px 11px; background:rgba(251,191,36,.06); border:1px solid rgba(251,191,36,.22); border-radius:7px; color:#fbbf24; font-family:'Space Mono',monospace; font-size:.6rem; letter-spacing:.04em; cursor:pointer; transition:all .15s; text-align:left; pointer-events:all; }
+  .fbtn:hover { background:rgba(251,191,36,.15); border-color:#fbbf24; }
+  .fbtn.active { background:rgba(251,191,36,.22); border-color:#fbbf24; color:#fff; }
+  .fbtn.danger { color:var(--accent2); border-color:rgba(255,107,53,.28); background:rgba(255,107,53,.05); }
+  .fbtn.danger:hover { background:rgba(255,107,53,.16); border-color:var(--accent2); color:#fff; }
+  .f-target-note { font-size:.55rem; color:rgba(200,216,232,.45); margin:6px 0 2px; line-height:1.5; }
+
+  #cam-hint { position:absolute; top:74px; right:240px; font-size:.55rem; color:rgba(167,139,250,.55); text-align:right; pointer-events:none; line-height:1.8; }
+
+  /* Trail Panel */
+  #trail-panel { top:122px; right:14px; width:230px; border-color:rgba(167,139,250,.28); }
+  #trail-panel .panel-header { border-color:rgba(167,139,250,.2); }
+  #trail-panel .panel-title { color:var(--accent3); }
+  #trail-panel .toggle-icon { color:var(--accent3); }
+  .trail-master-row { display:flex; gap:4px; margin-bottom:8px; }
+  .trail-master-btn { flex:1; padding:5px 0; border-radius:6px; border:1px solid rgba(167,139,250,.3); color:var(--accent3); font-family:'Space Mono',monospace; font-size:.55rem; cursor:pointer; text-align:center; background:rgba(167,139,250,.06); transition:all .15s; pointer-events:all; }
+  .trail-master-btn:hover { background:rgba(167,139,250,.2); border-color:var(--accent3); }
+  .trail-body-list { display:flex; flex-direction:column; gap:4px; }
+  .trail-row { display:flex; align-items:center; gap:7px; }
+  .trail-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .trail-name { flex:1; font-size:.58rem; color:var(--text); }
+  .trail-tog { width:34px; height:18px; border-radius:9px; border:1px solid rgba(167,139,250,.3); background:rgba(0,0,0,.3); cursor:pointer; pointer-events:all; position:relative; transition:background .2s, border-color .2s; flex-shrink:0; }
+  .trail-tog.on { background:rgba(167,139,250,.35); border-color:var(--accent3); }
+  .trail-tog::after { content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:#fff; transition:left .2s; opacity:.7; }
+  .trail-tog.on::after { left:18px; opacity:1; }
+  .trail-com-section { margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
+  .trail-com-row { display:flex; align-items:center; gap:7px; margin:3px 0; }
+  .trail-com-label { flex:1; font-size:.58rem; }
+  .trail-com-label.sys { color:var(--com-sys); }
+  .trail-com-label.sub { color:var(--com-sub); }
+
+  /* Charge UI */
+  .charge-sign-row { display:flex; gap:4px; margin:5px 0; }
+  .csign-btn { flex:1; padding:5px 0; border-radius:7px; border:2px solid; font-family:'Orbitron',monospace; font-size:.75rem; font-weight:900; cursor:pointer; text-align:center; transition:all .15s; pointer-events:all; }
+  .csign-btn.pos { border-color:rgba(248,113,113,.4); color:#f87171; background:rgba(248,113,113,.07); }
+  .csign-btn.pos:hover,.csign-btn.pos.active { background:rgba(248,113,113,.25); border-color:#f87171; color:#fff; box-shadow:0 0 10px rgba(248,113,113,.3); }
+  .csign-btn.neg { border-color:rgba(96,165,250,.4); color:#60a5fa; background:rgba(96,165,250,.07); }
+  .csign-btn.neg:hover,.csign-btn.neg.active { background:rgba(96,165,250,.25); border-color:#60a5fa; color:#fff; box-shadow:0 0 10px rgba(96,165,250,.3); }
+  .csign-btn.zero { border-color:rgba(200,216,232,.2); color:rgba(200,216,232,.5); background:rgba(200,216,232,.04); }
+  .csign-btn.zero:hover,.csign-btn.zero.active { background:rgba(200,216,232,.12); border-color:rgba(200,216,232,.5); color:#fff; }
+  .quick-charge-row { display:flex; gap:4px; margin-top:5px; flex-wrap:wrap; }
+  .qc-btn { flex:1; min-width:28px; border-radius:6px; border:1px solid; font-family:'Space Mono',monospace; font-size:.52rem; padding:4px 2px; cursor:pointer; pointer-events:all; text-align:center; transition:all .15s; }
+  .qc-btn.pos { border-color:rgba(248,113,113,.3); color:#f87171; background:rgba(248,113,113,.06); }
+  .qc-btn.pos:hover,.qc-btn.pos.active { background:rgba(248,113,113,.22); border-color:#f87171; }
+  .qc-btn.neg { border-color:rgba(96,165,250,.3); color:#60a5fa; background:rgba(96,165,250,.06); }
+  .qc-btn.neg:hover,.qc-btn.neg.active { background:rgba(96,165,250,.22); border-color:#60a5fa; }
+  /* Group tabs */
+  .group-tab {
+    padding:5px 10px; border-radius:7px; border:2px solid; font-family:'Space Mono',monospace;
+    font-size:.58rem; cursor:pointer; transition:all .15s; pointer-events:all;
+    display:flex; align-items:center; gap:5px; min-height:34px;
+  }
+  .group-tab .g-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .group-tab.active { color:#fff; }
+  .group-info-block {
+    margin-top:8px; padding:7px 9px; border-radius:8px; border:1px solid;
+    font-size:.57rem; line-height:1.8;
+  }
+  .group-info-block .gi-header {
+    display:flex; align-items:center; gap:6px; margin-bottom:3px;
+    font-family:'Orbitron',monospace; font-size:.56rem; font-weight:700; letter-spacing:.08em;
+  }
+  .group-info-block .gi-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+  #longpress-ring {
+    position:fixed; pointer-events:none; z-index:150;
+    width:60px; height:60px; margin-left:-30px; margin-top:-30px;
+    border-radius:50%; border:2px solid var(--com-sub);
+    opacity:0; transform:scale(0.4);
+    transition:transform 0.5s ease-out, opacity 0.1s;
+  }
+  #longpress-ring.active { opacity:0.8; transform:scale(1); }
+  /* Charge label on body */
+  .charge-sprite { pointer-events:none; }
+
+  /* Constant Force Panel */
+  #const-force-panel { bottom:60px; right:14px; width:252px; border-color:rgba(167,250,139,.28); }
+  #const-force-panel .panel-header { border-color:rgba(167,250,139,.2); }
+  #const-force-panel .panel-title { color:#86efac; }
+  #const-force-panel .toggle-icon { color:#86efac; }
+  .cfsec { font-weight:700; text-transform:uppercase; letter-spacing:.1em; font-size:.56rem; color:#86efac; border-bottom:1px solid rgba(167,250,139,.2); padding-bottom:3px; margin:10px 0 6px; }
+  .cfsec:first-child { margin-top:0; }
+  .cfbtn { display:block; width:100%; margin:4px 0; padding:7px 11px; background:rgba(134,239,172,.06); border:1px solid rgba(134,239,172,.22); border-radius:7px; color:#86efac; font-family:'Space Mono',monospace; font-size:.6rem; letter-spacing:.04em; cursor:pointer; transition:all .15s; text-align:left; pointer-events:all; min-height:36px; display:flex; align-items:center; }
+  .cfbtn:hover { background:rgba(134,239,172,.15); border-color:#86efac; }
+  .cfbtn.active { background:rgba(134,239,172,.22); border-color:#86efac; color:#fff; box-shadow:0 0 10px rgba(134,239,172,.2); }
+  .cfbtn.danger { color:var(--accent2); border-color:rgba(255,107,53,.28); background:rgba(255,107,53,.05); }
+  .cfbtn.danger:hover { background:rgba(255,107,53,.16); border-color:var(--accent2); color:#fff; }
+  .cf-axis-row { display:flex; align-items:center; gap:5px; margin:5px 0; }
+  .cf-axis-label { font-family:'Orbitron',monospace; font-weight:900; font-size:.68rem; min-width:18px; text-align:center; }
+  .cf-axis-label.cfx { color:#f87171; }
+  .cf-axis-label.cfy { color:#4ade80; }
+  .cf-axis-label.cfz { color:#60a5fa; }
+  .cf-dir-btn { flex:1; padding:6px 0; border-radius:7px; border:2px solid; font-family:'Orbitron',monospace; font-size:.66rem; font-weight:900; cursor:pointer; text-align:center; transition:all .15s; pointer-events:all; }
+  .cf-dir-btn.cfx-n,.cf-dir-btn.cfx-p { border-color:rgba(248,113,113,.45); color:#f87171; background:rgba(248,113,113,.07); }
+  .cf-dir-btn.cfx-n:hover,.cf-dir-btn.cfx-p:hover,.cf-dir-btn.cfx-n.active,.cf-dir-btn.cfx-p.active { background:rgba(248,113,113,.28); border-color:#f87171; color:#fff; }
+  .cf-dir-btn.cfy-n,.cf-dir-btn.cfy-p { border-color:rgba(74,222,128,.35); color:#4ade80; background:rgba(74,222,128,.07); }
+  .cf-dir-btn.cfy-n:hover,.cf-dir-btn.cfy-p:hover,.cf-dir-btn.cfy-n.active,.cf-dir-btn.cfy-p.active { background:rgba(74,222,128,.28); border-color:#4ade80; color:#fff; }
+  .cf-dir-btn.cfz-n,.cf-dir-btn.cfz-p { border-color:rgba(96,165,250,.35); color:#60a5fa; background:rgba(96,165,250,.07); }
+  .cf-dir-btn.cfz-n:hover,.cf-dir-btn.cfz-p:hover,.cf-dir-btn.cfz-n.active,.cf-dir-btn.cfz-p.active { background:rgba(96,165,250,.28); border-color:#60a5fa; color:#fff; }
+  .cf-mag-row { display:flex; align-items:center; gap:8px; margin:6px 0; font-size:.55rem; }
+  .cf-mag-row label { color:rgba(134,239,172,.7); white-space:nowrap; }
+  .cf-mag-row input[type=range] { flex:1; accent-color:#86efac; pointer-events:all; cursor:pointer; }
+  .cf-mag-row span { color:#86efac; min-width:36px; }
+  .cf-readout { display:grid; grid-template-columns:auto 1fr auto 1fr; gap:3px 8px; font-size:.57rem; margin-top:4px; }
+  .cf-rlbl { color:rgba(200,216,232,.45); }
+  .cf-rval { font-weight:700; }
+  .cf-rval.cfx { color:#f87171; }
+  .cf-rval.cfy { color:#4ade80; }
+  .cf-rval.cfz { color:#60a5fa; }
+  .cf-note { font-size:.54rem; color:rgba(200,216,232,.4); margin:5px 0 2px; line-height:1.5; }
+
+  /* Force-target toggle */
+  .ftarget-row { display:flex; align-items:center; gap:5px; margin:6px 0 2px; }
+  .ftarget-btn {
+    flex:1; padding:6px 0; border-radius:7px; border:1px solid; font-family:'Space Mono',monospace;
+    font-size:.55rem; cursor:pointer; text-align:center; transition:all .15s; pointer-events:all;
+  }
+  .ftarget-btn.all  { border-color:rgba(251,191,36,.4); color:#fbbf24; background:rgba(251,191,36,.07); }
+  .ftarget-btn.all.active  { background:rgba(251,191,36,.28); border-color:#fbbf24; color:#fff; box-shadow:0 0 8px rgba(251,191,36,.25); }
+  .ftarget-btn.all:hover   { background:rgba(251,191,36,.18); border-color:#fbbf24; }
+  .ftarget-btn.grp  { border-color:rgba(255,77,255,.4); color:var(--com-sub); background:rgba(255,77,255,.07); }
+  .ftarget-btn.grp.active  { background:rgba(255,77,255,.28); border-color:var(--com-sub); color:#fff; box-shadow:0 0 8px rgba(255,77,255,.25); }
+  .ftarget-btn.grp:hover   { background:rgba(255,77,255,.18); border-color:var(--com-sub); }
+  .ftarget-btn.cf-all  { border-color:rgba(134,239,172,.4); color:#86efac; background:rgba(134,239,172,.07); }
+  .ftarget-btn.cf-all.active  { background:rgba(134,239,172,.28); border-color:#86efac; color:#fff; box-shadow:0 0 8px rgba(134,239,172,.2); }
+  .ftarget-btn.cf-all:hover   { background:rgba(134,239,172,.18); border-color:#86efac; }
+  .ftarget-btn.cf-grp  { border-color:rgba(255,77,255,.4); color:var(--com-sub); background:rgba(255,77,255,.07); }
+  .ftarget-btn.cf-grp.active  { background:rgba(255,77,255,.28); border-color:var(--com-sub); color:#fff; box-shadow:0 0 8px rgba(255,77,255,.25); }
+  .ftarget-btn.cf-grp:hover   { background:rgba(255,77,255,.18); border-color:var(--com-sub); }
+
+  /* Space Field Panel */
+  #field-panel { bottom:60px; left:300px; width:268px; border-color:rgba(56,189,248,.28); }
+  #field-panel .panel-header { border-color:rgba(56,189,248,.2); }
+  #field-panel .panel-title { color:#38bdf8; }
+  #field-panel .toggle-icon { color:#38bdf8; }
+  .fldsec { font-weight:700; text-transform:uppercase; letter-spacing:.1em; font-size:.56rem; color:#38bdf8; border-bottom:1px solid rgba(56,189,248,.2); padding-bottom:3px; margin:10px 0 6px; }
+  .fldsec:first-child { margin-top:0; }
+  .fld-row { display:flex; align-items:center; gap:7px; margin:5px 0; }
+  .fld-tog-btn {
+    flex:1; padding:7px 10px; border-radius:7px; border:1px solid rgba(56,189,248,.3);
+    color:#38bdf8; background:rgba(56,189,248,.06); font-family:'Space Mono',monospace;
+    font-size:.58rem; cursor:pointer; text-align:left; transition:all .15s; pointer-events:all;
+    display:flex; align-items:center; gap:6px;
+  }
+  .fld-tog-btn:hover { background:rgba(56,189,248,.15); border-color:#38bdf8; }
+  .fld-tog-btn.active { background:rgba(56,189,248,.22); border-color:#38bdf8; color:#fff; box-shadow:0 0 10px rgba(56,189,248,.2); }
+  .fld-mag-row { display:flex; align-items:center; gap:7px; margin:3px 0 6px; font-size:.54rem; padding-left:2px; }
+  .fld-mag-row label { color:rgba(56,189,248,.6); white-space:nowrap; min-width:28px; }
+  .fld-mag-row input[type=range] { flex:1; accent-color:#38bdf8; pointer-events:all; cursor:pointer; }
+  .fld-mag-row span { color:#38bdf8; min-width:34px; font-size:.55rem; }
+  .fld-center-row { display:flex; align-items:center; gap:5px; margin:4px 0; font-size:.54rem; }
+  .fld-center-row label { color:rgba(56,189,248,.5); min-width:14px; font-family:'Orbitron',monospace; font-weight:700; }
+  .fld-center-row input[type=range] { flex:1; accent-color:#38bdf8; pointer-events:all; cursor:pointer; }
+  .fld-center-row span { color:#38bdf8; min-width:30px; font-size:.52rem; text-align:right; }
+  .fld-note { font-size:.53rem; color:rgba(56,189,248,.45); margin:4px 0 2px; line-height:1.55; }
+  .fld-divider { border:none; border-top:1px solid rgba(56,189,248,.1); margin:8px 0; }
+  .wind-dir-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin:5px 0; }
+  .wind-dir-btn { padding:6px 0; border-radius:6px; border:1px solid rgba(56,189,248,.3); color:#38bdf8; background:rgba(56,189,248,.06); font-family:'Orbitron',monospace; font-size:.62rem; font-weight:700; cursor:pointer; text-align:center; transition:all .15s; pointer-events:all; }
+  .wind-dir-btn:hover { background:rgba(56,189,248,.2); border-color:#38bdf8; }
+  .wind-dir-btn.active { background:rgba(56,189,248,.28); border-color:#38bdf8; color:#fff; box-shadow:0 0 8px rgba(56,189,248,.2); }
+  #cam-switcher {
+    position:absolute; bottom:16px; right:14px;
+    display:flex; flex-direction:column; align-items:flex-end; gap:5px;
+    pointer-events:all; z-index:20; max-height:calc(100vh - 120px);
+    overflow-y:auto; overflow-x:hidden;
+    scrollbar-width:thin; scrollbar-color:rgba(0,255,204,.2) transparent;
+  }
+  #cam-switcher::-webkit-scrollbar{width:3px;}
+  #cam-switcher::-webkit-scrollbar-thumb{background:rgba(0,255,204,.2);border-radius:3px;}
+  .cam-btn {
+    padding:6px 12px; border-radius:8px;
+    border:1px solid rgba(0,255,204,.25); background:rgba(0,8,28,.85);
+    color:var(--accent); font-family:'Space Mono',monospace; font-size:.58rem;
+    letter-spacing:.04em; cursor:pointer; transition:all .15s; white-space:nowrap;
+    backdrop-filter:blur(10px);
+  }
+  .cam-btn:hover { background:rgba(0,255,204,.15); border-color:var(--accent); }
+  .cam-btn.active { background:rgba(0,255,204,.22); border-color:var(--accent); color:#fff; box-shadow:0 0 10px rgba(0,255,204,.2); }
+  .cam-btn.all-view { border-color:rgba(167,139,250,.4); color:var(--accent3); background:rgba(167,139,250,.08); }
+  .cam-btn.all-view:hover { background:rgba(167,139,250,.2); border-color:var(--accent3); }
+  .cam-btn.all-view.active { background:rgba(167,139,250,.28); border-color:var(--accent3); color:#fff; box-shadow:0 0 10px rgba(167,139,250,.25); }
+
+
+  .panel-grip {
+    flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    height:22px; cursor:grab; border-top:1px solid var(--border);
+    background:rgba(0,255,204,.03); touch-action:none; user-select:none;
+  }
+  .panel-grip:active { cursor:grabbing; background:rgba(0,255,204,.08); }
+  .panel-grip::before {
+    content:''; display:block; width:36px; height:4px; border-radius:2px;
+    background:rgba(0,255,204,.25);
+  }
+  #force-panel .panel-grip::before { background:rgba(251,191,36,.3); }
+  #const-force-panel .panel-grip::before { background:rgba(134,239,172,.3); }
+  #trail-panel .panel-grip::before { background:rgba(167,139,250,.3); }
+
+  #body-ctx-menu {
+    position:fixed; z-index:200;
+    background:rgba(0,8,28,0.97); border:1px solid var(--border);
+    backdrop-filter:blur(18px); border-radius:14px;
+    padding:6px 0; min-width:210px;
+    display:none; flex-direction:column;
+    box-shadow:0 6px 32px rgba(0,0,0,.6);
+    font-family:'Space Mono',monospace; font-size:.65rem;
+  }
+  #body-ctx-menu.show { display:flex; }
+  .ctx-title {
+    font-family:'Orbitron',monospace; font-size:.58rem; font-weight:700;
+    letter-spacing:.1em; color:var(--accent); padding:8px 16px 9px;
+    border-bottom:1px solid var(--border); margin-bottom:2px;
+  }
+  .ctx-item {
+    padding:12px 16px; cursor:pointer; color:var(--text);
+    transition:background .12s; min-height:44px; display:flex; align-items:center;
+  }
+  .ctx-item:hover, .ctx-item:active { background:rgba(0,255,204,.1); color:#fff; }
+  .ctx-item.danger { color:var(--accent2); }
+  .ctx-item.danger:hover, .ctx-item.danger:active { background:rgba(255,107,53,.14); }
+  .ctx-sep { border:none; border-top:1px solid var(--border); margin:3px 0; }
+
+  /* Edit Body Panel */
+  #edit-body-panel {
+    position:fixed; z-index:190;
+    background:rgba(0,8,28,0.97); border:1px solid rgba(255,77,255,.4);
+    backdrop-filter:blur(18px); border-radius:16px;
+    width:240px; padding:0;
+    display:none; flex-direction:column;
+    box-shadow:0 8px 40px rgba(255,77,255,.15);
+    font-family:'Space Mono',monospace; font-size:.64rem;
+    pointer-events:all;
+  }
+  #edit-body-panel.show { display:flex; }
+  #edit-body-panel-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px 9px; border-bottom:1px solid rgba(255,77,255,.25);
+    cursor:grab;
+  }
+  #edit-body-panel-header:active { cursor:grabbing; }
+  #edit-body-title {
+    font-family:'Orbitron',monospace; font-size:.6rem; font-weight:700;
+    letter-spacing:.1em; color:var(--com-sub);
+  }
+  #edit-body-close {
+    font-size:.75rem; color:rgba(255,77,255,.6); cursor:pointer;
+    padding:2px 5px; border-radius:5px; line-height:1;
+    transition:all .15s;
+  }
+  #edit-body-close:hover { background:rgba(255,77,255,.15); color:var(--com-sub); }
+  #edit-body-panel .panel-body { padding:12px 14px; overflow-y:auto; max-height:70vh; }
+  .eb-sec { font-weight:700; text-transform:uppercase; letter-spacing:.1em; font-size:.55rem;
+    color:var(--com-sub); border-bottom:1px solid rgba(255,77,255,.2); padding-bottom:3px; margin:10px 0 6px; }
+  .eb-sec:first-child { margin-top:0; }
+  .eb-cur { font-size:.57rem; color:rgba(200,216,232,.55); margin-bottom:5px; }
+  .eb-cur span { font-weight:700; }
+  .eb-quick-row { display:flex; gap:4px; margin:5px 0; flex-wrap:wrap; }
+  .eb-qbtn {
+    flex:1; min-width:28px; padding:5px 3px; border-radius:6px;
+    border:1px solid var(--border); background:rgba(0,255,204,.05);
+    color:var(--accent); font-family:'Space Mono',monospace; font-size:.55rem;
+    cursor:pointer; text-align:center; transition:all .15s; pointer-events:all;
+  }
+  .eb-qbtn:hover, .eb-qbtn.active { background:rgba(0,255,204,.2); border-color:var(--accent); color:#fff; }
+  .eb-qbtn.charge-pos { border-color:rgba(248,113,113,.3); color:#f87171; background:rgba(248,113,113,.05); }
+  .eb-qbtn.charge-pos:hover, .eb-qbtn.charge-pos.active { background:rgba(248,113,113,.22); border-color:#f87171; color:#fff; }
+  .eb-qbtn.charge-neg { border-color:rgba(96,165,250,.3); color:#60a5fa; background:rgba(96,165,250,.05); }
+  .eb-qbtn.charge-neg:hover, .eb-qbtn.charge-neg.active { background:rgba(96,165,250,.22); border-color:#60a5fa; color:#fff; }
+  .eb-qbtn.charge-zero { border-color:rgba(200,216,232,.2); color:rgba(200,216,232,.5); }
+  .eb-qbtn.charge-zero:hover, .eb-qbtn.charge-zero.active { background:rgba(200,216,232,.15); border-color:rgba(200,216,232,.5); color:#fff; }
+  .eb-input-row { display:flex; gap:5px; margin-top:5px; }
+  .eb-input {
+    flex:1; background:rgba(0,255,204,.06); border:1px solid var(--border);
+    border-radius:7px; color:var(--accent); font-family:'Space Mono',monospace;
+    font-size:.6rem; padding:7px 8px; outline:none; transition:border-color .15s; pointer-events:all;
+  }
+  .eb-input:focus { border-color:var(--accent); background:rgba(0,255,204,.12); }
+  .eb-input.charge-input { border-color:rgba(167,139,250,.3); color:#a78bfa; }
+  .eb-input.charge-input:focus { border-color:#a78bfa; background:rgba(167,139,250,.1); }
+  .eb-btn {
+    padding:7px 10px; background:rgba(0,255,204,.12); border:1px solid rgba(0,255,204,.3);
+    border-radius:7px; color:var(--accent); font-family:'Space Mono',monospace; font-size:.6rem;
+    cursor:pointer; white-space:nowrap; transition:all .15s; pointer-events:all;
+  }
+  .eb-btn:hover { background:rgba(0,255,204,.25); border-color:var(--accent); }
+  .eb-btn.charge-btn { border-color:rgba(167,139,250,.3); color:#a78bfa; background:rgba(167,139,250,.08); }
+  .eb-btn.charge-btn:hover { background:rgba(167,139,250,.22); border-color:#a78bfa; }
+  .eb-btn.danger-btn { border-color:rgba(255,107,53,.3); color:var(--accent2); background:rgba(255,107,53,.06); }
+  .eb-btn.danger-btn:hover { background:rgba(255,107,53,.18); border-color:var(--accent2); }
+  .eb-vel-grid { display:grid; grid-template-columns:auto 1fr auto 1fr auto 1fr; gap:3px 6px; font-size:.57rem; margin:5px 0; align-items:center; }
+  .eb-vl { color:rgba(200,216,232,.45); }
+  .eb-vv { font-weight:700; color:var(--accent); }
+  .eb-sign-row { display:flex; gap:4px; margin:5px 0; }
+  .eb-sign-btn {
+    flex:1; padding:5px 0; border-radius:7px; border:2px solid;
+    font-family:'Orbitron',monospace; font-size:.72rem; font-weight:900;
+    cursor:pointer; text-align:center; transition:all .15s; pointer-events:all;
+  }
+  .eb-sign-btn.pos { border-color:rgba(248,113,113,.4); color:#f87171; background:rgba(248,113,113,.07); }
+  .eb-sign-btn.pos.active, .eb-sign-btn.pos:hover { background:rgba(248,113,113,.25); border-color:#f87171; color:#fff; }
+  .eb-sign-btn.zero { border-color:rgba(200,216,232,.2); color:rgba(200,216,232,.5); background:rgba(200,216,232,.04); }
+  .eb-sign-btn.zero.active, .eb-sign-btn.zero:hover { background:rgba(200,216,232,.15); border-color:rgba(200,216,232,.6); color:#fff; }
+  .eb-sign-btn.neg { border-color:rgba(96,165,250,.4); color:#60a5fa; background:rgba(96,165,250,.07); }
+  .eb-sign-btn.neg.active, .eb-sign-btn.neg:hover { background:rgba(96,165,250,.25); border-color:#60a5fa; color:#fff; }
+  .eb-color-row { display:flex; gap:5px; margin-top:5px; flex-wrap:wrap; }
+  .eb-color-dot {
+    width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent;
+    transition:all .15s; pointer-events:all; flex-shrink:0;
+  }
+  .eb-color-dot:hover { transform:scale(1.15); border-color:rgba(255,255,255,.5); }
+  .eb-color-dot.active { border-color:#fff; box-shadow:0 0 8px rgba(255,255,255,.4); }
+
+  /* Groups Panel */
+  #groups-panel { top:122px; left:14px; width:260px; border-color:rgba(255,77,255,.28); z-index:15; }
+  #groups-panel .panel-header { border-color:rgba(255,77,255,.2); }
+  #groups-panel .panel-title { color:var(--com-sub); }
+  #groups-panel .toggle-icon { color:var(--com-sub); }
+  .gp-group-block {
+    border-radius:10px; border:1px solid; margin-bottom:7px; overflow:hidden;
+  }
+  .gp-group-header {
+    display:flex; align-items:center; gap:7px;
+    padding:8px 11px; cursor:pointer; user-select:none;
+    transition:background .15s;
+  }
+  .gp-group-header:hover { filter:brightness(1.15); }
+  .gp-group-header.active-group { }
+  .gp-group-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .gp-group-name { flex:1; font-family:'Orbitron',monospace; font-size:.6rem; font-weight:700; letter-spacing:.08em; }
+  .gp-group-count { font-size:.54rem; opacity:.6; }
+  .gp-active-badge {
+    font-size:.5rem; font-family:'Orbitron',monospace; letter-spacing:.06em;
+    padding:2px 6px; border-radius:10px; font-weight:700;
+  }
+  .gp-body-list { padding:0 8px 8px; display:flex; flex-direction:column; gap:3px; }
+  .gp-body-row {
+    display:flex; align-items:center; gap:6px;
+    padding:6px 8px; border-radius:7px; border:1px solid rgba(255,255,255,.08);
+    background:rgba(0,0,0,.2); cursor:pointer; transition:background .12s;
+    font-size:.57rem;
+  }
+  .gp-body-row:hover { background:rgba(255,77,255,.12); border-color:rgba(255,77,255,.3); }
+  .gp-body-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .gp-body-name { flex:1; color:var(--text); }
+  .gp-body-remove { font-size:.65rem; color:rgba(255,107,53,.6); transition:color .12s; }
+  .gp-body-row:hover .gp-body-remove { color:var(--accent2); }
+  .gp-empty { font-size:.56rem; color:rgba(200,216,232,.3); text-align:center; padding:6px 0; }
+  .gp-no-groups { font-size:.57rem; color:rgba(200,216,232,.3); text-align:center; padding:8px 0; }
+
+  /* Speed slider */
+  #speed-slider-wrap { display:flex; align-items:center; gap:6px; pointer-events:all; }
+  #speed-slider-track { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  #speed-slider { width:110px; accent-color:#a78bfa; cursor:pointer; pointer-events:all; }
+  /* Tick marks: 0.1×  |  ×1  |  10× */
+  #speed-tick-row {
+    display:flex; justify-content:space-between; width:110px;
+    font-family:'Space Mono',monospace; font-size:.42rem;
+    color:rgba(167,139,250,.45); pointer-events:none; line-height:1;
+    padding: 0 2px;
+  }
+  #speed-tick-row span.mid { color:rgba(167,139,250,.85); font-weight:700; position:relative; }
+  #speed-tick-row span.mid::before {
+    content:'|'; position:absolute; top:-7px; left:50%; transform:translateX(-50%);
+    font-size:.5rem; color:rgba(167,139,250,.7);
+  }
+  #speed-label { font-family:'Orbitron',monospace; font-size:.6rem; font-weight:700; color:#a78bfa; min-width:38px; text-align:left; letter-spacing:.04em; }
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+
+<canvas id="three-canvas"></canvas>
+
+<div id="ui">
+  <div id="top-bar">
+    <h1>⊕ CENTRE OF MASS — 3D</h1>
+    <span id="mode-tag">ADD MODE</span>
+    <div id="speed-slider-wrap">
+      <span style="font-size:.55rem;color:rgba(167,139,250,.65)">⏱</span>
+      <div id="speed-slider-track">
+        <input id="speed-slider" type="range" min="0" max="100" value="50"
+          oninput="onSpeedSlider(this.value)" ontouchstart="event.stopPropagation()" ontouchmove="event.stopPropagation()">
+        <div id="speed-tick-row">
+          <span>×0.1</span>
+          <span class="mid">×1</span>
+          <span>×10</span>
+        </div>
+      </div>
+      <span id="speed-label">×1.0</span>
+    </div>
+  </div>
+
+  <!-- Info Panel -->
+  <div id="info-panel" class="panel collapsed">
+    <div class="panel-header" id="info-panel-drag">
+      <span class="panel-title">📊 System Info</span>
+      <span class="toggle-icon" onclick="togglePanel('info-panel')">▾</span>
+    </div>
+    <div class="panel-body">
+      <div class="plabel">System CoM ⊕</div>
+      <div>Bodies: <span class="val v-sys" id="s-n">0</span></div>
+      <div>Total mass: <span class="val v-sys" id="s-mass">—</span></div>
+      <div>CoM X: <span class="val v-sys" id="s-cx">—</span></div>
+      <div>CoM Y: <span class="val v-sys" id="s-cy">—</span></div>
+      <div>CoM Z: <span class="val v-sys" id="s-cz">—</span></div>
+      <div id="groups-info-list" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- Controls Panel -->
+  <div id="ctrl-panel" class="panel collapsed">
+    <div class="panel-header" id="ctrl-panel-drag">
+      <span class="panel-title">🎛 Controls</span>
+      <span class="toggle-icon" onclick="togglePanel('ctrl-panel')">▾</span>
+    </div>
+    <div class="panel-body">
+      <div class="sec-label">Mode</div>
+      <button class="btn active" id="btn-add" onclick="setMode('add')">⊕ Add Body</button>
+      <button class="btn" id="btn-move" onclick="setMode('move')">✥ Drag Body</button>
+      <button class="btn" id="btn-select" onclick="setMode('select')">◎ Select Sub-group</button>
+      <button class="btn" onclick="openGroupsPanel()" style="color:var(--com-sub);border-color:rgba(255,77,255,.3);background:rgba(255,77,255,.07);margin-top:3px">✦ Groups Panel</button>
+
+      <div class="sec-label">Mass</div>
+      <div style="font-size:.6rem;color:rgba(0,255,204,.6)">Current: <span id="cur-mass-display" style="color:var(--accent);font-weight:700">30 kg</span></div>
+      <div class="quick-mass-row">
+        <button class="qm-btn" onclick="setCustomMass(0)">0</button>
+        <button class="qm-btn" onclick="setCustomMass(5)">5</button>
+        <button class="qm-btn" onclick="setCustomMass(10)">10</button>
+        <button class="qm-btn active" onclick="setCustomMass(30)">30</button>
+        <button class="qm-btn" onclick="setCustomMass(50)">50</button>
+        <button class="qm-btn" onclick="setCustomMass(100)">100</button>
+      </div>
+      <div class="mass-input-row">
+        <input class="mass-input" id="custom-mass-input" type="number" min="0" max="9999" placeholder="Custom kg">
+        <button class="mass-set-btn" onclick="applyCustomMassInput()">Set</button>
+      </div>
+      <button class="btn" onclick="applyMassToSelected()" style="margin-top:5px;">⚖ Apply Mass → Selected</button>
+
+      <div class="sec-label">Charge</div>
+      <div style="font-size:.6rem;color:rgba(200,216,232,.6)">Current: <span id="cur-charge-display" style="color:#a78bfa;font-weight:700">0 C</span></div>
+      <div class="charge-sign-row">
+        <button class="csign-btn pos" id="csign-pos" onclick="setChargeSign(1)">＋</button>
+        <button class="csign-btn zero active" id="csign-zero" onclick="setChargeSign(0)">○</button>
+        <button class="csign-btn neg" id="csign-neg" onclick="setChargeSign(-1)">－</button>
+      </div>
+      <div class="quick-charge-row" id="qcharge-row">
+        <button class="qc-btn pos" onclick="setCustomChargeMag(1)">1</button>
+        <button class="qc-btn pos" onclick="setCustomChargeMag(5)">5</button>
+        <button class="qc-btn pos active" onclick="setCustomChargeMag(10)">10</button>
+        <button class="qc-btn pos" onclick="setCustomChargeMag(50)">50</button>
+      </div>
+      <div class="mass-input-row">
+        <input class="mass-input" id="custom-charge-input" type="number" min="0" max="9999" placeholder="Magnitude C" style="border-color:rgba(167,139,250,.3);">
+        <button class="mass-set-btn" onclick="applyCustomChargeInput()" style="border-color:rgba(167,139,250,.3);color:#a78bfa;">Set</button>
+      </div>
+      <button class="btn" onclick="applyChargeToSelected()" style="margin-top:5px;color:#a78bfa;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.06);">⚛ Apply Charge → Selected</button>
+
+      <div class="sec-label">Force Target</div>
+      <div style="display:flex;gap:5px;margin-bottom:4px">
+        <button class="ftarget-btn all active" id="ctrl-ftgt-btn-all" onclick="setForceTarget(true)" style="flex:1;justify-content:center;padding:8px 0;">⊕ All Bodies</button>
+        <button class="ftarget-btn grp" id="ctrl-ftgt-btn-grp" onclick="setForceTarget(false)" style="flex:1;justify-content:center;padding:8px 0;">✦ Active Group</button>
+      </div>
+      <div style="font-size:.53rem;color:rgba(200,216,232,.4);margin-bottom:4px;line-height:1.5" id="ctrl-ftgt-note">All forces affect every body</div>
+
+      <div class="sec-label">Coulomb Force</div>
+      <button class="btn" id="btn-coulomb" onclick="toggleCoulomb()">⚡ Coulomb: OFF</button>
+
+      <div class="sec-label">Physics</div>
+      <button class="btn" id="btn-grav" onclick="toggleGravity()">⟳ Gravity: OFF</button>
+      <button class="btn active" id="btn-sys-com" onclick="toggleSysCom()">⊕ System CoM: ON</button>
+      <button class="btn" id="btn-lines" onclick="toggleLines()">⟵ CoM Lines: OFF</button>
+      <button class="btn" id="btn-const-force-ctrl" onclick="openExtForcePanel()" style="color:#34d399;border-color:rgba(52,211,153,.28);background:rgba(52,211,153,.06);">⇶ Const. Force Field</button>
+      <button class="btn" id="btn-space-field" onclick="togglePanel('field-panel')" style="color:#38bdf8;border-color:rgba(56,189,248,.28);background:rgba(56,189,248,.06);">🌐 Space Field Forces</button>
+      <button class="btn" id="btn-trails" onclick="toggleTrails()">◈ Trails Panel</button>
+      <button class="btn" id="btn-axes" onclick="toggleAxes()">✛ 3D Axes: OFF</button>
+      <button class="btn" id="btn-grid" onclick="toggleGrid()">⊞ Grid Plane: OFF</button>
+
+      <div class="sec-label">Groups</div>
+      <div id="group-tabs" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
+      <button class="btn" onclick="createGroup()" id="btn-new-group">＋ New Group</button>
+      <button class="btn" onclick="addSelectedToGroup()" style="margin-top:3px">⊕ Add Tapped → Active</button>
+      <button class="btn" onclick="clearActiveGroup()" style="margin-top:3px">○ Clear Active Group</button>
+      <button class="btn danger" onclick="deleteActiveGroup()" style="margin-top:3px">✕ Delete Active Group</button>
+
+      <div class="sec-label">Selection</div>
+      <button class="btn" onclick="selectAll()">◉ Add All → Active Group</button>
+      <button class="btn danger" onclick="removeSelectedBodies()">✕ Remove Active Group Bodies</button>
+
+      <div class="sec-label">Shapes &amp; Presets</div>
+      <div style="font-size:.55rem;color:rgba(0,255,204,.5);margin-bottom:5px;line-height:1.5">Spawn shape · bodies snap to vertices · extra body at centre</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px">
+        <button class="btn" onclick="spawnShape('line3')" style="font-size:.55rem;padding:7px 6px">— Line (3)</button>
+        <button class="btn" onclick="spawnShape('triangle')" style="font-size:.55rem;padding:7px 6px">△ Triangle</button>
+        <button class="btn" onclick="spawnShape('square')" style="font-size:.55rem;padding:7px 6px">□ Square</button>
+        <button class="btn" onclick="spawnShape('pentagon')" style="font-size:.55rem;padding:7px 6px">⬠ Pentagon</button>
+        <button class="btn" onclick="spawnShape('hexagon')" style="font-size:.55rem;padding:7px 6px">⬡ Hexagon</button>
+        <button class="btn" onclick="spawnShape('circle8')" style="font-size:.55rem;padding:7px 6px">○ Circle (8)</button>
+      </div>
+      <div style="font-size:.53rem;color:rgba(167,139,250,.6);margin:6px 0 4px;text-transform:uppercase;letter-spacing:.08em">3D Shapes</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px">
+        <button class="btn" onclick="spawnShape('tetrahedron')" style="font-size:.55rem;padding:7px 6px;color:#a78bfa;border-color:rgba(167,139,250,.3)">⟁ Tetrahedron</button>
+        <button class="btn" onclick="spawnShape('cube')" style="font-size:.55rem;padding:7px 6px;color:#a78bfa;border-color:rgba(167,139,250,.3)">⬛ Cube</button>
+        <button class="btn" onclick="spawnShape('octahedron')" style="font-size:.55rem;padding:7px 6px;color:#a78bfa;border-color:rgba(167,139,250,.3)">◆ Octahedron</button>
+        <button class="btn" onclick="spawnShape('triangular_prism')" style="font-size:.55rem;padding:7px 6px;color:#a78bfa;border-color:rgba(167,139,250,.3)">▽ Tri. Prism</button>
+        <button class="btn" onclick="spawnShape('square_pyramid')" style="font-size:.55rem;padding:7px 6px;color:#a78bfa;border-color:rgba(167,139,250,.3)">△ Sq. Pyramid</button>
+        <button class="btn" onclick="spawnShape('tri_pyramid')" style="font-size:.55rem;padding:7px 6px;color:#a78bfa;border-color:rgba(167,139,250,.3)">⟁ Tri. Pyramid</button>
+        <button class="btn" onclick="spawnShape('cone')" style="font-size:.55rem;padding:7px 6px;color:#a78bfa;border-color:rgba(167,139,250,.3)">▲ Cone (8)</button>
+        <button class="btn" onclick="spawnShape('cylinder')" style="font-size:.55rem;padding:7px 6px;color:#a78bfa;border-color:rgba(167,139,250,.3)">⬭ Cylinder</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin:4px 0">
+        <span style="font-size:.55rem;color:rgba(0,255,204,.6);white-space:nowrap">Scale:</span>
+        <input type="range" min="20" max="200" value="60" id="shape-scale-slider" style="flex:1;accent-color:#00ffcc;pointer-events:all;cursor:pointer" oninput="document.getElementById('shape-scale-val').textContent=this.value">
+        <span id="shape-scale-val" style="font-size:.55rem;color:var(--accent);min-width:28px">60</span>
+      </div>
+
+      <div class="sec-label">Actions</div>
+      <button class="btn danger" onclick="clearAll()">✕ Clear All Bodies</button>
+    </div>
+  </div>
+
+  <!-- Force Lab -->
+  <div id="force-panel" class="panel collapsed">
+    <div class="panel-header" id="force-panel-drag">
+      <span class="panel-title" style="color:#fbbf24">🎯 Force Lab — 3D Impulse</span>
+      <span class="toggle-icon" onclick="togglePanel('force-panel')" style="color:#fbbf24">▾</span>
+    </div>
+    <div id="force-lock-note" style="display:none;font-family:'Space Mono',monospace;font-size:.58rem;color:var(--accent2);padding:8px 14px;border-bottom:1px solid rgba(255,107,53,.2);background:rgba(255,107,53,.07);pointer-events:none;"></div>
+    <div class="panel-body">
+      <div class="fsec">Application Point</div>
+      <div style="font-size:.55rem;color:rgba(251,191,36,.55);margin-bottom:6px;line-height:1.5">Set 3D coordinates where force is applied</div>
+      <!-- AP X slider -->
+      <div style="display:flex;align-items:center;gap:6px;margin:4px 0;">
+        <span class="axis-label fx" style="min-width:22px">X</span>
+        <input type="range" min="-300" max="300" value="0" step="1" id="ap-x-slider"
+          style="flex:1;accent-color:#f87171;pointer-events:all;cursor:pointer"
+          oninput="updateAppPoint()">
+        <span class="f-axis-val fx" id="ap-x-val" style="min-width:42px;text-align:right">0</span>
+      </div>
+      <!-- AP Y slider -->
+      <div style="display:flex;align-items:center;gap:6px;margin:4px 0;">
+        <span class="axis-label fy" style="min-width:22px">Y</span>
+        <input type="range" min="-300" max="300" value="0" step="1" id="ap-y-slider"
+          style="flex:1;accent-color:#4ade80;pointer-events:all;cursor:pointer"
+          oninput="updateAppPoint()">
+        <span class="f-axis-val fy" id="ap-y-val" style="min-width:42px;text-align:right">0</span>
+      </div>
+      <!-- AP Z slider -->
+      <div style="display:flex;align-items:center;gap:6px;margin:4px 0;">
+        <span class="axis-label fz" style="min-width:22px">Z</span>
+        <input type="range" min="-300" max="300" value="0" step="1" id="ap-z-slider"
+          style="flex:1;accent-color:#60a5fa;pointer-events:all;cursor:pointer"
+          oninput="updateAppPoint()">
+        <span class="f-axis-val fz" id="ap-z-val" style="min-width:42px;text-align:right">0</span>
+      </div>
+      <!-- Coordinate readout + reset -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:5px 0 7px;font-size:.57rem;">
+        <span style="color:rgba(200,216,232,.4)">Point:</span>
+        <span id="ap-coords-val" style="color:#fbbf24;font-weight:700;font-size:.56rem">(0, 0, 0)</span>
+        <button onclick="resetAppPoint()" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.07);color:#fbbf24;font-family:'Space Mono',monospace;font-size:.52rem;cursor:pointer;pointer-events:all;transition:all .15s;" onmouseover="this.style.background='rgba(251,191,36,.18)'" onmouseout="this.style.background='rgba(251,191,36,.07)'">↺ Origin</button>
+      </div>
+
+      <div class="fsec">Impulse Magnitude</div>
+      <div class="fmag-row">
+        <label>F =</label>
+        <input type="range" min="1" max="5000" value="500" id="force-mag-slider" oninput="forceMag=parseInt(this.value);document.getElementById('force-mag-val').textContent=this.value">
+        <span id="force-mag-val">500</span> <span style="color:rgba(251,191,36,.5)">N·s</span>
+      </div>
+
+      <div class="fsec">Apply Force Impulse</div>
+      <div class="axis-row">
+        <span class="axis-label fx">Fx</span>
+        <button class="f-impulse-btn fx-neg" onclick="applyForce('x',-1)">◀ −X</button>
+        <span class="f-axis-val fx" id="fval-x">0.0</span>
+        <button class="f-impulse-btn fx-pos" onclick="applyForce('x',+1)">+X ▶</button>
+      </div>
+      <div class="axis-row">
+        <span class="axis-label fy">Fy</span>
+        <button class="f-impulse-btn fy-neg" onclick="applyForce('y',-1)">▲ −Y</button>
+        <span class="f-axis-val fy" id="fval-y">0.0</span>
+        <button class="f-impulse-btn fy-pos" onclick="applyForce('y',+1)">+Y ▼</button>
+      </div>
+      <div class="axis-row">
+        <span class="axis-label fz">Fz</span>
+        <button class="f-impulse-btn fz-neg" onclick="applyForce('z',-1)">⊙ −Z</button>
+        <span class="f-axis-val fz" id="fval-z">0.0</span>
+        <button class="f-impulse-btn fz-pos" onclick="applyForce('z',+1)">⊕ +Z</button>
+      </div>
+      <div class="fsec" style="margin-top:8px">Force Target</div>
+      <div class="ftarget-row">
+        <button class="ftarget-btn all active" id="ftgt-btn-all" onclick="setForceTarget(true)">⊕ All Bodies</button>
+        <button class="ftarget-btn grp" id="ftgt-btn-grp" onclick="setForceTarget(false)">✦ Active Group</button>
+      </div>
+      <div class="f-target-note" id="force-target-note">● Applies to: <strong style="color:#fbbf24">all bodies</strong></div>
+
+      <div class="fsec">Variable Force (All Axes)</div>
+      <div style="font-size:.55rem;color:rgba(251,191,36,.55);margin-bottom:6px;line-height:1.5">Dial per-axis impulse, then fire ▶</div>
+
+      <!-- Fx slider -->
+      <div style="display:flex;align-items:center;gap:6px;margin:4px 0;">
+        <span class="axis-label fx" style="min-width:22px">Fx</span>
+        <input type="range" min="-5000" max="5000" value="0" step="10" id="vf-x-slider"
+          style="flex:1;accent-color:#f87171;pointer-events:all;cursor:pointer"
+          oninput="updateVFReadout()">
+        <span class="f-axis-val fx" id="vf-x-val" style="min-width:42px;text-align:right">0</span>
+        <span style="font-size:.5rem;color:rgba(248,113,113,.45)">N·s</span>
+      </div>
+      <!-- Fy slider -->
+      <div style="display:flex;align-items:center;gap:6px;margin:4px 0;">
+        <span class="axis-label fy" style="min-width:22px">Fy</span>
+        <input type="range" min="-5000" max="5000" value="0" step="10" id="vf-y-slider"
+          style="flex:1;accent-color:#4ade80;pointer-events:all;cursor:pointer"
+          oninput="updateVFReadout()">
+        <span class="f-axis-val fy" id="vf-y-val" style="min-width:42px;text-align:right">0</span>
+        <span style="font-size:.5rem;color:rgba(74,222,128,.45)">N·s</span>
+      </div>
+      <!-- Fz slider -->
+      <div style="display:flex;align-items:center;gap:6px;margin:4px 0;">
+        <span class="axis-label fz" style="min-width:22px">Fz</span>
+        <input type="range" min="-5000" max="5000" value="0" step="10" id="vf-z-slider"
+          style="flex:1;accent-color:#60a5fa;pointer-events:all;cursor:pointer"
+          oninput="updateVFReadout()">
+        <span class="f-axis-val fz" id="vf-z-val" style="min-width:42px;text-align:right">0</span>
+        <span style="font-size:.5rem;color:rgba(96,165,250,.45)">N·s</span>
+      </div>
+
+      <!-- |F| magnitude readout -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:5px 0 7px;font-size:.57rem;">
+        <span style="color:rgba(200,216,232,.4)">|F| =</span>
+        <span id="vf-mag-val" style="color:#fbbf24;font-weight:700">0.0 N·s</span>
+        <button onclick="resetVFSliders()" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.07);color:#fbbf24;font-family:'Space Mono',monospace;font-size:.52rem;cursor:pointer;pointer-events:all;transition:all .15s;" onmouseover="this.style.background='rgba(251,191,36,.18)'" onmouseout="this.style.background='rgba(251,191,36,.07)'">↺ Zero</button>
+      </div>
+
+      <!-- Fire button -->
+      <button onclick="applyVariableForce()" style="width:100%;padding:10px;border-radius:8px;border:2px solid #fbbf24;background:rgba(251,191,36,.12);color:#fbbf24;font-family:'Orbitron',monospace;font-size:.72rem;font-weight:900;cursor:pointer;pointer-events:all;letter-spacing:.08em;transition:all .15s;margin-bottom:2px;" onmouseover="this.style.background='rgba(251,191,36,.28)';this.style.color='#fff'" onmouseout="this.style.background='rgba(251,191,36,.12)';this.style.color='#fbbf24'">▶ APPLY FORCE</button>
+
+      <div class="fsec">Acceleration Readout</div>
+      <div class="acc-grid">
+        <span class="acc-lbl">ax:</span><span class="acc-val ax" id="acc-x">—</span>
+        <span class="acc-lbl">ay:</span><span class="acc-val ay" id="acc-y">—</span>
+        <span class="acc-lbl">az:</span><span class="acc-val az" id="acc-z">—</span>
+        <span class="acc-lbl">|a|:</span><span class="acc-val am" id="acc-m">—</span>
+      </div>
+
+      <div class="fsec">Actions</div>
+      <button class="fbtn danger" onclick="resetAllVelocities()">↺ Reset All Velocities</button>
+    </div>
+    <div class="panel-grip" title="Drag to move"></div>
+  </div>
+
+  <!-- Constant Force Panel -->
+  <div id="const-force-panel" class="panel collapsed">
+    <div class="panel-header" id="const-force-panel-drag">
+      <span class="panel-title" style="color:#86efac">⇒ Constant Force</span>
+      <span class="toggle-icon" onclick="togglePanel('const-force-panel')" style="color:#86efac">▾</span>
+    </div>
+    <div class="panel-body">
+      <div class="cfsec">Force Magnitude</div>
+      <div class="cf-mag-row">
+        <label>F =</label>
+        <input type="range" min="0.5" max="100" step="0.5" value="10" id="cf-mag-slider"
+          oninput="cfMag=parseFloat(this.value);document.getElementById('cf-mag-val').textContent=this.value;updateCFReadout()">
+        <span id="cf-mag-val">10</span> <span style="color:rgba(134,239,172,.5)">N</span>
+      </div>
+
+      <div class="cfsec">Direction</div>
+      <div class="cf-axis-row">
+        <span class="cf-axis-label cfx">Fx</span>
+        <button class="cf-dir-btn cfx-n" id="cf-btn-xn" onclick="setCFDir('x',-1)">◀ −X</button>
+        <button class="cf-dir-btn cfx-p" id="cf-btn-x0" onclick="setCFDir('x',0)" style="border-color:rgba(248,113,113,.2);font-size:.55rem">○ OFF</button>
+        <button class="cf-dir-btn cfx-p" id="cf-btn-xp" onclick="setCFDir('x',+1)">+X ▶</button>
+      </div>
+      <div class="cf-axis-row">
+        <span class="cf-axis-label cfy">Fy</span>
+        <button class="cf-dir-btn cfy-n" id="cf-btn-yn" onclick="setCFDir('y',-1)">▼ −Y</button>
+        <button class="cf-dir-btn cfy-p" id="cf-btn-y0" onclick="setCFDir('y',0)" style="border-color:rgba(74,222,128,.2);font-size:.55rem">○ OFF</button>
+        <button class="cf-dir-btn cfy-p" id="cf-btn-yp" onclick="setCFDir('y',+1)">+Y ▲</button>
+      </div>
+      <div class="cf-axis-row">
+        <span class="cf-axis-label cfz">Fz</span>
+        <button class="cf-dir-btn cfz-n" id="cf-btn-zn" onclick="setCFDir('z',-1)">⊙ −Z</button>
+        <button class="cf-dir-btn cfz-p" id="cf-btn-z0" onclick="setCFDir('z',0)" style="border-color:rgba(96,165,250,.2);font-size:.55rem">○ OFF</button>
+        <button class="cf-dir-btn cfz-p" id="cf-btn-zp" onclick="setCFDir('z',+1)">⊕ +Z</button>
+      </div>
+
+      <div class="cfsec">Status</div>
+      <button class="cfbtn" id="cf-toggle-btn" onclick="toggleConstForce()">⇒ Constant Force: OFF</button>
+      <div class="cf-readout" style="margin-top:6px">
+        <span class="cf-rlbl">Fx:</span><span class="cf-rval cfx" id="cf-read-x">0.0 N</span>
+        <span class="cf-rlbl">Fy:</span><span class="cf-rval cfy" id="cf-read-y">0.0 N</span>
+        <span class="cf-rlbl">Fz:</span><span class="cf-rlbl cfz" id="cf-read-z" style="color:#60a5fa;font-weight:700">0.0 N</span>
+        <span class="cf-rlbl">|F|:</span><span class="cf-rval" style="color:#86efac" id="cf-read-m">0.0 N</span>
+      </div>
+      <div class="cfsec" style="margin-top:8px">Force Target</div>
+      <div class="ftarget-row">
+        <button class="ftarget-btn cf-all active" id="cf-ftgt-btn-all" onclick="setForceTarget(true)">⊕ All Bodies</button>
+        <button class="ftarget-btn cf-grp" id="cf-ftgt-btn-grp" onclick="setForceTarget(false)">✦ Active Group</button>
+      </div>
+      <div class="cf-note" id="cf-target-note">⇒ Applies to: <strong style="color:#86efac">all bodies</strong></div>
+
+      <div class="cfsec">Actions</div>
+      <button class="cfbtn danger" onclick="cfResetAll()">↺ Stop + Clear Velocities</button>
+    </div>
+    <div class="panel-grip" title="Drag to move"></div>
+  </div>
+
+  <!-- Space Field Panel -->
+  <div id="field-panel" class="panel collapsed">
+    <div class="panel-header" id="field-panel-drag">
+      <span class="panel-title">🌐 Space Field Forces</span>
+      <span class="toggle-icon" onclick="togglePanel('field-panel')" style="color:#38bdf8">▾</span>
+    </div>
+    <div class="panel-body">
+      <div class="fld-note" style="margin-top:0;margin-bottom:8px">Each field permeates all space — any body present is automatically affected.</div>
+
+      <!-- SPRING -->
+      <div class="fldsec">① Spring Field</div>
+      <div class="fld-note">Pulls every body toward the field centre. Stronger when further away.</div>
+      <button class="fld-tog-btn" id="fld-spring-btn" onclick="toggleField('spring')">⟳ Spring: OFF</button>
+      <div class="fld-mag-row">
+        <label>k =</label>
+        <input type="range" min="0.001" max="0.5" step="0.001" value="0.05" id="fld-spring-k"
+          oninput="fieldState.spring.k=parseFloat(this.value);document.getElementById('fld-spring-kval').textContent=parseFloat(this.value).toFixed(3)">
+        <span id="fld-spring-kval">0.050</span>
+      </div>
+      <div class="fld-note">Centre (drag to set):</div>
+      <div class="fld-center-row"><label>X</label><input type="range" min="-500" max="500" value="0" step="1" id="fld-spring-cx" oninput="updateFieldCenter('spring')"><span id="fld-spring-cx-v">0</span></div>
+      <div class="fld-center-row"><label>Y</label><input type="range" min="-500" max="500" value="0" step="1" id="fld-spring-cy" oninput="updateFieldCenter('spring')"><span id="fld-spring-cy-v">0</span></div>
+      <div class="fld-center-row"><label>Z</label><input type="range" min="-500" max="500" value="0" step="1" id="fld-spring-cz" oninput="updateFieldCenter('spring')"><span id="fld-spring-cz-v">0</span></div>
+
+      <hr class="fld-divider">
+
+      <!-- RADIAL -->
+      <div class="fldsec">② Radial Field</div>
+      <div class="fld-note">Pushes (+) or pulls (−) bodies from a point. Like a space repulsor/attractor.</div>
+      <button class="fld-tog-btn" id="fld-radial-btn" onclick="toggleField('radial')">◎ Radial: OFF</button>
+      <div class="fld-mag-row">
+        <label>F =</label>
+        <input type="range" min="-80" max="80" step="0.5" value="20" id="fld-radial-f"
+          oninput="fieldState.radial.strength=parseFloat(this.value);document.getElementById('fld-radial-fval').textContent=parseFloat(this.value).toFixed(1)">
+        <span id="fld-radial-fval">20.0</span>
+      </div>
+      <div class="fld-note" style="margin-bottom:3px">− = attract · + = repel</div>
+      <div class="fld-center-row"><label>X</label><input type="range" min="-500" max="500" value="0" step="1" id="fld-radial-cx" oninput="updateFieldCenter('radial')"><span id="fld-radial-cx-v">0</span></div>
+      <div class="fld-center-row"><label>Y</label><input type="range" min="-500" max="500" value="0" step="1" id="fld-radial-cy" oninput="updateFieldCenter('radial')"><span id="fld-radial-cy-v">0</span></div>
+      <div class="fld-center-row"><label>Z</label><input type="range" min="-500" max="500" value="0" step="1" id="fld-radial-cz" oninput="updateFieldCenter('radial')"><span id="fld-radial-cz-v">0</span></div>
+
+      <hr class="fld-divider">
+
+      <!-- VORTEX -->
+      <div class="fldsec">③ Vortex Field</div>
+      <div class="fld-note">Swirls bodies in a spiral around the chosen axis. Great for angular momentum demos.</div>
+      <button class="fld-tog-btn" id="fld-vortex-btn" onclick="toggleField('vortex')">⟳ Vortex: OFF</button>
+      <div class="fld-mag-row">
+        <label>ω =</label>
+        <input type="range" min="-3" max="3" step="0.05" value="0.8" id="fld-vortex-w"
+          oninput="fieldState.vortex.omega=parseFloat(this.value);document.getElementById('fld-vortex-wval').textContent=parseFloat(this.value).toFixed(2)">
+        <span id="fld-vortex-wval">0.80</span>
+      </div>
+      <div class="fld-note" style="margin-bottom:3px">Axis:</div>
+      <div style="display:flex;gap:5px;margin-bottom:5px">
+        <button class="wind-dir-btn active" id="fld-vortex-ax-Y" onclick="setVortexAxis('Y')">Y</button>
+        <button class="wind-dir-btn" id="fld-vortex-ax-X" onclick="setVortexAxis('X')">X</button>
+        <button class="wind-dir-btn" id="fld-vortex-ax-Z" onclick="setVortexAxis('Z')">Z</button>
+      </div>
+
+      <hr class="fld-divider">
+
+      <!-- WIND -->
+      <div class="fldsec">④ Wind Field</div>
+      <div class="fld-note">Uniform push on all space — a constant background force in any direction.</div>
+      <button class="fld-tog-btn" id="fld-wind-btn" onclick="toggleField('wind')">💨 Wind: OFF</button>
+      <div class="fld-mag-row">
+        <label>F =</label>
+        <input type="range" min="0" max="100" step="0.5" value="15" id="fld-wind-f"
+          oninput="fieldState.wind.mag=parseFloat(this.value);document.getElementById('fld-wind-fval').textContent=parseFloat(this.value).toFixed(1)">
+        <span id="fld-wind-fval">15.0</span>
+      </div>
+      <div class="fld-note" style="margin-bottom:4px">Direction:</div>
+      <div class="wind-dir-grid">
+        <button class="wind-dir-btn" id="wdb--X" onclick="setWindDir(-1,0,0)">−X</button>
+        <button class="wind-dir-btn active" id="wdb-+Y" onclick="setWindDir(0,1,0)">+Y</button>
+        <button class="wind-dir-btn" id="wdb-+X" onclick="setWindDir(1,0,0)">+X</button>
+        <button class="wind-dir-btn" id="wdb--Z" onclick="setWindDir(0,0,-1)">−Z</button>
+        <button class="wind-dir-btn" id="wdb--Y" onclick="setWindDir(0,-1,0)">−Y</button>
+        <button class="wind-dir-btn" id="wdb-+Z" onclick="setWindDir(0,0,1)">+Z</button>
+      </div>
+    </div>
+    <div class="panel-grip" title="Drag to move"></div>
+  </div>
+
+  <!-- Groups Panel -->
+  <div id="groups-panel" class="panel collapsed">
+    <div class="panel-header" id="groups-panel-drag">
+      <span class="panel-title">✦ GROUPS</span>
+      <span class="toggle-icon" onclick="togglePanel('groups-panel')" style="color:var(--com-sub)">▾</span>
+    </div>
+    <div class="panel-body" id="groups-panel-body">
+      <div class="gp-no-groups">No groups yet</div>
+    </div>
+    <div style="padding:8px 10px;border-top:1px solid rgba(255,77,255,.15);display:flex;gap:5px;pointer-events:all;flex-shrink:0">
+      <button onclick="createGroup()" style="flex:1;padding:8px 0;border-radius:7px;border:1px solid rgba(255,77,255,.35);background:rgba(255,77,255,.09);color:var(--com-sub);font-family:'Space Mono',monospace;font-size:.6rem;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(255,77,255,.22)'" onmouseout="this.style.background='rgba(255,77,255,.09)'">＋ New Group</button>
+      <button onclick="setMode('select')" style="flex:1;padding:8px 0;border-radius:7px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.07);color:var(--accent3);font-family:'Space Mono',monospace;font-size:.6rem;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(167,139,250,.2)'" onmouseout="this.style.background='rgba(167,139,250,.07)'">◎ Select Mode</button>
+      <button onclick="setForceTarget(true);setHint('Forces now apply to all bodies')" id="gp-allbodies-btn" style="flex:1;padding:8px 0;border-radius:7px;border:1px solid rgba(0,255,204,.35);background:rgba(0,255,204,.09);color:var(--accent);font-family:'Space Mono',monospace;font-size:.6rem;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(0,255,204,.2)'" onmouseout="this.style.background='rgba(0,255,204,.09)'">⊕ All Bodies</button>
+    </div>
+    <div class="panel-grip" style="border-top-color:rgba(255,77,255,.2)" title="Drag to move"></div>
+  </div>
+
+  <!-- Trail Panel -->
+  <div id="trail-panel" class="panel collapsed">
+    <div class="panel-header" id="trail-panel-drag">
+      <span class="panel-title">◈ TRAILS</span>
+      <span class="toggle-icon" onclick="togglePanel('trail-panel')" style="color:var(--accent3)">▾</span>
+    </div>
+    <div class="panel-body">
+      <div class="trail-master-row">
+        <button class="trail-master-btn" onclick="setAllTrails(true)">All ON</button>
+        <button class="trail-master-btn" onclick="setAllTrails(false)">All OFF</button>
+        <button class="trail-master-btn" onclick="clearAllTrails()">Clear</button>
+      </div>
+      <div class="trail-body-list" id="trail-body-list">
+        <div style="font-size:.57rem;color:rgba(200,216,232,.3);text-align:center">No bodies yet</div>
+      </div>
+      <div class="trail-com-section">
+        <div class="trail-com-row">
+          <span class="trail-com-label sys">⊕ System CoM</span>
+          <div class="trail-tog" id="tog-com-sys" onclick="toggleComTrail('sys')"></div>
+        </div>
+        <div id="trail-group-com-list"></div>
+      </div>
+    </div>
+    <div class="panel-grip" title="Drag to move"></div>
+  </div>
+
+  <div id="sel-badge">✦ <span id="sel-badge-n">0</span> IN GROUP <span id="sel-badge-g">1</span></div>
+  <div id="hint">Tap empty space to add · Tap a ball to assign groups / edit · Drag to orbit</div>
+  <div id="cam-hint">☝ Orbit: 1-finger drag<br>🤏 Zoom: pinch<br>✋ Pan: 2-finger drag</div>
+  <div id="longpress-ring"></div>
+
+  <!-- Edit Body Panel (Select Mode) -->
+  <div id="edit-body-panel">
+    <div id="edit-body-panel-header">
+      <span id="edit-body-title">✎ EDIT BODY</span>
+      <span id="edit-body-close" onclick="closeEditPanel()">✕</span>
+    </div>
+    <div class="panel-body">
+
+      <div class="eb-sec">⚖ Mass</div>
+      <div class="eb-cur">Current: <span id="eb-cur-mass" style="color:var(--accent)">—</span></div>
+      <div class="eb-quick-row" id="eb-mass-quick">
+        <button class="eb-qbtn" onclick="ebSetMassQuick(0)">0</button>
+        <button class="eb-qbtn" onclick="ebSetMassQuick(5)">5</button>
+        <button class="eb-qbtn" onclick="ebSetMassQuick(10)">10</button>
+        <button class="eb-qbtn" onclick="ebSetMassQuick(30)">30</button>
+        <button class="eb-qbtn" onclick="ebSetMassQuick(50)">50</button>
+        <button class="eb-qbtn" onclick="ebSetMassQuick(100)">100</button>
+      </div>
+      <div class="eb-input-row">
+        <input class="eb-input" id="eb-mass-input" type="number" min="0" max="9999" placeholder="Custom kg">
+        <button class="eb-btn" onclick="ebApplyMass()">Set</button>
+      </div>
+
+      <div class="eb-sec">⚛ Charge</div>
+      <div class="eb-cur">Current: <span id="eb-cur-charge" style="color:#a78bfa">—</span></div>
+      <div class="eb-sign-row">
+        <button class="eb-sign-btn pos" id="eb-csign-pos" onclick="ebSetChargeSign(1)">＋</button>
+        <button class="eb-sign-btn zero active" id="eb-csign-zero" onclick="ebSetChargeSign(0)">○</button>
+        <button class="eb-sign-btn neg" id="eb-csign-neg" onclick="ebSetChargeSign(-1)">－</button>
+      </div>
+      <div class="eb-quick-row" id="eb-charge-quick">
+        <button class="eb-qbtn charge-pos" onclick="ebSetChargeMagQuick(1)">1</button>
+        <button class="eb-qbtn charge-pos" onclick="ebSetChargeMagQuick(5)">5</button>
+        <button class="eb-qbtn charge-pos active" onclick="ebSetChargeMagQuick(10)">10</button>
+        <button class="eb-qbtn charge-pos" onclick="ebSetChargeMagQuick(50)">50</button>
+      </div>
+      <div class="eb-input-row">
+        <input class="eb-input charge-input" id="eb-charge-input" type="number" min="0" max="9999" placeholder="Magnitude C">
+        <button class="eb-btn charge-btn" onclick="ebApplyCharge()">Set</button>
+      </div>
+
+      <div class="eb-sec">🎨 Color</div>
+      <div class="eb-color-row" id="eb-color-row"></div>
+
+      <div class="eb-sec">⚡ Velocity</div>
+      <div class="eb-vel-grid">
+        <span class="eb-vl">vx:</span><span class="eb-vv" id="eb-vx">—</span>
+        <span class="eb-vl">vy:</span><span class="eb-vv" id="eb-vy">—</span>
+        <span class="eb-vl">vz:</span><span class="eb-vv" id="eb-vz">—</span>
+      </div>
+      <div class="eb-input-row" style="margin-top:5px">
+        <button class="eb-btn" style="flex:1;text-align:center" onclick="ebResetVelocity()">↺ Reset Velocity</button>
+      </div>
+
+      <div class="eb-sec" style="margin-top:12px"></div>
+      <div class="eb-input-row">
+        <button class="eb-btn danger-btn" style="flex:1;text-align:center" onclick="ebRemoveBody()">✕ Delete This Body</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera Switcher -->
+  <div id="cam-switcher">
+    <button class="cam-btn all-view active" onclick="setCameraMode('all')" id="cam-btn-all">⊞ All View</button>
+    <button class="cam-btn" onclick="setCameraMode('free')" id="cam-btn-free" style="border-color:rgba(251,191,36,.3);color:#fbbf24;">✦ Free Orbit</button>
+  </div>
+
+</div>
+  <div id="body-ctx-menu">
+    <div class="ctx-title" id="ctx-title">BODY</div>
+    <div id="ctx-group-section"></div>
+    <div class="ctx-item" onclick="ctxApplyCharge()">⚛ Set charge → <span id="ctx-charge-preview" style="color:#a78bfa">0 C</span></div>
+    <div class="ctx-item" onclick="ctxApplyMass()">⚖ Set mass → <span id="ctx-mass-preview" style="color:var(--accent)">30 kg</span></div>
+    <hr class="ctx-sep">
+    <div class="ctx-item danger" onclick="ctxRemoveBody()">✕ Remove this body</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── Prevent native browser page zoom (pinch & ctrl+wheel) ──
+// We handle zoom ourselves inside the canvas only.
+document.addEventListener('gesturestart',  e=>e.preventDefault(), {passive:false});
+document.addEventListener('gesturechange', e=>e.preventDefault(), {passive:false});
+document.addEventListener('gestureend',    e=>e.preventDefault(), {passive:false});
+document.addEventListener('wheel', e=>{
+  if(e.ctrlKey){ e.preventDefault(); } // ctrl+scroll = browser zoom — block it
+}, {passive:false});
+document.addEventListener('touchmove', e=>{
+  // Only block multi-touch if it's NOT on the canvas (canvas handles its own pinch via pointer events)
+  if(e.touches.length > 1 && e.target !== document.getElementById('three-canvas')){
+    e.preventDefault();
+  }
+}, {passive:false});
+// ═══════════════════════════════════════════════════════════
+// THREE.JS SETUP
+// ═══════════════════════════════════════════════════════════
+const canvas3d = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.outputEncoding = THREE.sRGBEncoding;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x00001a);
+
+// Starfield
+(function(){
+  const geo = new THREE.BufferGeometry();
+  const n = 600;
+  const pos = new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    pos[i*3]   = (Math.random()-.5)*40000;
+    pos[i*3+1] = (Math.random()-.5)*40000;
+    pos[i*3+2] = (Math.random()-.5)*40000;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const mat = new THREE.PointsMaterial({color:0xffffff, size:1.5, sizeAttenuation:false, transparent:true, opacity:.7});
+  scene.add(new THREE.Points(geo, mat));
+})();
+
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 50000);
+camera.position.set(0, 600, 1200);
+camera.lookAt(0,0,0);
+
+// Ambient + directional light — stronger to make colors vivid and solid
+scene.add(new THREE.AmbientLight(0x8899bb, 1.8));
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.6);
+dirLight.position.set(200, 300, 200);
+scene.add(dirLight);
+const dirLight2 = new THREE.DirectionalLight(0xa0c0ff, 0.7);
+dirLight2.position.set(-200,-100,-200);
+scene.add(dirLight2);
+const dirLight3 = new THREE.DirectionalLight(0xffffff, 0.5);
+dirLight3.position.set(0, -300, 100);
+scene.add(dirLight3);
+
+// ── Orbit Controls (manual implementation) ─────────────────
+let orbitTheta = 0, orbitPhi = Math.PI/4;
+let orbitRadius = 1200;
+let panOffset = new THREE.Vector3(0,0,0);
+
+function updateCamera(){
+  const x = orbitRadius * Math.sin(orbitPhi) * Math.sin(orbitTheta);
+  const y = orbitRadius * Math.cos(orbitPhi);
+  const z = orbitRadius * Math.sin(orbitPhi) * Math.cos(orbitTheta);
+  camera.position.set(x + panOffset.x, y + panOffset.y, z + panOffset.z);
+  camera.lookAt(panOffset.x, panOffset.y, panOffset.z);
+}
+updateCamera();
+
+// ── Grid & Axes ────────────────────────────────────────────
+let gridHelper = null, axesHelper = null;
+function toggleGrid(){
+  if(gridHelper){ scene.remove(gridHelper); gridHelper=null; document.getElementById('btn-grid').classList.remove('active'); document.getElementById('btn-grid').textContent='⊞ Grid Plane: OFF'; }
+  else { gridHelper = new THREE.GridHelper(600,20,0x00ffcc22,0x002244); scene.add(gridHelper); document.getElementById('btn-grid').classList.add('active'); document.getElementById('btn-grid').textContent='⊞ Grid Plane: ON'; }
+}
+function toggleAxes(){
+  if(axesHelper){ scene.remove(axesHelper); axesHelper=null; document.getElementById('btn-axes').classList.remove('active'); document.getElementById('btn-axes').textContent='✛ 3D Axes: OFF'; }
+  else {
+    axesHelper = new THREE.Group();
+    const dirs=[{d:[1,0,0],c:0xf87171,l:'X'},{d:[0,1,0],c:0x4ade80,l:'Y'},{d:[0,0,1],c:0x60a5fa,l:'Z'}];
+    dirs.forEach(({d,c})=>{
+      const geo = new THREE.CylinderGeometry(.8,.8,200,8);
+      const mat = new THREE.MeshBasicMaterial({color:c, transparent:true, opacity:.5});
+      const mesh = new THREE.Mesh(geo,mat);
+      if(d[0]){ mesh.rotation.z=Math.PI/2; }
+      else if(d[2]){ mesh.rotation.x=Math.PI/2; }
+      axesHelper.add(mesh);
+    });
+    scene.add(axesHelper);
+    document.getElementById('btn-axes').classList.add('active');
+    document.getElementById('btn-axes').textContent='✛ 3D Axes: ON';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SIMULATION STATE
+// ═══════════════════════════════════════════════════════════
+const COLORS = ['#00ffcc','#ff6b35','#a78bfa','#38bdf8','#fb7185','#fbbf24','#34d399','#f472b6','#60a5fa','#a3e635'];
+const GROUP_COLORS = ['#ff4dff','#fbbf24','#4ade80','#f87171','#60a5fa','#fb923c'];
+const GROUP_COLORS_HEX = [0xff4dff, 0xfbbf24, 0x4ade80, 0xf87171, 0x60a5fa, 0xfb923c];
+const MAX_GROUPS = 6;
+const G = 500;
+let bodies = [];
+
+// Multi-group system
+let groups = []; // [{id, name, color, colorHex, members: Set, comMesh, linePools, trailOn, comTrail}]
+let activeGroupIdx = -1; // index into groups[], -1 = none
+
+// Compatibility shim: `selected` always reflects active group's members
+Object.defineProperty(window, 'selected', {
+  get(){ return activeGroupIdx >= 0 ? groups[activeGroupIdx].members : new Set(); },
+  configurable: true
+});
+
+let mode = 'add';
+let gravityOn = false;
+let showLines = false;
+let showSysCom = true;
+let allGroupsComOn = true; // master toggle for all group CoM markers
+let showTrails = false; // master flag (used by old global toggle, kept for compat)
+let comTrailSysOn = false;
+let colorIdx = 0;
+let customMass = 30;
+let customChargeSign = 0;   // -1, 0, +1
+let customChargeMag = 10;   // magnitude
+let coulombOn = false;
+// Global "all-bodies" force toggles — act across all groups
+let globalGravOn = false;
+let globalCoulombOn = false;
+let globalCfOn = false;
+const globalCfDir = { x: 0, y: 0, z: 0 };
+let globalCfMag = 10.0; // consistent with per-group and const-force panel defaults
+const K_E = 12000000; // Coulomb constant (tuned for sim scale)
+const MIN_INERTIAL_MASS = 0.1; // massless bodies use this for F=ma
+let forceMag = 500;
+let cumulativeFx=0, cumulativeFy=0, cumulativeFz=0;
+let timeScale = 1.0; // speed multiplier
+
+// Slider: 0=×0.1, 50=×1 (centre), 100=×10  — symmetric log scale
+// Map [0..100] → log space: pos=0→log(0.1), pos=50→log(1), pos=100→log(10)
+// Both halves use the same log ratio, so ×1 is exactly at the visual centre.
+const _SLO_MIN = Math.log(0.1);   // = -ln(10)
+const _SLO_MID = Math.log(1.0);   // = 0
+const _SLO_MAX = Math.log(10.0);  // = +ln(10)
+function sliderPosToScale(pos){
+  // t in [0,1]; linear interpolation in log space → exponential in linear space
+  const t = pos / 100;
+  return Math.exp(_SLO_MIN + t * (_SLO_MAX - _SLO_MIN));
+}
+function onSpeedSlider(pos){
+  timeScale = sliderPosToScale(parseFloat(pos));
+  const label = document.getElementById('speed-label');
+  if(label) label.textContent = '×' + (timeScale < 1 ? timeScale.toFixed(2) : timeScale < 10 ? timeScale.toFixed(1) : timeScale.toFixed(0));
+}
+function setTimeScale(s){ // kept for compat
+  timeScale = s;
+  // Sync slider to matching position (approximate)
+  const slider = document.getElementById('speed-slider');
+  if(slider){
+    // find pos where sliderPosToScale(pos) ≈ s
+    let best = 50, bestDiff = Infinity;
+    for(let p=0; p<=100; p++){
+      const diff = Math.abs(sliderPosToScale(p) - s);
+      if(diff < bestDiff){ bestDiff = diff; best = p; }
+    }
+    slider.value = best;
+    const label = document.getElementById('speed-label');
+    if(label) label.textContent = '×' + (s < 1 ? s.toFixed(2) : s < 10 ? s.toFixed(1) : s.toFixed(0));
+  }
+}
+
+// ── Application Point ──────────────────────────────────────
+const appPoint = { x: 0, y: 0, z: 0 };
+let appPointMesh = null;
+
+function initAppPointMesh(){
+  // Crosshair group: three thin cylinders along each axis + small sphere
+  const grp = new THREE.Group();
+  const r = 1.5, len = 28;
+  const axes = [
+    { dir: [1,0,0], color: 0xf87171, rot: [0,0,Math.PI/2] },
+    { dir: [0,1,0], color: 0x4ade80, rot: [0,0,0] },
+    { dir: [0,0,1], color: 0x60a5fa, rot: [Math.PI/2,0,0] }
+  ];
+  axes.forEach(({color, rot})=>{
+    const geo = new THREE.CylinderGeometry(r, r, len, 8);
+    const mat = new THREE.MeshBasicMaterial({color, transparent:true, opacity:.85});
+    const m = new THREE.Mesh(geo, mat);
+    m.rotation.set(...rot);
+    grp.add(m);
+  });
+  // Center sphere
+  const sgeo = new THREE.SphereGeometry(4, 12, 10);
+  const smat = new THREE.MeshBasicMaterial({color:0xfbbf24, transparent:true, opacity:.95});
+  grp.add(new THREE.Mesh(sgeo, smat));
+  // Outer ring (torus)
+  const tgeo = new THREE.TorusGeometry(10, 1.2, 8, 40);
+  const tmat = new THREE.MeshBasicMaterial({color:0xfbbf24, transparent:true, opacity:.6});
+  grp.add(new THREE.Mesh(tgeo, tmat));
+  grp.position.set(0,0,0);
+  grp.visible = false;
+  scene.add(grp);
+  appPointMesh = grp;
+}
+
+function updateAppPoint(){
+  appPoint.x = parseFloat(document.getElementById('ap-x-slider').value);
+  appPoint.y = parseFloat(document.getElementById('ap-y-slider').value);
+  appPoint.z = parseFloat(document.getElementById('ap-z-slider').value);
+  document.getElementById('ap-x-val').textContent = appPoint.x;
+  document.getElementById('ap-y-val').textContent = appPoint.y;
+  document.getElementById('ap-z-val').textContent = appPoint.z;
+  document.getElementById('ap-coords-val').textContent =
+    `(${appPoint.x}, ${appPoint.y}, ${appPoint.z})`;
+  if(appPointMesh){
+    appPointMesh.position.set(appPoint.x, appPoint.y, appPoint.z);
+    appPointMesh.visible = true;
+  }
+}
+
+function resetAppPoint(){
+  ['x','y','z'].forEach(a=>{
+    document.getElementById('ap-'+a+'-slider').value = 0;
+  });
+  updateAppPoint();
+  if(appPointMesh) appPointMesh.visible = false;
+}
+
+// ── Constant Force state (independent of gravity & Coulomb) ──
+let cfOn = false;
+let cfMag = 10.0; // matches cf-mag-slider default value="10"
+// Per-axis sign: -1, 0, or +1
+const cfDir = { x: 0, y: 0, z: 0 };
+let dragging = null;
+let dragPlane = new THREE.Plane();
+let dragIntersect = new THREE.Vector3();
+let lastFrameTime = performance.now();
+let lastTrailTime = 0;
+const TRAIL_INTERVAL = 40; // ms between trail samples (~25fps sampling)
+
+// CoM markers (3D spheres)
+let sysComMesh = null;
+// Per-group CoM meshes are on group objects themselves
+
+// ── Body factory ───────────────────────────────────────────
+function massToRadius(m){ return m===0 ? 10 : Math.max(8, Math.min(45, Math.round(8 * Math.cbrt(m/10)))); }
+
+function hexToThree(hex){ return new THREE.Color(hex); }
+
+function createBodyMesh(body){
+  const r = massToRadius(body.mass);
+  const geo = new THREE.SphereGeometry(r, 40, 30);
+  const col = hexToThree(body.color);
+  // Use MeshStandardMaterial for solid, physically-based look with clear color differentiation
+  const mat = new THREE.MeshStandardMaterial({
+    color: col,
+    emissive: col.clone().multiplyScalar(0.35),
+    roughness: 0.38,
+    metalness: 0.22,
+    transparent: false
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(body.x, body.y, body.z);
+  mesh.castShadow = true;
+
+  // Glow sprite — stronger, tinted to body color for clear visual distinction
+  const spriteMat = new THREE.SpriteMaterial({
+    color: col, transparent:true, opacity:0.32, sizeAttenuation:true
+  });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(r*4.5, r*4.5, 1);
+  mesh.add(sprite);
+
+  // Selection ring (initially invisible)
+  const ringGeo = new THREE.TorusGeometry(r+6, 1.5, 8, 64);
+  const ringMat = new THREE.MeshBasicMaterial({color:0xff4dff, transparent:true, opacity:0});
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI/2;
+  mesh.add(ring);
+
+  body.mesh = mesh;
+  body.ring = ring;
+  body.r = r;
+  body.trail3d = [];
+  body.trailLine = null;
+  scene.add(mesh);
+  updateChargeVisual(body);
+  updateBodyLabel(body);
+}
+
+// Letter label: A, B, C... shown on each body — small but readable
+function updateBodyLabel(body){
+  if(body.bodyLabel){
+    body.mesh.remove(body.bodyLabel);
+    // Dispose GPU resources to prevent texture memory leak
+    if(body.bodyLabel.material){ if(body.bodyLabel.material.map) body.bodyLabel.material.map.dispose(); body.bodyLabel.material.dispose(); }
+    body.bodyLabel = null;
+  }
+  const idx = bodies.indexOf(body);
+  const letter = idx >= 0 ? String.fromCharCode(65 + (idx % 26)) : '?';
+  const r = body.r;
+  const canvas = document.createElement('canvas');
+  canvas.width = 128; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,128,128);
+  // Subtle dark disc for contrast, no harsh circle
+  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  ctx.beginPath(); ctx.arc(64,64,36,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.font = 'bold 38px "Orbitron", monospace, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(letter, 64, 66);
+  const tex = new THREE.CanvasTexture(canvas);
+  const lm = new THREE.SpriteMaterial({map:tex, transparent:true, opacity:0.88, depthTest:false});
+  const label = new THREE.Sprite(lm);
+  // Scale to ~65% of ball diameter — small but visible
+  label.scale.set(r*1.3, r*1.3, 1);
+  label.position.set(0, 0, 0);
+  body.mesh.add(label);
+  body.bodyLabel = label;
+}
+
+function updateChargeVisual(body){
+  // Remove old charge glow/label and dispose GPU resources
+  if(body.chargeGlow){
+    body.mesh.remove(body.chargeGlow);
+    if(body.chargeGlow.material){ body.chargeGlow.material.dispose(); }
+    body.chargeGlow = null;
+  }
+  if(body.chargeLabel){
+    body.mesh.remove(body.chargeLabel);
+    if(body.chargeLabel.material){ if(body.chargeLabel.material.map) body.chargeLabel.material.map.dispose(); body.chargeLabel.material.dispose(); }
+    body.chargeLabel = null;
+  }
+  if(body.charge === 0) return;
+  const r = body.r;
+  const isPos = body.charge > 0;
+  const glowCol = isPos ? new THREE.Color(1,0.25,0.25) : new THREE.Color(0.2,0.5,1);
+  // Charge glow sprite (outer halo different from body glow)
+  const gm = new THREE.SpriteMaterial({color:glowCol, transparent:true, opacity:0.28, sizeAttenuation:true});
+  const glow = new THREE.Sprite(gm);
+  glow.scale.set(r*7, r*7, 1);
+  body.mesh.add(glow);
+  body.chargeGlow = glow;
+  // Canvas label sprite: +/- sign
+  const canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,64,64);
+  ctx.fillStyle = isPos ? '#ff8888' : '#88aaff';
+  ctx.font = 'bold 44px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(isPos ? '+' : '−', 32, 32);
+  const tex = new THREE.CanvasTexture(canvas);
+  const lm = new THREE.SpriteMaterial({map:tex, transparent:true, opacity:0.95, depthTest:false});
+  const label = new THREE.Sprite(lm);
+  label.scale.set(r*1.8, r*1.8, 1);
+  label.position.set(0, r*0.6, 0);
+  body.mesh.add(label);
+  body.chargeLabel = label;
+}
+
+// ══════════════════════════════════════════════════════
+// SHAPE PRESETS — spawn bodies at shape vertices + centre
+// ══════════════════════════════════════════════════════
+function spawnShape(shapeName) {
+  const scale = parseInt(document.getElementById('shape-scale-slider').value) || 60;
+  const cx = 0, cy = 0, cz = 0; // spawn centred at world origin
+
+  // Returns array of {x,y,z} vertex positions (local coords scaled by `scale`)
+  // Centre vertex is always added separately at [0,0,0]
+  function ring2D(n, r) {
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const a = (2 * Math.PI * i) / n - Math.PI / 2;
+      pts.push({ x: Math.cos(a) * r, y: 0, z: Math.sin(a) * r });
+    }
+    return pts;
+  }
+
+  let vertices = [];
+
+  switch (shapeName) {
+    // ── 2D shapes (flat on XZ plane) ──
+    case 'line3': {
+      vertices = [
+        { x: -scale, y: 0, z: 0 },
+        { x: 0,      y: 0, z: 0 },
+        { x:  scale, y: 0, z: 0 },
+      ];
+      break;
+    }
+    case 'triangle': {
+      vertices = ring2D(3, scale);
+      break;
+    }
+    case 'square': {
+      vertices = ring2D(4, scale);
+      break;
+    }
+    case 'pentagon': {
+      vertices = ring2D(5, scale);
+      break;
+    }
+    case 'hexagon': {
+      vertices = ring2D(6, scale);
+      break;
+    }
+    case 'circle8': {
+      vertices = ring2D(8, scale);
+      break;
+    }
+
+    // ── 3D shapes ──
+    case 'tetrahedron': {
+      // Regular tetrahedron
+      const h = scale * Math.sqrt(2/3);
+      const r2 = scale * Math.sqrt(2/3) * 0.816; // circumradius of base
+      const base = ring2D(3, scale * 0.8165);
+      base.forEach(v => { v.y = -h * 0.333; });
+      vertices = [
+        ...base,
+        { x: 0, y: h * 0.667, z: 0 }  // apex
+      ];
+      break;
+    }
+    case 'cube': {
+      const s = scale * 0.7;
+      for (let sx of [-s, s])
+        for (let sy of [-s, s])
+          for (let sz of [-s, s])
+            vertices.push({ x: sx, y: sy, z: sz });
+      break;
+    }
+    case 'octahedron': {
+      const s = scale;
+      vertices = [
+        { x:  s, y: 0, z: 0 }, { x: -s, y: 0, z: 0 },
+        { x: 0,  y: s, z: 0 }, { x: 0, y: -s, z: 0 },
+        { x: 0,  y: 0, z: s }, { x: 0,  y: 0, z: -s },
+      ];
+      break;
+    }
+    case 'triangular_prism': {
+      const base2 = ring2D(3, scale * 0.85);
+      const half = scale * 0.6;
+      base2.forEach(v => vertices.push({ x: v.x, y: -half, z: v.z }));
+      base2.forEach(v => vertices.push({ x: v.x, y:  half, z: v.z }));
+      break;
+    }
+    case 'square_pyramid': {
+      // Square base + apex
+      const base3 = ring2D(4, scale * 0.8);
+      base3.forEach(v => { v.y = -scale * 0.4; });
+      vertices = [
+        ...base3,
+        { x: 0, y: scale * 0.8, z: 0 } // apex
+      ];
+      break;
+    }
+    case 'tri_pyramid': {
+      // Triangular base + apex (like tetrahedron but flat base)
+      const base4 = ring2D(3, scale * 0.8);
+      base4.forEach(v => { v.y = -scale * 0.4; });
+      vertices = [
+        ...base4,
+        { x: 0, y: scale * 0.8, z: 0 }
+      ];
+      break;
+    }
+    case 'cone': {
+      // Circle of 8 base vertices + apex
+      const base5 = ring2D(8, scale * 0.8);
+      base5.forEach(v => { v.y = -scale * 0.5; });
+      vertices = [
+        ...base5,
+        { x: 0, y: scale * 0.7, z: 0 } // apex
+      ];
+      break;
+    }
+    case 'cylinder': {
+      // Two circles of 8 + centre top + centre bottom
+      const bot = ring2D(8, scale * 0.7);
+      const top = ring2D(8, scale * 0.7);
+      const half2 = scale * 0.6;
+      bot.forEach(v => { v.y = -half2; vertices.push(v); });
+      top.forEach(v => { v.y =  half2; vertices.push(v); });
+      // Add top/bottom circle-centre explicitly (as part of main set)
+      vertices.push({ x: 0, y: -half2, z: 0 });
+      vertices.push({ x: 0, y:  half2, z: 0 });
+      break;
+    }
+    default:
+      return;
+  }
+
+  // Compute geometric centroid so we can place the centre body exactly there
+  // (For cylinder/line3 we already handle centre internally; for others add centroid)
+  const needsCentre = !['line3','cylinder'].includes(shapeName);
+
+  // Place all vertex bodies
+  vertices.forEach(v => addBody(cx + v.x, cy + v.y, cz + v.z));
+
+  // Add centre body at geometric centroid
+  if (needsCentre) {
+    const n = vertices.length;
+    const gcx = vertices.reduce((s, v) => s + v.x, 0) / n;
+    const gcy = vertices.reduce((s, v) => s + v.y, 0) / n;
+    const gcz = vertices.reduce((s, v) => s + v.z, 0) / n;
+    addBody(cx + gcx, cy + gcy, cz + gcz);
+  }
+
+  const total = vertices.length + (needsCentre ? 1 : 0);
+  setHint(`✦ ${shapeName} spawned — ${total} bodies (vertices + centre) · scale ${scale}`);
+}
+
+function addBody(wx, wy, wz){
+  const activeG = activeGroupIdx >= 0 ? groups[activeGroupIdx] : null;
+  const color = activeG ? activeG.color : COLORS[colorIdx % COLORS.length];
+  colorIdx++;
+  const body = {
+    id: Date.now() + Math.random(),
+    x: wx, y: wy, z: wz,
+    mass: customMass,
+    color,
+    baseColor: color,
+    vx:0, vy:0, vz:0,
+    ax:0, ay:0, az:0,
+    mesh: null, ring: null, r:8, trail3d:[], trailLine:null,
+    trailOn: false,
+    charge: customChargeSign * customChargeMag,
+    chargeLabel: null
+  };
+  bodies.push(body);
+  createBodyMesh(body);
+  if(activeG){
+    activeG.members.add(body.id);
+    syncBodyColors();
+    rebuildGroupTabs();
+    rebuildGroupsPanel();
+  }
+  rebuildTrailPanel();
+  rebuildCamButtons();
+  const grpNote = activeG ? ` → ${activeG.name}` : '';
+  setHint(`${bodies.length} bod${bodies.length>1?'ies':'y'} added${grpNote}`);
+}
+
+function removeBodyMesh(body){
+  if(body.mesh){
+    scene.remove(body.mesh);
+    body.mesh.geometry.dispose();
+    if(body.mesh.material) body.mesh.material.dispose();
+    // Dispose all child resources (glow sprite, ring, charge glow, charge label, body label)
+    body.mesh.children.forEach(c=>{
+      if(c.geometry) c.geometry.dispose();
+      if(c.material){ if(c.material.map) c.material.map.dispose(); c.material.dispose(); }
+    });
+  }
+  if(body.trailLine){
+    scene.remove(body.trailLine);
+    body.trailLine.geometry.dispose();
+    if(body.trailLine.material) body.trailLine.material.dispose();
+  }
+  body.mesh = null; body.trailLine = null;
+}
+
+// ── CoM computation ────────────────────────────────────────
+function comOf(arr){
+  if(!arr.length) return null;
+  let tm=0, wx=0, wy=0, wz=0;
+  for(const b of arr){ tm+=b.mass; wx+=b.mass*b.x; wy+=b.mass*b.y; wz+=b.mass*b.z; }
+  if(tm === 0){
+    // All massless: use geometric centroid to avoid NaN
+    let gx=0, gy=0, gz=0;
+    for(const b of arr){ gx+=b.x; gy+=b.y; gz+=b.z; }
+    const n = arr.length;
+    return {x:gx/n, y:gy/n, z:gz/n, totalMass:0};
+  }
+  return {x:wx/tm, y:wy/tm, z:wz/tm, totalMass:tm};
+}
+function getGroupBodies(g){ return bodies.filter(b=>g.members.has(b.id)); }
+function getSubBodies(){ return activeGroupIdx>=0 ? getGroupBodies(groups[activeGroupIdx]) : []; }
+
+// ── CoM sphere markers ─────────────────────────────────────
+function initComMarkers(){
+  // System CoM marker
+  const geo1 = new THREE.SphereGeometry(8,16,12);
+  const mat1 = new THREE.MeshBasicMaterial({color:0xffd700, transparent:true, opacity:.9});
+  sysComMesh = new THREE.Mesh(geo1,mat1);
+  const rg = new THREE.TorusGeometry(14,1.5,8,48);
+  const rm = new THREE.MeshBasicMaterial({color:0xffd700, transparent:true, opacity:.6});
+  sysComMesh.add(new THREE.Mesh(rg,rm));
+  sysComMesh.visible = false;
+  scene.add(sysComMesh);
+}
+initComMarkers();
+initAppPointMesh();
+
+function createGroupComMesh(colorHex){
+  const geo = new THREE.SphereGeometry(7,16,12);
+  const mat = new THREE.MeshBasicMaterial({color:colorHex, transparent:true, opacity:.9});
+  const mesh = new THREE.Mesh(geo,mat);
+  mesh.visible = false;
+  scene.add(mesh);
+  return mesh;
+}
+
+// Per-body CoM lines — persistent, updated in place
+// We keep a pool of line objects and update their positions
+let sysLinePool = [];   // {line, geo}
+// Per-group line pools are on each group object
+
+// CoM trails
+const comTrailSys = { trail: [], line: null, color: 0xffd700 };
+// Per-group com trails are on each group object
+
+function ensureLinePool(pool, count, color){
+  while(pool.length < count){
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+    const mat = new THREE.LineBasicMaterial({color, transparent:true, opacity:.4, vertexColors:false});
+    const line = new THREE.Line(geo, mat);
+    scene.add(line);
+    pool.push({line, geo});
+  }
+  // Hide excess
+  for(let i=count; i<pool.length; i++) pool[i].line.visible = false;
+}
+
+function updateLinePool(pool, pairs, color){
+  ensureLinePool(pool, pairs.length, color);
+  for(let i=0;i<pairs.length;i++){
+    const {a, b} = pairs[i];
+    const pos = pool[i].geo.attributes.position;
+    pos.setXYZ(0, a.x, a.y, a.z);
+    pos.setXYZ(1, b.x, b.y, b.z);
+    pos.needsUpdate = true;
+    pool[i].line.visible = true;
+    pool[i].line.material.color.set(color);
+  }
+}
+
+function updateComMarkers(nowMs){
+  const sysCom = comOf(bodies);
+  const t = nowMs * 0.001;
+
+  // System CoM
+  if(showSysCom && sysCom && bodies.length >= 1){
+    sysComMesh.position.set(sysCom.x, sysCom.y, sysCom.z);
+    sysComMesh.visible = true;
+    sysComMesh.children[0].rotation.x = t;
+    sysComMesh.children[0].rotation.z = t * 0.7;
+  } else {
+    sysComMesh.visible = false;
+  }
+
+  // System CoM lines
+  if(showLines && sysCom && bodies.length >= 1){
+    const pairs = bodies.map(b=>({a:{x:b.x,y:b.y,z:b.z}, b:{x:sysCom.x,y:sysCom.y,z:sysCom.z}}));
+    updateLinePool(sysLinePool, pairs, 0x00ffcc);
+  } else {
+    ensureLinePool(sysLinePool, 0, 0);
+  }
+
+  // Per-group CoM markers + lines
+  for(const g of groups){
+    const gBods = getGroupBodies(g);
+    const gCom = gBods.length >= 1 ? comOf(gBods) : null;
+    if(gCom && g.showCom){
+      g.comMesh.position.set(gCom.x, gCom.y, gCom.z);
+      g.comMesh.visible = true;
+    } else {
+      g.comMesh.visible = false;
+    }
+    if(g.showLines && gCom && gBods.length >= 1){
+      const pairs = gBods.map(b=>({a:{x:b.x,y:b.y,z:b.z}, b:{x:gCom.x,y:gCom.y,z:gCom.z}}));
+      updateLinePool(g.linePool, pairs, g.colorHex);
+    } else {
+      ensureLinePool(g.linePool, 0, 0);
+    }
+  }
+
+  updateStats(sysCom);
+}
+
+function updateComTrail(ct, pos){
+  if(!pos) return;
+  ct.trail.push(pos.x, pos.y, pos.z);
+  if(ct.trail.length > MAX_TRAIL * 3) ct.trail.splice(0, 3);
+  const count = ct.trail.length / 3;
+  if(count < 2) return;
+  if(!ct.line){
+    const geo = new THREE.BufferGeometry();
+    const buf = new Float32Array(MAX_TRAIL * 3);
+    geo.setAttribute('position', new THREE.BufferAttribute(buf, 3));
+    geo.setDrawRange(0, 0);
+    const mat = new THREE.LineBasicMaterial({color: ct.color, transparent:true, opacity:.85, linewidth:2});
+    ct.line = new THREE.Line(geo, mat);
+    scene.add(ct.line);
+  }
+  const attr = ct.line.geometry.attributes.position;
+  for(let i=0;i<ct.trail.length;i++) attr.array[i] = ct.trail[i];
+  attr.needsUpdate = true;
+  ct.line.geometry.setDrawRange(0, count);
+}
+
+// ── Trails ─────────────────────────────────────────────────
+const MAX_TRAIL = 300;
+function updateTrails(){
+  for(const b of bodies){
+    if(!b.trailOn){
+      // hide trail if turned off
+      if(b.trailLine){ b.trailLine.visible = false; }
+      continue;
+    }
+    b.trail3d.push(b.x, b.y, b.z);
+    if(b.trail3d.length > MAX_TRAIL * 3) b.trail3d.splice(0, 3);
+    const count = b.trail3d.length / 3;
+    if(count < 2) continue;
+    if(!b.trailLine){
+      const geo = new THREE.BufferGeometry();
+      const buf = new Float32Array(MAX_TRAIL * 3);
+      geo.setAttribute('position', new THREE.BufferAttribute(buf, 3));
+      geo.setDrawRange(0, 0);
+      const mat = new THREE.LineBasicMaterial({color: hexToThree(b.color), transparent:true, opacity:.55});
+      b.trailLine = new THREE.Line(geo, mat);
+      scene.add(b.trailLine);
+    }
+    b.trailLine.visible = true;
+    const attr = b.trailLine.geometry.attributes.position;
+    const len = b.trail3d.length;
+    for(let i=0;i<len;i++) attr.array[i] = b.trail3d[i];
+    attr.needsUpdate = true;
+    b.trailLine.geometry.setDrawRange(0, count);
+  }
+  // CoM trails
+  if(comTrailSysOn) updateComTrail(comTrailSys, comOf(bodies));
+  else if(comTrailSys.line) comTrailSys.line.visible = false;
+  // Per-group CoM trails
+  for(const g of groups){
+    if(g.trailOn){
+      const gBods = getGroupBodies(g);
+      updateComTrail(g.comTrail, gBods.length >= 1 ? comOf(gBods) : null);
+    } else if(g.comTrail.line){ g.comTrail.line.visible=false; }
+  }
+}
+
+// ── Physics ────────────────────────────────────────────────
+const TARGET_DT = 1/60;
+
+// Inelastic collision response between two solid spheres.
+// Bodies stop on contact with minimal bounce-back (e=0.08).
+function resolveCollisions(){
+  // Run multiple substeps so fast-moving bodies don't tunnel through each other
+  const SUBSTEPS = 3;
+  for(let step=0; step<SUBSTEPS; step++){
+    for(let i=0;i<bodies.length;i++){
+      for(let j=i+1;j<bodies.length;j++){
+        const bi=bodies[i], bj=bodies[j];
+        const dx=bj.x-bi.x, dy=bj.y-bi.y, dz=bj.z-bi.z;
+        const distSq = dx*dx+dy*dy+dz*dz;
+        const minDist = bi.r + bj.r;
+        if(distSq >= minDist*minDist) continue;
+
+        const dist = Math.sqrt(distSq) || 0.001;
+        const nx=dx/dist, ny=dy/dist, nz=dz/dist;
+
+        // Push surfaces to exactly touching (100% correction per substep)
+        const overlap = (minDist - dist);
+        const mi = Math.max(bi.mass, MIN_INERTIAL_MASS);
+        const mj = Math.max(bj.mass, MIN_INERTIAL_MASS);
+        const totalM = mi + mj;
+        bi.x -= nx * overlap * mj / totalM;
+        bi.y -= ny * overlap * mj / totalM;
+        bi.z -= nz * overlap * mj / totalM;
+        bj.x += nx * overlap * mi / totalM;
+        bj.y += ny * overlap * mi / totalM;
+        bj.z += nz * overlap * mi / totalM;
+
+        // Relative velocity along normal
+        const dvx = bi.vx - bj.vx;
+        const dvy = bi.vy - bj.vy;
+        const dvz = bi.vz - bj.vz;
+        const vRel = dvx*nx + dvy*ny + dvz*nz;
+        if(vRel <= 0) continue;
+
+        // e=0.08: nearly inelastic
+        const e = 0.08;
+        const impulse = -(1 + e) * vRel / (1/mi + 1/mj);
+        bi.vx += impulse*nx/mi; bi.vy += impulse*ny/mi; bi.vz += impulse*nz/mi;
+        bj.vx -= impulse*nx/mj; bj.vy -= impulse*ny/mj; bj.vz -= impulse*nz/mj;
+
+        // Surface friction
+        const mu = 0.25;
+        const tang_dvx = dvx - vRel*nx;
+        const tang_dvy = dvy - vRel*ny;
+        const tang_dvz = dvz - vRel*nz;
+        const tImp = mu / (1/mi + 1/mj);
+        bi.vx -= tang_dvx*tImp/mi; bi.vy -= tang_dvy*tImp/mi; bi.vz -= tang_dvz*tImp/mi;
+        bj.vx += tang_dvx*tImp/mj; bj.vy += tang_dvy*tImp/mj; bj.vz += tang_dvz*tImp/mj;
+
+        // Update mesh positions immediately so next substep sees correct positions
+        if(bi.mesh) bi.mesh.position.set(bi.x, bi.y, bi.z);
+        if(bj.mesh) bj.mesh.position.set(bj.x, bj.y, bj.z);
+      }
+    }
+  }
+}
+
+function applyForces(dt){
+  // Correct Euler integration: Δv = (F/m) * dt — frame-rate independent.
+  // dt is already clamped in the animate loop; no re-clamp needed here.
+  const clampedDt = dt;
+
+  // Apply Newton's 3rd-law pair: inverse-square gravity + Coulomb
+  function applyPair(bi, bj, gravOn, coulombOn){
+    const dx=bj.x-bi.x, dy=bj.y-bi.y, dz=bj.z-bi.z;
+    const dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
+    const minDist = bi.r+bj.r+1;
+    if(dist < minDist) return;
+    const invDist = 1/dist;
+    const invDist2 = invDist*invDist;
+    let fx=0, fy=0, fz=0;
+
+    // Gravity: F = G·m1·m2/r²  (attractive → along +dx from bi toward bj)
+    if(gravOn && bi.mass>0 && bj.mass>0){
+      const fg = G * bi.mass * bj.mass * invDist2;
+      fx += fg*dx*invDist;
+      fy += fg*dy*invDist;
+      fz += fg*dz*invDist;
+    }
+
+    // Coulomb: F = Ke·q1·q2/r²  (repulsive for like charges → subtract)
+    if(coulombOn && bi.charge!==0 && bj.charge!==0){
+      const fc = K_E * bi.charge * bj.charge * invDist2;
+      fx -= fc*dx*invDist;
+      fy -= fc*dy*invDist;
+      fz -= fc*dz*invDist;
+    }
+
+    // Δv = (F/m) · dt  — correct Euler, frame-rate independent
+    const imi = 1/Math.max(bi.mass, MIN_INERTIAL_MASS);
+    const imj = 1/Math.max(bj.mass, MIN_INERTIAL_MASS);
+    bi.vx += fx*imi*clampedDt; bi.vy += fy*imi*clampedDt; bi.vz += fz*imi*clampedDt;
+    bj.vx -= fx*imj*clampedDt; bj.vy -= fy*imj*clampedDt; bj.vz -= fz*imj*clampedDt;
+  }
+
+  // Build per-body group membership for fast lookup
+  const bodyGroupMap = new Map();
+  for(const g of groups){
+    for(const id of g.members) bodyGroupMap.set(id, g);
+  }
+
+  // Per-group gravity + coulomb (within each group)
+  for(const g of groups){
+    if(!g.gravOn && !g.coulombOn) continue;
+    const gBods = getGroupBodies(g);
+    for(let i=0;i<gBods.length;i++){
+      for(let j=i+1;j<gBods.length;j++){
+        applyPair(gBods[i], gBods[j], g.gravOn, g.coulombOn);
+      }
+    }
+  }
+
+  // Global gravity + coulomb for ungrouped bodies (legacy global toggles)
+  if(gravityOn || coulombOn){
+    const ungrouped = bodies.filter(b=>!bodyGroupMap.has(b.id));
+    for(let i=0;i<ungrouped.length;i++){
+      for(let j=i+1;j<ungrouped.length;j++){
+        applyPair(ungrouped[i], ungrouped[j], gravityOn, coulombOn);
+      }
+    }
+  }
+
+  // ── GLOBAL cross-group gravity + coulomb (all bodies, ignores group boundaries) ──
+  if(globalGravOn || globalCoulombOn){
+    for(let i=0;i<bodies.length;i++){
+      for(let j=i+1;j<bodies.length;j++){
+        applyPair(bodies[i], bodies[j], globalGravOn, globalCoulombOn);
+      }
+    }
+  }
+
+  // Positions and collision resolution are handled centrally in the animate loop
+}
+// keep legacy name alias
+const applyGravity = applyForces;
+
+// ── Selection ring update ──────────────────────────────────
+function updateSelectionRings(nowMs){
+  // Build a map: bodyId → group color hex
+  const bodyGroupColor = new Map();
+  for(const g of groups){
+    for(const id of g.members) bodyGroupColor.set(id, g.colorHex);
+  }
+  for(const b of bodies){
+    if(b.ring){
+      const inGroup = bodyGroupColor.has(b.id);
+      b.ring.material.opacity = inGroup ? 0.9 : 0;
+      if(inGroup){
+        b.ring.material.color.setHex(bodyGroupColor.get(b.id));
+        const t = nowMs*0.003;
+        b.ring.scale.setScalar(1 + 0.08*Math.sin(t));
+      }
+    }
+  }
+}
+
+let _lastStats = {};
+function setEl(id, val){ if(_lastStats[id]!==val){ _lastStats[id]=val; const el=document.getElementById(id); if(el) el.textContent=val; } }
+
+function forceUpdateStats(){
+  // Clear cache so all values re-render even if numerically identical
+  _lastStats = {};
+  updateComMarkers(performance.now());
+}
+
+function updateStats(sysCom){
+  setEl('s-n',    bodies.length);
+  setEl('s-mass', sysCom ? sysCom.totalMass.toFixed(0)+' kg' : '—');
+  setEl('s-cx',   sysCom ? sysCom.x.toFixed(1) : '—');
+  setEl('s-cy',   sysCom ? sysCom.y.toFixed(1) : '—');
+  setEl('s-cz',   sysCom ? sysCom.z.toFixed(1) : '—');
+
+  // Groups info panel
+  const listEl = document.getElementById('groups-info-list');
+  if(listEl){
+    let html = '';
+    for(let i=0;i<groups.length;i++){
+      const g = groups[i];
+      const gBods = getGroupBodies(g);
+      const gCom = gBods.length ? comOf(gBods) : null;
+      const isActive = i === activeGroupIdx;
+      html += `<div class="group-info-block" style="border-color:${g.color}33;background:${g.color}09;margin-bottom:5px">
+        <div class="gi-header">
+          <div class="gi-dot" style="background:${g.color}"></div>
+          <span style="color:${g.color}">${g.name}</span>
+          <span style="color:rgba(200,216,232,.4);font-size:.52rem;font-weight:400">${gBods.length} bod${gBods.length!==1?'ies':'y'}${isActive?' · ACTIVE':''}</span>
+        </div>
+        <div>Mass: <span style="color:${g.color};font-weight:700">${gCom?gCom.totalMass.toFixed(0)+' kg':'—'}</span></div>
+        <div>CoM: <span style="color:${g.color};font-weight:700">${gCom?gCom.x.toFixed(1)+', '+gCom.y.toFixed(1)+', '+gCom.z.toFixed(1):'—'}</span></div>
+      </div>`;
+    }
+    if(!groups.length) html = '<div style="font-size:.57rem;color:rgba(200,216,232,.3)">No groups — create one in Controls</div>';
+    listEl.innerHTML = html;
+  }
+
+  // Badge
+  const activeG = activeGroupIdx>=0 ? groups[activeGroupIdx] : null;
+  const n = activeG ? activeG.members.size : 0;
+  setEl('sel-badge-n', n);
+  setEl('sel-badge-g', activeG ? activeG.name : '—');
+  document.getElementById('sel-badge').classList.toggle('show', n>0 && activeGroupIdx>=0);
+
+  // Force target notes (delegated to helper so toggle stays in sync)
+  updateForceTargetNotes();
+}
+
+// ═══════════════════════════════════════════════════════════
+// RAYCASTING / PICKING
+// ═══════════════════════════════════════════════════════════
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function screenToWorld(ex, ey){
+  mouse.x = (ex/window.innerWidth)*2-1;
+  mouse.y = -(ey/window.innerHeight)*2+1;
+  raycaster.setFromCamera(mouse, camera);
+  // Plane faces the camera and passes through panOffset (the orbit/look-at target).
+  // THREE.Plane(normal, constant) uses the convention: normal·x + constant = 0,
+  // so constant = -normal.dot(pointOnPlane).
+  const camDir = new THREE.Vector3().subVectors(panOffset, camera.position).normalize();
+  const constant = -camDir.dot(panOffset);
+  const plane = new THREE.Plane(camDir, constant);
+  const pt = new THREE.Vector3();
+  raycaster.ray.intersectPlane(plane, pt);
+  return pt;
+}
+
+function pickBody(ex, ey){
+  mouse.x = (ex/window.innerWidth)*2-1;
+  mouse.y = -(ey/window.innerHeight)*2+1;
+  raycaster.setFromCamera(mouse, camera);
+  const meshes = bodies.map(b=>b.mesh).filter(Boolean);
+  // intersectObjects with recursive=false, we only care about the body sphere itself
+  const hits = raycaster.intersectObjects(meshes, false);
+  if(!hits.length) return null;
+  return bodies.find(b=>b.mesh === hits[0].object) || null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// INTERACTION — smooth multi-touch orbit/pan/zoom with inertia
+// ═══════════════════════════════════════════════════════════
+
+// Camera helpers
+function getCameraVectors(){
+  const forward = new THREE.Vector3().subVectors(panOffset, camera.position).normalize();
+  const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+  const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+  return {right, up};
+}
+
+// ── Active pointer tracking ────────────────────────────────
+const activePointers = new Map(); // pointerId → {x, y}
+
+function pointerMidpoint(){
+  const pts = [...activePointers.values()];
+  return { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+}
+function pointerSpread(){
+  const pts = [...activePointers.values()];
+  const dx = pts[0].x - pts[1].x, dy = pts[0].y - pts[1].y;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+
+// ── Inertia state ──────────────────────────────────────────
+// Orbit inertia
+let orbitVelTheta = 0, orbitVelPhi = 0;
+// Pan inertia
+let panVelX = 0, panVelY = 0; // in camera-right and camera-up units
+// Zoom inertia
+let zoomVel = 0;
+const INERTIA_DECAY = 0.88; // per-frame multiplier (lower = faster stop)
+const ORBIT_SENSITIVITY = 0.003;
+const PAN_SENSITIVITY = 0.0012;
+const ZOOM_SENSITIVITY = 0.001;
+
+// Smooth the raw deltas with a tiny EMA to reduce jitter from noisy touch input
+let smoothDdx = 0, smoothDdy = 0;
+const SMOOTH_A = 0.35; // EMA alpha (higher = more responsive, less smooth)
+
+// Gesture state
+let dragBody = null;
+let dragBodyPlane = new THREE.Plane();
+let gestureLastMid = {x:0, y:0};
+let gestureLastSpread = 0;
+let singleDownPos = {x:0, y:0};
+let singleMoved = false;
+let hitOnDown = null;
+
+// Long-press
+let longPressTimer = null;
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_THRESHOLD = 10;
+const lpRing = document.getElementById('longpress-ring');
+
+function cancelLongPress(){
+  if(longPressTimer){ clearTimeout(longPressTimer); longPressTimer=null; }
+  lpRing.classList.remove('active');
+}
+
+// Called from the render loop each frame to apply inertia
+function tickCameraInertia(){
+  if(activePointers.size > 0) return; // don't drift while touching
+  if(Math.abs(orbitVelTheta) > 0.0001 || Math.abs(orbitVelPhi) > 0.0001){
+    orbitTheta += orbitVelTheta;
+    orbitPhi = Math.max(0.05, Math.min(Math.PI - 0.05, orbitPhi + orbitVelPhi));
+    orbitVelTheta *= INERTIA_DECAY;
+    orbitVelPhi   *= INERTIA_DECAY;
+  }
+  if(Math.abs(panVelX) > 0.001 || Math.abs(panVelY) > 0.001){
+    const {right, up} = getCameraVectors();
+    panOffset.addScaledVector(right, -panVelX);
+    panOffset.addScaledVector(up,     panVelY);
+    panVelX *= INERTIA_DECAY;
+    panVelY *= INERTIA_DECAY;
+  }
+  if(Math.abs(zoomVel) > 0.01){
+    orbitRadius = Math.max(30, Math.min(50000, orbitRadius + zoomVel));
+    zoomVel *= INERTIA_DECAY;
+  }
+}
+
+canvas3d.addEventListener('contextmenu', e=>e.preventDefault());
+
+// How many pixels to move before we decide it's a drag vs a tap
+const DRAG_START_THRESHOLD = 6;
+
+canvas3d.addEventListener('pointerdown', e=>{
+  if(e.target !== canvas3d) return;
+  e.preventDefault();
+  canvas3d.setPointerCapture(e.pointerId);
+  activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+
+  // Kill inertia on touch
+  orbitVelTheta = 0; orbitVelPhi = 0;
+  panVelX = 0; panVelY = 0; zoomVel = 0;
+  smoothDdx = 0; smoothDdy = 0;
+
+  if(activePointers.size === 1){
+    singleDownPos = {x: e.clientX, y: e.clientY};
+    singleMoved = false;
+    hitOnDown = pickBody(e.clientX, e.clientY);
+
+    cancelLongPress();
+    if(hitOnDown){
+      lpRing.style.left = e.clientX + 'px';
+      lpRing.style.top  = e.clientY + 'px';
+      lpRing.classList.add('active');
+      longPressTimer = setTimeout(()=>{
+        longPressTimer = null;
+        lpRing.classList.remove('active');
+        if(!singleMoved){
+          if(mode === 'select'){
+            openEditPanel(hitOnDown, singleDownPos.x + 8, singleDownPos.y + 8);
+          } else {
+            showCtxMenu(hitOnDown, singleDownPos.x + 4, singleDownPos.y + 4);
+          }
+        }
+      }, LONG_PRESS_MS);
+
+      // Pre-arm drag plane immediately so drag starts the instant threshold is crossed
+      const normal = new THREE.Vector3().subVectors(camera.position, panOffset).normalize();
+      dragBodyPlane.setFromNormalAndCoplanarPoint(normal,
+        new THREE.Vector3(hitOnDown.x, hitOnDown.y, hitOnDown.z));
+    }
+
+    // Move mode: begin drag immediately on pointerdown
+    if(mode === 'move' && hitOnDown){
+      dragBody = hitOnDown;
+      dragBody.vx = 0; dragBody.vy = 0; dragBody.vz = 0;
+    }
+
+  } else if(activePointers.size === 2){
+    cancelLongPress();
+    dragBody = null;
+    gestureLastMid = pointerMidpoint();
+    gestureLastSpread = pointerSpread();
+  }
+}, {passive: false});
+
+canvas3d.addEventListener('pointermove', e=>{
+  if(!activePointers.has(e.pointerId)) return;
+
+  const prev = activePointers.get(e.pointerId);
+  const rawDdx = e.clientX - prev.x;
+  const rawDdy = e.clientY - prev.y;
+  activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+
+  // Long-press cancellation threshold
+  const dx = e.clientX - singleDownPos.x;
+  const dy = e.clientY - singleDownPos.y;
+  if(Math.abs(dx) > LONG_PRESS_MOVE_THRESHOLD || Math.abs(dy) > LONG_PRESS_MOVE_THRESHOLD){
+    if(!singleMoved){ cancelLongPress(); singleMoved = true; }
+  }
+
+  if(activePointers.size === 2){
+    // ── Two-finger: pinch-zoom + pan ──
+    const mid = pointerMidpoint();
+    const spread = pointerSpread();
+
+    if(gestureLastSpread > 0){
+      const ratio = gestureLastSpread / spread;
+      const zoomDelta = (orbitRadius * ratio) - orbitRadius;
+      orbitRadius = Math.max(30, Math.min(50000, orbitRadius + zoomDelta));
+      zoomVel = zoomDelta * 0.4;
+    }
+
+    const ddx = mid.x - gestureLastMid.x;
+    const ddy = mid.y - gestureLastMid.y;
+    const {right, up} = getCameraVectors();
+    const scale = orbitRadius * PAN_SENSITIVITY;
+    panOffset.addScaledVector(right, -ddx * scale);
+    panOffset.addScaledVector(up,     ddy * scale);
+    panVelX = ddx * scale;
+    panVelY = ddy * scale;
+
+    gestureLastMid = mid;
+    gestureLastSpread = spread;
+
+    // Seeding orbit from current camera so pinch/pan doesn't snap
+    const rel = new THREE.Vector3().subVectors(camera.position, panOffset);
+    orbitRadius = rel.length();
+    orbitPhi = Math.acos(Math.max(-1, Math.min(1, rel.y / orbitRadius)));
+    orbitTheta = Math.atan2(rel.x, rel.z);
+
+    // Any manual touch switches to free orbit
+    setCameraMode('free');
+
+  } else if(activePointers.size === 1){
+    // ── Body drag: works in any mode once threshold crossed ──
+    if(!dragBody && hitOnDown && !longPressTimer){
+      // Threshold already cancelled long-press; start drag now
+      const dd = Math.sqrt(dx*dx + dy*dy);
+      if(dd >= DRAG_START_THRESHOLD){
+        dragBody = hitOnDown;
+        dragBody.vx = 0; dragBody.vy = 0; dragBody.vz = 0;
+      }
+    }
+    if(dragBody){
+      mouse.x = (e.clientX / window.innerWidth)  * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const pt = new THREE.Vector3();
+      if(raycaster.ray.intersectPlane(dragBodyPlane, pt)){
+        dragBody.x = pt.x; dragBody.y = pt.y; dragBody.z = pt.z;
+        dragBody.vx = 0; dragBody.vy = 0; dragBody.vz = 0;
+        dragBody.mesh.position.set(pt.x, pt.y, pt.z);
+      }
+    } else if(singleMoved){
+      // ── Orbit — always works, seeds free-orbit from current camera ──
+      // Sync orbit state from actual camera position first so no snap
+      const rel = new THREE.Vector3().subVectors(camera.position, panOffset);
+      const curR = rel.length();
+      if(curR > 0.01){
+        orbitRadius = curR;
+        orbitPhi    = Math.acos(Math.max(-1, Math.min(1, rel.y / curR)));
+        orbitTheta  = Math.atan2(rel.x, rel.z);
+      }
+
+      smoothDdx = SMOOTH_A * rawDdx + (1 - SMOOTH_A) * smoothDdx;
+      smoothDdy = SMOOTH_A * rawDdy + (1 - SMOOTH_A) * smoothDdy;
+
+      const dTheta = -smoothDdx * ORBIT_SENSITIVITY;
+      const dPhi   =  smoothDdy * ORBIT_SENSITIVITY;
+      orbitTheta += dTheta;
+      orbitPhi = Math.max(0.05, Math.min(Math.PI - 0.05, orbitPhi + dPhi));
+
+      orbitVelTheta = dTheta;
+      orbitVelPhi   = dPhi;
+
+      // Switch to free orbit so the manual drag isn't overridden
+      setCameraMode('free');
+      updateCamera();
+    }
+  }
+});
+
+canvas3d.addEventListener('pointerup', e=>{
+  const wasIn = activePointers.has(e.pointerId);
+  activePointers.delete(e.pointerId);
+  cancelLongPress();
+
+  if(!wasIn) return;
+
+  if(activePointers.size === 0){
+    const wasDraggingBody = !!dragBody;
+    dragBody = null;
+    if(wasDraggingBody) { hitOnDown = null; return; } // body was dragged — no tap action
+
+    if(!singleMoved){
+      if(mode === 'add'){
+        if(hitOnDown){
+          showCtxMenu(hitOnDown, singleDownPos.x + 4, singleDownPos.y + 4);
+        } else {
+          const pt = screenToWorld(singleDownPos.x, singleDownPos.y);
+          if(pt) addBody(pt.x, pt.y, pt.z);
+        }
+      } else if(mode === 'move'){
+        // tap (no drag) on a body in move mode → show ctx menu
+        if(hitOnDown) showCtxMenu(hitOnDown, singleDownPos.x + 4, singleDownPos.y + 4);
+      } else if(mode === 'select' && hitOnDown){
+        toggleSelect(hitOnDown, singleDownPos.x + 8, singleDownPos.y + 8);
+      }
+    }
+
+    hitOnDown = null;
+
+  } else if(activePointers.size === 1){
+    // 2 fingers → 1: reset single tracking to avoid jump
+    const rem = [...activePointers.values()][0];
+    singleDownPos = {x: rem.x, y: rem.y};
+    singleMoved = false;
+    gestureLastSpread = 0;
+    smoothDdx = 0; smoothDdy = 0;
+  }
+});
+
+canvas3d.addEventListener('pointercancel', e=>{
+  activePointers.delete(e.pointerId);
+  cancelLongPress();
+  dragBody = null;
+});
+
+// Mouse wheel zoom with smooth inertia
+canvas3d.addEventListener('wheel', e=>{
+  zoomVel += e.deltaY * 0.35;
+  zoomVel = Math.max(-80, Math.min(80, zoomVel));
+}, {passive: true});
+
+// ═══════════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════════
+function togglePanel(id){ document.getElementById(id).classList.toggle('collapsed'); }
+function setHint(t){ document.getElementById('hint').textContent=t; }
+
+function setMode(m){
+  mode=m;
+  ['add','move','select'].forEach(id=>document.getElementById('btn-'+id).classList.toggle('active',id===m));
+  document.getElementById('mode-tag').textContent={add:'ADD MODE',move:'DRAG MODE',select:'SELECT MODE'}[m];
+  document.getElementById('mode-tag').classList.toggle('sel-mode',m==='select');
+  setHint({add:'Tap empty space to add · Tap a body to edit · 1-finger drag to orbit',move:'Drag any body to move it · 1-finger drag to orbit',select:'Tap any body to edit it · Long-press for quick menu'}[m]);
+  if(m !== 'select') closeEditPanel();
+}
+
+function toggleGravity(){
+  gravityOn=!gravityOn;
+  document.getElementById('btn-grav').textContent='⟳ Gravity: '+(gravityOn?'ON':'OFF');
+  document.getElementById('btn-grav').classList.toggle('active',gravityOn);
+  // Do NOT reset velocities — bodies keep their momentum when gravity is toggled off
+  updateForcePanelLock();
+}
+
+function toggleLines(){
+  showLines=!showLines;
+  document.getElementById('btn-lines').textContent='⟵ CoM Lines: '+(showLines?'ON':'OFF');
+  document.getElementById('btn-lines').classList.toggle('active',showLines);
+}
+
+function toggleSysCom(){
+  showSysCom=!showSysCom;
+  if(!showSysCom) sysComMesh.visible=false;
+  document.getElementById('btn-sys-com').textContent='⊕ System CoM: '+(showSysCom?'ON':'OFF');
+  document.getElementById('btn-sys-com').classList.toggle('active',showSysCom);
+}
+
+function toggleTrails(){
+  // Legacy master toggle — opens trail panel and toggles all
+  togglePanel('trail-panel');
+}
+
+function setBodyTrail(body, on){
+  body.trailOn = on;
+  if(!on && body.trailLine){ body.trailLine.visible=false; body.trail3d=[]; }
+  rebuildTrailPanel();
+}
+
+function setAllTrails(on){
+  bodies.forEach(b=>{ b.trailOn=on; if(!on && b.trailLine){b.trailLine.visible=false;b.trail3d=[];} });
+  rebuildTrailPanel();
+}
+
+function clearAllTrails(){
+  bodies.forEach(b=>{
+    b.trail3d=[];
+    if(b.trailLine){
+      b.trailLine.visible=false;
+      // Also reset the draw range so the old geometry isn't rendered if made visible again
+      b.trailLine.geometry.setDrawRange(0,0);
+    }
+  });
+  if(comTrailSys.line){ comTrailSys.line.visible=false; comTrailSys.line.geometry.setDrawRange(0,0); } comTrailSys.trail=[];
+  for(const g of groups){
+    if(g.comTrail.line){ g.comTrail.line.visible=false; g.comTrail.line.geometry.setDrawRange(0,0); } g.comTrail.trail=[];
+  }
+}
+
+function toggleComTrail(which){
+  if(which==='sys'){
+    comTrailSysOn=!comTrailSysOn;
+    document.getElementById('tog-com-sys').classList.toggle('on', comTrailSysOn);
+    if(!comTrailSysOn && comTrailSys.line){ comTrailSys.line.visible=false; comTrailSys.trail=[]; }
+  }
+}
+
+function rebuildTrailPanel(){
+  const list = document.getElementById('trail-body-list');
+  if(!bodies.length){
+    list.innerHTML='<div style="font-size:.57rem;color:rgba(200,216,232,.3);text-align:center">No bodies yet</div>';
+    return;
+  }
+  list.innerHTML = bodies.map((b,i)=>`
+    <div class="trail-row">
+      <div class="trail-dot" style="background:${b.color}"></div>
+      <span class="trail-name">Body ${i+1} · ${b.mass}kg</span>
+      <div class="trail-tog ${b.trailOn?'on':''}" onclick="toggleBodyTrailById('${b.id}')"></div>
+    </div>`).join('');
+}
+
+function toggleBodyTrail(idx){
+  const b = bodies[idx];
+  if(!b) return;
+  b.trailOn = !b.trailOn;
+  if(!b.trailOn && b.trailLine){ b.trailLine.visible=false; b.trail3d=[]; }
+  rebuildTrailPanel();
+}
+
+function toggleBodyTrailById(id){
+  // Use stable body ID so stale array indices can't toggle the wrong body
+  const idNum = parseFloat(id);
+  const b = bodies.find(b=>b.id===idNum);
+  if(!b) return;
+  b.trailOn = !b.trailOn;
+  if(!b.trailOn && b.trailLine){ b.trailLine.visible=false; b.trail3d=[]; }
+  rebuildTrailPanel();
+}
+
+// ── Charge controls ───────────────────────────────────────
+function setChargeSign(s){
+  customChargeSign = s;
+  ['pos','zero','neg'].forEach(id=>document.getElementById('csign-'+id).classList.remove('active'));
+  if(s===1) document.getElementById('csign-pos').classList.add('active');
+  else if(s===0) document.getElementById('csign-zero').classList.add('active');
+  else document.getElementById('csign-neg').classList.add('active');
+  updateChargeDisplay();
+  // Recolor quick charge buttons
+  document.querySelectorAll('.qc-btn').forEach(btn=>{
+    btn.classList.remove('pos','neg');
+    btn.classList.add(s<0?'neg':'pos');
+  });
+}
+
+function setCustomChargeMag(mag){
+  customChargeMag = mag;
+  document.querySelectorAll('.qc-btn').forEach(btn=>btn.classList.toggle('active', parseInt(btn.textContent)===mag));
+  updateChargeDisplay();
+}
+
+function applyCustomChargeInput(){
+  const v = parseFloat(document.getElementById('custom-charge-input').value);
+  if(isNaN(v)||v<0){ setHint('Enter valid charge magnitude ≥0'); return; }
+  customChargeMag = Math.min(v, 9999);
+  document.getElementById('custom-charge-input').value='';
+  document.querySelectorAll('.qc-btn').forEach(b=>b.classList.remove('active'));
+  updateChargeDisplay();
+}
+document.getElementById('custom-charge-input').addEventListener('keydown',e=>{if(e.key==='Enter')applyCustomChargeInput();e.stopPropagation();});
+
+function updateChargeDisplay(){
+  const q = customChargeSign * customChargeMag;
+  const el = document.getElementById('cur-charge-display');
+  el.textContent = (q>0?'+':'')+q+' C';
+  el.style.color = q>0?'#f87171': q<0?'#60a5fa':'#a78bfa';
+}
+
+function toggleCoulomb(){
+  coulombOn=!coulombOn;
+  document.getElementById('btn-coulomb').textContent='⚡ Coulomb: '+(coulombOn?'ON':'OFF');
+  document.getElementById('btn-coulomb').classList.toggle('active',coulombOn);
+  // Do NOT reset velocities — bodies keep their momentum when Coulomb is toggled off
+  updateForcePanelLock();
+}
+
+function setCustomMass(m){
+  customMass=m;
+  document.getElementById('cur-mass-display').textContent=m+' kg';
+  document.getElementById('custom-mass-input').value='';
+  document.querySelectorAll('.qm-btn').forEach(btn=>btn.classList.toggle('active',parseInt(btn.textContent)===m));
+}
+
+function applyCustomMassInput(){
+  const v=parseInt(document.getElementById('custom-mass-input').value);
+  if(isNaN(v)||v<0){setHint('Enter valid mass ≥0 kg');return;}
+  customMass=Math.min(v,9999);
+  document.getElementById('cur-mass-display').textContent=customMass+' kg';
+  document.querySelectorAll('.qm-btn').forEach(b=>b.classList.remove('active'));
+}
+
+document.getElementById('custom-mass-input').addEventListener('keydown',e=>{if(e.key==='Enter')applyCustomMassInput();e.stopPropagation();});
+
+function toggleSelect(b, tapX, tapY){
+  // In select mode, just open the edit panel — group assignment is via the tap menu
+  openEditPanel(b, tapX, tapY);
+}
+
+function applyChargeToSelected(){
+  if(activeGroupIdx<0 || groups[activeGroupIdx].members.size===0){
+    setHint('No active group selection — tap a group first'); return;
+  }
+  const targets = bodies.filter(b=>groups[activeGroupIdx].members.has(b.id));
+  if(!targets.length){ setHint('No bodies in active group!'); return; }
+  const q = customChargeSign * customChargeMag;
+  for(const b of targets){
+    b.charge = q;
+    updateChargeVisual(b);
+  }
+  setHint(`Charge ${q>0?'+':''}${q} C applied to ${targets.length} bod${targets.length>1?'ies':'y'}`);
+}
+
+function applyMassToSelected(){
+  if(activeGroupIdx<0 || groups[activeGroupIdx].members.size===0){
+    setHint('No active group selection — tap a group first'); return;
+  }
+  const targets = bodies.filter(b=>groups[activeGroupIdx].members.has(b.id));
+  if(!targets.length){ setHint('No bodies in active group!'); return; }
+  for(const b of targets){
+    b.mass = customMass;
+    removeBodyMesh(b);
+    b.trail3d = []; b.trailLine = null;
+    createBodyMesh(b);
+  }
+  syncBodyColors(); // restore group colors & rings after batch mesh rebuild
+  rebuildTrailPanel();
+  setHint(`Mass ${customMass} kg applied to ${targets.length} bod${targets.length>1?'ies':'y'}`);
+}
+
+// ── Remove selected bodies ────────────────────────────────
+function removeSelectedBodies(){
+  if(activeGroupIdx<0 || groups[activeGroupIdx].members.size===0){
+    setHint('No active group or group is empty'); return;
+  }
+  const g = groups[activeGroupIdx];
+  const toRemove = bodies.filter(b=>g.members.has(b.id));
+  toRemove.forEach(b=>{ removeBodyMesh(b); for(const grp of groups) grp.members.delete(b.id); });
+  bodies = bodies.filter(b=>!toRemove.includes(b));
+  rebuildTrailPanel();
+  rebuildGroupTabs();
+  rebuildGroupsPanel();
+  rebuildAllBodyLabels();
+  syncBodyColors();
+  rebuildCamButtons();
+  forceUpdateStats();
+  setHint(`${toRemove.length} bod${toRemove.length>1?'ies':'y'} removed`);
+}
+
+// ── Context menu (right-click on body) ───────────────────
+let ctxTargetBody = null;
+const ctxMenu = document.getElementById('body-ctx-menu');
+
+function showCtxMenu(body, x, y){
+  ctxTargetBody = body;
+  const idx = bodies.indexOf(body);
+  const q = body.charge;
+  document.getElementById('ctx-title').textContent =
+    `BODY ${idx+1} (${String.fromCharCode(65+(idx%26))}) · ${body.mass}kg`;
+  // Group assignment section
+  const gs = document.getElementById('ctx-group-section');
+  if(groups.length === 0){
+    gs.innerHTML = `<div style="font-size:.55rem;color:rgba(255,77,255,.6);padding:5px 10px 2px;line-height:1.5">No groups yet — create one<br>in the Groups panel (✦)</div><hr class="ctx-sep">`;
+  } else {
+    const memberOf = new Set(groups.filter(g=>g.members.has(body.id)).map(g=>g.id));
+    let html = `<div style="font-size:.52rem;color:rgba(200,216,232,.45);padding:4px 10px 2px;letter-spacing:.06em;text-transform:uppercase">Assign to group</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 8px 6px">`;
+    groups.forEach((g,gi)=>{
+      const inGroup = memberOf.has(g.id);
+      html += `<button onclick="ctxToggleGroup('${g.id}')"
+        style="padding:5px 10px;border-radius:7px;border:2px solid ${g.color}${inGroup?'':'66'};
+        background:${inGroup?g.color+'33':'transparent'};color:${inGroup?'#fff':g.color};
+        font-family:'Space Mono',monospace;font-size:.58rem;cursor:pointer;
+        transition:all .15s;pointer-events:all;display:flex;align-items:center;gap:5px">
+        <span style="width:8px;height:8px;border-radius:50%;background:${g.color};display:inline-block;flex-shrink:0"></span>
+        ${g.name}${inGroup?' ✓':''}
+      </button>`;
+    });
+    html += `</div><hr class="ctx-sep">`;
+    gs.innerHTML = html;
+  }
+  const newQ = customChargeSign * customChargeMag;
+  const cEl = document.getElementById('ctx-charge-preview');
+  cEl.textContent = (newQ>0?'+':'')+newQ+' C';
+  cEl.style.color = newQ>0?'#f87171': newQ<0?'#60a5fa':'#a78bfa';
+  document.getElementById('ctx-mass-preview').textContent = customMass+' kg';
+  ctxMenu.style.left = Math.min(x, window.innerWidth-220)+'px';
+  ctxMenu.style.top  = Math.min(y, window.innerHeight-380)+'px';
+  ctxMenu.classList.add('show');
+}
+
+function ctxToggleGroup(gidStr){
+  if(!ctxTargetBody) return;
+  const gid = parseFloat(gidStr);
+  const g = groups.find(g=>g.id===gid);
+  if(!g) return;
+  if(g.members.has(ctxTargetBody.id)){
+    // Remove from this group
+    g.members.delete(ctxTargetBody.id);
+  } else {
+    // Remove from ALL other groups first (one body = one group)
+    for(const og of groups) og.members.delete(ctxTargetBody.id);
+    g.members.add(ctxTargetBody.id);
+    activeGroupIdx = groups.indexOf(g);
+  }
+  syncBodyColors();
+  rebuildGroupTabs();
+  rebuildGroupsPanel();
+  // Refresh the menu in place so checkmarks update
+  const x = parseFloat(ctxMenu.style.left);
+  const y = parseFloat(ctxMenu.style.top);
+  showCtxMenu(ctxTargetBody, x, y);
+}
+
+function hideCtxMenu(){ ctxMenu.classList.remove('show'); ctxTargetBody=null; }
+
+function ctxApplyCharge(){
+  if(!ctxTargetBody) return;
+  const q = customChargeSign * customChargeMag;
+  ctxTargetBody.charge = q;
+  updateChargeVisual(ctxTargetBody);
+  setHint(`Charge set to ${q>0?'+':''}${q} C on Body ${bodies.indexOf(ctxTargetBody)+1}`);
+  hideCtxMenu();
+}
+
+function ctxApplyMass(){
+  if(!ctxTargetBody) return;
+  ctxTargetBody.mass = customMass;
+  removeBodyMesh(ctxTargetBody);
+  ctxTargetBody.trail3d = []; ctxTargetBody.trailLine = null;
+  createBodyMesh(ctxTargetBody);
+  syncBodyColors(); // restore group color & ring after mesh rebuild
+  rebuildTrailPanel();
+  setHint(`Mass set to ${customMass} kg on Body ${bodies.indexOf(ctxTargetBody)+1}`);
+  hideCtxMenu();
+}
+
+function ctxRemoveBody(){
+  if(!ctxTargetBody) return;
+  const idx = bodies.indexOf(ctxTargetBody);
+  removeBodyMesh(ctxTargetBody);
+  for(const g of groups) g.members.delete(ctxTargetBody.id);
+  bodies.splice(idx, 1);
+  rebuildTrailPanel();
+  rebuildGroupTabs();
+  rebuildGroupsPanel();
+  rebuildCamButtons();
+  rebuildAllBodyLabels();
+  syncBodyColors();
+  forceUpdateStats();
+  setHint(`Body ${idx+1} removed`);
+  hideCtxMenu();
+}
+
+// Close ctx menu on click outside
+document.addEventListener('pointerdown', e=>{
+  if(!ctxMenu.contains(e.target)) hideCtxMenu();
+}, true);
+
+function selectAll(){
+  if(activeGroupIdx<0){ setHint('Create a group first'); return; }
+  bodies.forEach(b=>groups[activeGroupIdx].members.add(b.id));
+  syncBodyColors(); rebuildGroupTabs(); rebuildGroupsPanel();
+  setHint(`All ${bodies.length} bodies added to ${groups[activeGroupIdx].name}`);
+}
+// ── Group management ───────────────────────────────────────
+let groupCounter = 0;
+
+function createGroup(){
+  if(groups.length >= MAX_GROUPS){ setHint('Max 6 groups'); return; }
+  groupCounter++;
+  const idx = groups.length % GROUP_COLORS.length;
+  const g = {
+    id: Date.now(),
+    name: 'G'+groupCounter,
+    color: GROUP_COLORS[idx],
+    colorHex: GROUP_COLORS_HEX[idx],
+    members: new Set(),
+    comMesh: createGroupComMesh(GROUP_COLORS_HEX[idx]),
+    linePool: [],
+    trailOn: false,
+    comTrail: { trail:[], line:null, color: GROUP_COLORS_HEX[idx] },
+    // Per-group force toggles
+    gravOn: false,
+    coulombOn: false,
+    cfOn: false,
+    cfDir: { x:0, y:1, z:0 },  // default +Y so force works immediately on enable
+    cfMag: 600,
+    // Per-group visual toggles
+    showCom: true,
+    showLines: false
+  };
+  groups.push(g);
+  activeGroupIdx = groups.length - 1;
+  rebuildGroupTabs();
+  rebuildTrailGroupList();
+  rebuildGroupsPanel();
+  setHint(`${g.name} is now active — new balls will auto-join it`);
+}
+
+function setActiveGroup(idx){
+  activeGroupIdx = idx;
+  rebuildGroupTabs();
+  rebuildGroupsPanel();
+  setHint(activeGroupIdx>=0 ? `Switched to ${groups[activeGroupIdx].name} — new balls will auto-join it` : 'No active group');
+}
+
+function clearActiveGroup(){
+  if(activeGroupIdx<0){ setHint('No active group'); return; }
+  groups[activeGroupIdx].members.clear();
+  syncBodyColors();
+  rebuildGroupsPanel();
+  setHint(`${groups[activeGroupIdx].name} cleared`);
+}
+
+function addSelectedToGroup(){
+  setHint('Tap bodies in Select mode to add them to the active group');
+}
+
+function deleteActiveGroup(){
+  if(activeGroupIdx<0){ setHint('No active group'); return; }
+  const g = groups[activeGroupIdx];
+  // Cleanup 3D objects
+  if(g.comMesh){ scene.remove(g.comMesh); g.comMesh.geometry.dispose(); }
+  ensureLinePool(g.linePool, 0, 0);
+  if(g.comTrail.line){ scene.remove(g.comTrail.line); g.comTrail.line.geometry.dispose(); }
+  groups.splice(activeGroupIdx, 1);
+  activeGroupIdx = groups.length > 0 ? Math.min(activeGroupIdx, groups.length-1) : -1;
+  syncBodyColors();
+  rebuildGroupTabs();
+  rebuildTrailGroupList();
+  rebuildGroupsPanel();
+  forceUpdateStats();
+  setHint('Group deleted');
+}
+
+function rebuildGroupTabs(){
+  const tabs = document.getElementById('group-tabs');
+  if(!tabs) return;
+  tabs.innerHTML = groups.map((g,i)=>{
+    const isActive = i === activeGroupIdx;
+    return `<button class="group-tab${isActive?' active':''}"
+      style="border-color:${g.color}${isActive?'':'66'};color:${isActive?'#fff':g.color};background:${g.color}${isActive?'2a':'0d'}"
+      onclick="setActiveGroup(${i})">
+      <span class="g-dot" style="background:${g.color}"></span>${g.name} <span style="opacity:.6;font-size:.52rem">(${g.members.size})</span>
+    </button>`;
+  }).join('');
+  // New group button state
+  const nb = document.getElementById('btn-new-group');
+  if(nb) nb.style.opacity = groups.length >= MAX_GROUPS ? '0.4' : '1';
+}
+
+function rebuildTrailGroupList(){
+  const el = document.getElementById('trail-group-com-list');
+  if(!el) return;
+  el.innerHTML = groups.map((g,i)=>`
+    <div class="trail-com-row">
+      <span class="trail-com-label" style="color:${g.color}">✦ ${g.name} CoM</span>
+      <div class="trail-tog${g.trailOn?' on':''}" onclick="toggleGroupTrail(${i})"></div>
+    </div>`).join('');
+}
+
+function toggleGroupTrail(idx){
+  if(!groups[idx]) return;
+  groups[idx].trailOn = !groups[idx].trailOn;
+  if(!groups[idx].trailOn && groups[idx].comTrail.line){
+    groups[idx].comTrail.line.visible=false;
+    groups[idx].comTrail.trail=[];
+  }
+  rebuildTrailGroupList();
+}
+function clearAll(){
+  bodies.forEach(b=>removeBodyMesh(b));
+  bodies=[]; colorIdx=0;
+  // Clean up group 3D objects but keep group definitions, just clear members
+  for(const g of groups){
+    g.members.clear();
+    ensureLinePool(g.linePool, 0, 0);
+    if(g.comTrail.line){ scene.remove(g.comTrail.line); g.comTrail.line=null; g.comTrail.trail=[]; }
+  }
+  sysLinePool.forEach(({line})=>{ line.visible=false; });
+  if(sysComMesh) sysComMesh.visible=false;
+  [comTrailSys].forEach(ct=>{
+    if(ct.line){ scene.remove(ct.line); ct.line=null; }
+    ct.trail=[];
+  });
+  rebuildTrailPanel();
+  rebuildGroupTabs();
+  rebuildGroupsPanel();
+  rebuildCamButtons();
+  forceUpdateStats();
+  const ag = activeGroupIdx >= 0 ? groups[activeGroupIdx] : null;
+  setHint('All cleared — tap to add balls' + (ag ? ' → auto-join ' + ag.name : ''));
+}
+
+// ── Force Lab ──────────────────────────────────────────────
+// forceTargetAll: true = always apply to all bodies, false = respect active group
+let forceTargetAll = true;
+
+function getForceTargets(){
+  if(forceTargetAll) return bodies;
+  return (activeGroupIdx>=0 && groups[activeGroupIdx].members.size>0)
+    ? bodies.filter(b=>groups[activeGroupIdx].members.has(b.id))
+    : bodies;
+}
+
+function setForceTarget(all){
+  forceTargetAll = all;
+  // Sync Force Lab buttons
+  const fa = document.getElementById('ftgt-btn-all');
+  const fg = document.getElementById('ftgt-btn-grp');
+  if(fa) fa.classList.toggle('active', all);
+  if(fg) fg.classList.toggle('active', !all);
+  // Sync Constant Force panel buttons
+  const cfa = document.getElementById('cf-ftgt-btn-all');
+  const cfg = document.getElementById('cf-ftgt-btn-grp');
+  if(cfa) cfa.classList.toggle('active', all);
+  if(cfg) cfg.classList.toggle('active', !all);
+  // Sync Controls panel buttons
+  const cta = document.getElementById('ctrl-ftgt-btn-all');
+  const ctg = document.getElementById('ctrl-ftgt-btn-grp');
+  if(cta) cta.classList.toggle('active', all);
+  if(ctg) ctg.classList.toggle('active', !all);
+  updateForceTargetNotes();
+}
+
+function updateForceTargetNotes(){
+  const activeG = activeGroupIdx>=0 ? groups[activeGroupIdx] : null;
+  const n = activeG ? activeG.members.size : 0;
+  let label, shortLabel;
+  if(forceTargetAll){
+    label = `all bodies (${bodies.length})`;
+    shortLabel = 'All forces affect every body';
+  } else {
+    label = (activeG && n>0) ? `${n} in ${activeG.name}` : 'all bodies (no active group)';
+    shortLabel = (activeG && n>0) ? `Forces → ${n} bodies in ${activeG.name}` : 'No active group — using all bodies';
+  }
+  const fNote = document.getElementById('force-target-note');
+  if(fNote) fNote.innerHTML = `● Applies to: <strong style="color:#fbbf24">${label}</strong>`;
+  const cfNote = document.getElementById('cf-target-note');
+  if(cfNote) cfNote.innerHTML = `⇒ Applies to: <strong style="color:#86efac">${label}</strong>`;
+  const ctNote = document.getElementById('ctrl-ftgt-note');
+  if(ctNote) ctNote.textContent = shortLabel;
+}
+
+function updateForcePanelLock(){
+  // Impulse always available regardless of gravity/Coulomb state
+  const body = document.getElementById('force-panel').querySelector('.panel-body');
+  body.style.opacity = '1';
+  body.style.pointerEvents = 'all';
+  document.getElementById('force-lock-note').style.display = 'none';
+}
+
+function applyForce(axis, sign){
+  const targets = getForceTargets();
+  if(!targets.length){setHint('No bodies to apply force to!');return;}
+  const impulse=sign*forceMag;
+  for(const b of targets){
+    const im=1/Math.max(b.mass, MIN_INERTIAL_MASS);
+    const dv = impulse * im;  // Δv = J/m  (impulse / mass)
+    if(axis==='x') b.vx += dv;
+    if(axis==='y') b.vy += dv;
+    if(axis==='z') b.vz += dv;
+    // Visual flash: boost emissive briefly
+    if(b.mesh && b.mesh.material){
+      b.mesh.material.emissive.set(new THREE.Color(1,1,1));
+      b._flashTime = performance.now();
+    }
+  }
+  if(axis==='x') cumulativeFx+=impulse;
+  if(axis==='y') cumulativeFy+=impulse;
+  if(axis==='z') cumulativeFz+=impulse;
+  document.getElementById('fval-x').textContent=cumulativeFx.toFixed(1);
+  document.getElementById('fval-y').textContent=cumulativeFy.toFixed(1);
+  document.getElementById('fval-z').textContent=cumulativeFz.toFixed(1);
+  // Acceleration readout: show average Δv/m this impulse gave (instantaneous)
+  if(targets.length){
+    let ax=0,ay=0,az=0;
+    for(const b of targets){
+      const im=1/Math.max(b.mass, MIN_INERTIAL_MASS);
+      if(axis==='x') ax+=impulse*im;
+      if(axis==='y') ay+=impulse*im;
+      if(axis==='z') az+=impulse*im;
+    }
+    ax/=targets.length; ay/=targets.length; az/=targets.length;
+    const am=Math.sqrt(ax*ax+ay*ay+az*az);
+    document.getElementById('acc-x').textContent=ax.toFixed(3)+' m/s²';
+    document.getElementById('acc-y').textContent=ay.toFixed(3)+' m/s²';
+    document.getElementById('acc-z').textContent=az.toFixed(3)+' m/s²';
+    document.getElementById('acc-m').textContent=am.toFixed(3)+' m/s²';
+  }
+  setHint(`Impulse ${sign>0?'+':'-'}${forceMag} N·s on ${axis.toUpperCase()} → ${targets.length} bod${targets.length>1?'ies':'y'}`);
+}
+
+function resetAllVelocities(){
+  bodies.forEach(b=>{b.vx=0;b.vy=0;b.vz=0;b.ax=0;b.ay=0;b.az=0;});
+  cumulativeFx=0;cumulativeFy=0;cumulativeFz=0;
+  ['x','y','z'].forEach(a=>{document.getElementById('fval-'+a).textContent='0.0';document.getElementById('acc-'+a).textContent='—';});
+  document.getElementById('acc-m').textContent='—';
+  resetVFSliders();
+  setHint('All velocities reset');
+}
+
+// ── Variable Force (all-axes sliders) ──────────────────────
+function updateVFReadout(){
+  const fx = parseFloat(document.getElementById('vf-x-slider').value);
+  const fy = parseFloat(document.getElementById('vf-y-slider').value);
+  const fz = parseFloat(document.getElementById('vf-z-slider').value);
+  document.getElementById('vf-x-val').textContent = fx;
+  document.getElementById('vf-y-val').textContent = fy;
+  document.getElementById('vf-z-val').textContent = fz;
+  const mag = Math.sqrt(fx*fx + fy*fy + fz*fz);
+  document.getElementById('vf-mag-val').textContent = mag.toFixed(1) + ' N·s';
+}
+
+function resetVFSliders(){
+  ['x','y','z'].forEach(a=>{
+    document.getElementById('vf-'+a+'-slider').value = 0;
+  });
+  updateVFReadout();
+}
+
+function applyVariableForce(){
+  const fx = parseFloat(document.getElementById('vf-x-slider').value);
+  const fy = parseFloat(document.getElementById('vf-y-slider').value);
+  const fz = parseFloat(document.getElementById('vf-z-slider').value);
+  if(fx===0 && fy===0 && fz===0){ setHint('Set sliders before applying!'); return; }
+  const targets = getForceTargets();
+  if(!targets.length){ setHint('No bodies to apply force to!'); return; }
+  for(const b of targets){
+    const im = 1 / Math.max(b.mass, MIN_INERTIAL_MASS);
+    b.vx += fx * im;
+    b.vy += fy * im;
+    b.vz += fz * im;
+    if(b.mesh && b.mesh.material){ b.mesh.material.emissive.set(new THREE.Color(1,1,1)); b._flashTime = performance.now(); }
+  }
+  cumulativeFx += fx; cumulativeFy += fy; cumulativeFz += fz;
+  document.getElementById('fval-x').textContent = cumulativeFx.toFixed(1);
+  document.getElementById('fval-y').textContent = cumulativeFy.toFixed(1);
+  document.getElementById('fval-z').textContent = cumulativeFz.toFixed(1);
+  // Acceleration readout: Δv/m this impulse produced, averaged over targets
+  {
+    let ax=0, ay=0, az=0;
+    for(const b of targets){
+      const im = 1 / Math.max(b.mass, MIN_INERTIAL_MASS);
+      ax += fx * im; ay += fy * im; az += fz * im;
+    }
+    ax /= targets.length; ay /= targets.length; az /= targets.length;
+    const am = Math.sqrt(ax*ax + ay*ay + az*az);
+    document.getElementById('acc-x').textContent = ax.toFixed(3)+' m/s²';
+    document.getElementById('acc-y').textContent = ay.toFixed(3)+' m/s²';
+    document.getElementById('acc-z').textContent = az.toFixed(3)+' m/s²';
+    document.getElementById('acc-m').textContent = am.toFixed(3)+' m/s²';
+  }
+  const mag = Math.sqrt(fx*fx+fy*fy+fz*fz);
+  setHint(`Variable force |F|=${mag.toFixed(1)} N·s → ${targets.length} bod${targets.length>1?'ies':'y'}`);
+}
+
+// ── Constant Force Lab ─────────────────────────────────────
+function applyConstantForce(dt){
+  // Δv = (F/m) · dt — correct Euler, frame-rate independent
+  // dt is already clamped in the animate loop; no re-clamp needed here.
+  const targets = getForceTargets();
+  for(const b of targets){
+    const im = 1 / Math.max(b.mass, MIN_INERTIAL_MASS);
+    b.vx += cfDir.x * cfMag * im * dt;
+    b.vy += cfDir.y * cfMag * im * dt;
+    b.vz += cfDir.z * cfMag * im * dt;
+  }
+}
+
+function toggleConstForce(){
+  cfOn = !cfOn;
+  const btn = document.getElementById('cf-toggle-btn');
+  btn.textContent = '⇒ Constant Force: ' + (cfOn ? 'ON' : 'OFF');
+  btn.classList.toggle('active', cfOn);
+  // Sync shortcut button in Controls panel
+  const cb = document.getElementById('btn-const-force-ctrl');
+  if(cb){
+    cb.textContent = '⇶ Const. Force: ' + (cfOn ? 'ON' : 'OFF');
+    cb.classList.toggle('active', cfOn);
+    cb.style.color = cfOn ? '#fff' : '#34d399';
+    cb.style.background = cfOn ? 'rgba(52,211,153,.22)' : 'rgba(52,211,153,.06)';
+  }
+  setHint('Constant Force: ' + (cfOn ? 'ON — bodies pushed each frame' : 'OFF'));
+}
+
+function setCFDir(axis, sign){
+  cfDir[axis] = sign;
+  // Update button active states for this axis
+  const ids = {
+    x: { '-1':'cf-btn-xn', '0':'cf-btn-x0', '1':'cf-btn-xp' },
+    y: { '-1':'cf-btn-yn', '0':'cf-btn-y0', '1':'cf-btn-yp' },
+    z: { '-1':'cf-btn-zn', '0':'cf-btn-z0', '1':'cf-btn-zp' }
+  };
+  Object.values(ids[axis]).forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.remove('active'); });
+  const activeId = ids[axis][String(sign)];
+  const el = document.getElementById(activeId);
+  if(el) el.classList.add('active');
+  updateCFReadout();
+}
+
+function updateCFReadout(){
+  const fx = cfDir.x * cfMag, fy = cfDir.y * cfMag, fz = cfDir.z * cfMag;
+  const fm = Math.sqrt(fx*fx + fy*fy + fz*fz);
+  document.getElementById('cf-read-x').textContent = fx.toFixed(1)+' N';
+  document.getElementById('cf-read-y').textContent = fy.toFixed(1)+' N';
+  document.getElementById('cf-read-z').textContent = fz.toFixed(1)+' N';
+  document.getElementById('cf-read-m').textContent = fm.toFixed(1)+' N';
+}
+
+function cfResetAll(){
+  cfOn = false;
+  const btn = document.getElementById('cf-toggle-btn');
+  btn.textContent = '⇒ Constant Force: OFF';
+  btn.classList.remove('active');
+  const cb = document.getElementById('btn-const-force-ctrl');
+  if(cb){ cb.textContent = '⇶ Const. Force: OFF'; cb.classList.remove('active'); cb.style.color='#34d399'; cb.style.background='rgba(52,211,153,.06)'; }
+  bodies.forEach(b=>{b.vx=0;b.vy=0;b.vz=0;b.ax=0;b.ay=0;b.az=0;});
+  setHint('Constant Force OFF — all velocities cleared');
+}
+
+// Sync every body's colour to its group colour (or reset to original if ungrouped)
+function syncBodyColors(){
+  // Build map: bodyId → group
+  const bodyGroup = new Map();
+  for(const g of groups){
+    for(const id of g.members) bodyGroup.set(id, g);
+  }
+  for(const b of bodies){
+    const g = bodyGroup.get(b.id);
+    const newColor = g ? g.color : b.baseColor || b.color;
+    if(!b.baseColor) b.baseColor = b.color; // save original color first time
+    if(b.color !== newColor){
+      b.color = newColor;
+      if(b.mesh){
+        const col = hexToThree(newColor);
+        b.mesh.material.color.set(col);
+        if(!b._flashTime) b.mesh.material.emissive.set(col.clone().multiplyScalar(0.35));
+        if(b.mesh.children[0] && b.mesh.children[0].material){
+          b.mesh.children[0].material.color.set(col);
+        }
+      }
+      if(b.trailLine) b.trailLine.material.color.set(hexToThree(newColor));
+    }
+  }
+  rebuildTrailPanel();
+}
+
+function rebuildAllBodyLabels(){
+  for(const b of bodies) updateBodyLabel(b);
+}
+
+function openGroupsPanel(){
+  const p = document.getElementById('groups-panel');
+  p.classList.remove('collapsed');
+  setHint('Groups Panel — tap a group to make it active · tap a body to remove from group');
+}
+
+function rebuildGroupsPanel(){
+  const body = document.getElementById('groups-panel-body');
+  if(!body) return;
+
+  // ── Global (All Bodies) forces block ──
+  const globalCfDirLabel = ['−X','−Y','−Z','+X','+Y','+Z'].map(d=>{
+    const sign = d[0]==='+' ? 1 : -1;
+    const axis = d[1].toLowerCase();
+    return globalCfDir[axis]===sign ? d : null;
+  }).filter(Boolean).join(' ') || '—';
+
+  const gfColor = '#00ffcc';
+  let globalHtml = `<div style="margin-bottom:10px;padding:8px 9px;border-radius:9px;border:1px solid rgba(0,255,204,.3);background:rgba(0,255,204,.06)">
+    <div style="font-family:'Orbitron',monospace;font-size:.58rem;font-weight:700;letter-spacing:.1em;color:${gfColor};margin-bottom:6px;display:flex;align-items:center;gap:5px">
+      <span>⊕ GLOBAL MASTER FORCES</span>
+      <span style="font-size:.48rem;color:rgba(0,255,204,.5);font-weight:400;font-family:'Space Mono',monospace">controls all groups</span>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">
+      <button onclick="toggleGlobalGrav()" style="flex:1;min-width:64px;padding:6px 4px;border-radius:6px;border:1px solid ${globalGravOn?'rgba(0,255,204,.8)':'rgba(0,255,204,.3)'};background:${globalGravOn?'rgba(0,255,204,.25)':'rgba(0,255,204,.07)'};color:${globalGravOn?'#fff':'#00ffcc'};font-family:'Space Mono',monospace;font-size:.53rem;cursor:pointer;pointer-events:all;transition:all .15s">⟳ Gravity ${globalGravOn?'ON':'OFF'}</button>
+      <button onclick="toggleGlobalCoulomb()" style="flex:1;min-width:64px;padding:6px 4px;border-radius:6px;border:1px solid ${globalCoulombOn?'rgba(0,255,204,.8)':'rgba(0,255,204,.3)'};background:${globalCoulombOn?'rgba(0,255,204,.25)':'rgba(0,255,204,.07)'};color:${globalCoulombOn?'#fff':'#00ffcc'};font-family:'Space Mono',monospace;font-size:.53rem;cursor:pointer;pointer-events:all;transition:all .15s">⚡ Coulomb ${globalCoulombOn?'ON':'OFF'}</button>
+      <button onclick="toggleGlobalCF()" style="flex:1;min-width:64px;padding:6px 4px;border-radius:6px;border:1px solid ${globalCfOn?'rgba(0,255,204,.8)':'rgba(0,255,204,.3)'};background:${globalCfOn?'rgba(0,255,204,.25)':'rgba(0,255,204,.07)'};color:${globalCfOn?'#fff':'#00ffcc'};font-family:'Space Mono',monospace;font-size:.53rem;cursor:pointer;pointer-events:all;transition:all .15s">⇒ Const.F ${globalCfOn?'ON':'OFF'}</button>
+    </div>
+    <div style="display:flex;gap:4px;margin-bottom:4px">
+      <button onclick="toggleAllGroupsCom()" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid ${allGroupsComOn?'rgba(0,255,204,.8)':'rgba(0,255,204,.3)'};background:${allGroupsComOn?'rgba(0,255,204,.25)':'rgba(0,255,204,.07)'};color:${allGroupsComOn?'#fff':'#00ffcc'};font-family:'Space Mono',monospace;font-size:.53rem;cursor:pointer;pointer-events:all;transition:all .15s">⊕ All Groups CoM ${allGroupsComOn?'ON':'OFF'}</button>
+      <button onclick="toggleSysCom();setTimeout(()=>rebuildGroupsPanel(),0)" style="flex:1;padding:6px 4px;border-radius:6px;border:1px solid ${showSysCom?'rgba(0,255,204,.8)':'rgba(0,255,204,.3)'};background:${showSysCom?'rgba(0,255,204,.25)':'rgba(0,255,204,.07)'};color:${showSysCom?'#fff':'#00ffcc'};font-family:'Space Mono',monospace;font-size:.53rem;cursor:pointer;pointer-events:all;transition:all .15s">⊕ System CoM ${showSysCom?'ON':'OFF'}</button>
+    </div>`;
+  if(globalCfOn){
+    globalHtml += `<div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;margin-top:2px">
+      <span style="font-size:.5rem;color:rgba(0,255,204,.6);margin-right:2px">Dir:</span>
+      ${['−X','−Y','−Z','+X','+Y','+Z'].map(d=>{
+        const sign = d[0]==='+' ? 1 : -1;
+        const axis = d[1].toLowerCase();
+        const isAct = globalCfDir[axis]===sign;
+        return `<button onclick="setGlobalCFDir('${axis}',${sign})" style="padding:3px 6px;border-radius:5px;border:1px solid ${isAct?'rgba(0,255,204,.8)':'rgba(255,255,255,.15)'};background:${isAct?'rgba(0,255,204,.28)':'rgba(0,0,0,.2)'};color:${isAct?'#fff':'#00ffcc'};font-family:'Orbitron',monospace;font-size:.5rem;font-weight:700;cursor:pointer;pointer-events:all;transition:all .12s">${d}</button>`;
+      }).join('')}
+      <button onclick="resetGlobalCF()" style="padding:3px 6px;border-radius:5px;border:1px solid rgba(255,107,53,.3);background:rgba(255,107,53,.07);color:var(--accent2);font-family:'Space Mono',monospace;font-size:.48rem;cursor:pointer;pointer-events:all">↺</button>
+    </div>`;
+  }
+  globalHtml += `<div style="font-size:.5rem;color:rgba(0,255,204,.4);margin-top:5px;line-height:1.5">Master switches — toggling ON/OFF here propagates to every group. Per-group toggles sync back up to master.</div>
+  </div>`;
+
+  if(!groups.length){
+    body.innerHTML = globalHtml + '<div class="gp-no-groups" style="line-height:2">① Tap <b style="color:var(--com-sub)">＋ New Group</b> below<br>② <b style="color:var(--accent)">Tap any ball</b> in the scene<br>③ Assign it to a group from the popup</div>';
+    return;
+  }
+  let html = globalHtml;
+  for(let gi=0; gi<groups.length; gi++){
+    const g = groups[gi];
+    const isActive = gi === activeGroupIdx;
+    const gBods = getGroupBodies(g);
+    const gCom = gBods.length ? comOf(gBods) : null;
+    const borderColor = g.color + (isActive ? 'aa' : '33');
+    const bgColor = g.color + (isActive ? '18' : '09');
+    // CoM readout strings
+    const comX = gCom ? gCom.x.toFixed(1) : '—';
+    const comY = gCom ? gCom.y.toFixed(1) : '—';
+    const comZ = gCom ? gCom.z.toFixed(1) : '—';
+    const comM = gCom ? gCom.totalMass.toFixed(0)+' kg' : '—';
+    html += `<div class="gp-group-block" style="border-color:${borderColor};background:${bgColor}">
+      <div class="gp-group-header${isActive?' active-group':''}"
+        style="background:${g.color}${isActive?'22':'0d'}"
+        onclick="gpSetActive(${gi})">
+        <div class="gp-group-dot" style="background:${g.color}"></div>
+        <span class="gp-group-name" style="color:${g.color}">${g.name}</span>
+        <span class="gp-group-count" style="color:${g.color}">${gBods.length} bod${gBods.length!==1?'ies':'y'}</span>
+        ${isActive ? `<span class="gp-active-badge" style="background:${g.color}33;color:${g.color}">ACTIVE</span>` : ''}
+      </div>
+
+      <!-- CoM readout + visual toggles -->
+      <div style="padding:5px 9px 4px;border-bottom:1px solid ${g.color}22">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span style="font-family:'Orbitron',monospace;font-size:.5rem;font-weight:700;color:${g.color};letter-spacing:.08em;opacity:.9">⊕ CoM</span>
+          <div style="display:flex;gap:3px">
+            <button onclick="gpToggleCom(${gi})" style="padding:3px 7px;border-radius:5px;border:1px solid ${g.showCom?g.color+'cc':g.color+'44'};background:${g.showCom?g.color+'30':'transparent'};color:${g.showCom?'#fff':g.color};font-family:'Space Mono',monospace;font-size:.48rem;cursor:pointer;pointer-events:all;transition:all .15s">● Marker ${g.showCom?'ON':'OFF'}</button>
+            <button onclick="gpToggleLines(${gi})" style="padding:3px 7px;border-radius:5px;border:1px solid ${g.showLines?g.color+'cc':g.color+'44'};background:${g.showLines?g.color+'30':'transparent'};color:${g.showLines?'#fff':g.color};font-family:'Space Mono',monospace;font-size:.48rem;cursor:pointer;pointer-events:all;transition:all .15s">⟵ Lines ${g.showLines?'ON':'OFF'}</button>
+          </div>
+        </div>
+        <div id="gp-com-readout-${gi}" style="display:grid;grid-template-columns:auto 1fr auto 1fr;gap:2px 8px;font-size:.52rem">
+          <span style="color:${g.color};opacity:.6">M</span><span class="gp-com-m" style="color:${g.color};font-weight:700">${comM}</span>
+          <span style="color:#f87171;opacity:.7">X</span><span class="gp-com-x" style="color:#f87171;font-weight:700">${comX}</span>
+          <span style="color:#4ade80;opacity:.7">Y</span><span class="gp-com-y" style="color:#4ade80;font-weight:700">${comY}</span>
+          <span style="color:#60a5fa;opacity:.7">Z</span><span class="gp-com-z" style="color:#60a5fa;font-weight:700">${comZ}</span>
+        </div>
+      </div>
+
+      <!-- Per-group force toggles -->
+      <div style="display:flex;gap:4px;padding:6px 8px 2px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:.48rem;color:${g.color};opacity:.65;width:100%;margin-bottom:2px;letter-spacing:.06em;text-transform:uppercase">Within group:</span>
+        <button onclick="gpToggleGrav(${gi})" style="flex:1;min-width:60px;padding:5px 4px;border-radius:6px;border:1px solid ${g.gravOn?g.color+'aa':g.color+'33'};background:${g.gravOn?g.color+'28':g.color+'0a'};color:${g.gravOn?'#fff':g.color};font-family:'Space Mono',monospace;font-size:.52rem;cursor:pointer;transition:all .15s;pointer-events:all"
+          id="gp-grav-${gi}">⟳ Grav ${g.gravOn?'ON':'OFF'}</button>
+        <button onclick="gpToggleCoulomb(${gi})" style="flex:1;min-width:60px;padding:5px 4px;border-radius:6px;border:1px solid ${g.coulombOn?g.color+'aa':g.color+'33'};background:${g.coulombOn?g.color+'28':g.color+'0a'};color:${g.coulombOn?'#fff':g.color};font-family:'Space Mono',monospace;font-size:.52rem;cursor:pointer;transition:all .15s;pointer-events:all"
+          id="gp-coulomb-${gi}">⚡ Coulomb ${g.coulombOn?'ON':'OFF'}</button>
+        <button onclick="gpToggleCF(${gi})" style="flex:1;min-width:60px;padding:5px 4px;border-radius:6px;border:1px solid ${g.cfOn?g.color+'aa':g.color+'33'};background:${g.cfOn?g.color+'28':g.color+'0a'};color:${g.cfOn?'#fff':g.color};font-family:'Space Mono',monospace;font-size:.52rem;cursor:pointer;transition:all .15s;pointer-events:all"
+          id="gp-cf-${gi}">⇒ Const.F ${g.cfOn?'ON':'OFF'}</button>
+      </div>
+      <!-- Const Force direction (show only if cfOn) -->
+      ${g.cfOn ? `<div style="display:flex;gap:3px;padding:2px 8px 6px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:.5rem;color:${g.color};opacity:.7;margin-right:2px">Dir:</span>
+        ${['−X','−Y','−Z','+X','+Y','+Z'].map(d=>{
+          const [sign,axis] = [d[0]==='+' ? 1:-1, d[1].toLowerCase()];
+          const isActive2 = g.cfDir[axis]===sign;
+          return `<button onclick="gpSetCFDir(${gi},'${axis}',${sign})" style="padding:3px 6px;border-radius:5px;border:1px solid ${isActive2?g.color:'rgba(255,255,255,.15)'};background:${isActive2?g.color+'33':'rgba(0,0,0,.2)'};color:${isActive2?'#fff':g.color};font-family:'Orbitron',monospace;font-size:.5rem;font-weight:700;cursor:pointer;pointer-events:all;transition:all .12s">${d}</button>`;
+        }).join('')}
+        <button onclick="gpResetCF(${gi})" style="padding:3px 6px;border-radius:5px;border:1px solid rgba(255,107,53,.3);background:rgba(255,107,53,.07);color:var(--accent2);font-family:'Space Mono',monospace;font-size:.48rem;cursor:pointer;pointer-events:all">↺</button>
+      </div>` : ''}
+
+      <!-- Body list -->
+      <div class="gp-body-list">`;
+    if(gBods.length === 0){
+      html += `<div class="gp-empty">Empty — tap a ball to assign it here</div>`;
+    } else {
+      gBods.forEach((b)=>{
+        const bIdx = bodies.indexOf(b);
+        // Show this body's weighted contribution % to CoM
+        const pct = (gCom && gCom.totalMass > 0 && b.mass > 0)
+          ? ((b.mass / gCom.totalMass) * 100).toFixed(0) + '%'
+          : b.mass === 0 ? '0%' : '—';
+        html += `<div class="gp-body-row" onclick="gpRemoveBody('${g.id}','${b.id}')">
+          <div class="gp-body-dot" style="background:${b.color}"></div>
+          <span class="gp-body-name">Body ${bIdx+1} (${String.fromCharCode(65+(bIdx%26))}) · ${b.mass}kg</span>
+          <span style="font-size:.48rem;color:${g.color};opacity:.7;margin-right:4px">${pct}</span>
+          <span class="gp-body-remove">✕</span>
+        </div>`;
+      });
+    }
+    html += `</div></div>`;
+  }
+  body.innerHTML = html;
+}
+
+// Live-update CoM readout numbers inside each group block without rebuilding the whole panel
+function liveUpdateGroupCoM(){
+  for(let gi=0; gi<groups.length; gi++){
+    const g = groups[gi];
+    const gBods = getGroupBodies(g);
+    const gCom = gBods.length ? comOf(gBods) : null;
+    const el = document.getElementById('gp-com-readout-'+gi);
+    if(!el) continue;
+    if(gCom){
+      const mEl = el.querySelector('.gp-com-m');
+      const xEl = el.querySelector('.gp-com-x');
+      const yEl = el.querySelector('.gp-com-y');
+      const zEl = el.querySelector('.gp-com-z');
+      if(mEl) mEl.textContent = gCom.totalMass.toFixed(0)+' kg';
+      if(xEl) xEl.textContent = gCom.x.toFixed(1);
+      if(yEl) yEl.textContent = gCom.y.toFixed(1);
+      if(zEl) zEl.textContent = gCom.z.toFixed(1);
+    }
+  }
+}
+
+function gpToggleCom(gi){
+  const g = groups[gi]; if(!g) return;
+  g.showCom = !g.showCom;
+  if(!g.showCom) g.comMesh.visible = false;
+  setTimeout(()=>rebuildGroupsPanel(), 0);
+}
+function gpToggleLines(gi){
+  const g = groups[gi]; if(!g) return;
+  g.showLines = !g.showLines;
+  if(!g.showLines) ensureLinePool(g.linePool, 0, 0);
+  setTimeout(()=>rebuildGroupsPanel(), 0);
+}
+
+function gpToggleGrav(gi){
+  const g = groups[gi]; if(!g) return;
+  g.gravOn = !g.gravOn;
+  // Sync global: ON if all groups are ON, OFF if any group is OFF
+  globalGravOn = groups.length > 0 && groups.every(gr=>gr.gravOn);
+  const n = getGroupBodies(g).length;
+  const note = (g.gravOn && n < 2) ? ' (needs 2+ bodies)' : '';
+  setHint(`${g.name} Gravity: ${g.gravOn?'ON':'OFF'}${note}`);
+  setTimeout(()=>rebuildGroupsPanel(), 0);
+}
+function gpToggleCoulomb(gi){
+  const g = groups[gi]; if(!g) return;
+  g.coulombOn = !g.coulombOn;
+  // Sync global: ON if all groups are ON
+  globalCoulombOn = groups.length > 0 && groups.every(gr=>gr.coulombOn);
+  setHint(`${g.name} Coulomb: ${g.coulombOn?'ON':'OFF'}`);
+  setTimeout(()=>rebuildGroupsPanel(), 0);
+}
+function gpToggleCF(gi){
+  const g = groups[gi]; if(!g) return;
+  g.cfOn = !g.cfOn;
+  // Sync global: ON if all groups are ON
+  globalCfOn = groups.length > 0 && groups.every(gr=>gr.cfOn);
+  // If no direction set, auto-enable +Y so it actually does something
+  if(g.cfOn && g.cfDir.x===0 && g.cfDir.y===0 && g.cfDir.z===0) g.cfDir.y = 1;
+  setHint(`${g.name} Constant Force: ${g.cfOn?'ON':'OFF'}`);
+  setTimeout(()=>rebuildGroupsPanel(), 0);
+}
+function gpSetCFDir(gi, axis, sign){
+  const g = groups[gi]; if(!g) return;
+  // Toggle off if already set
+  g.cfDir[axis] = (g.cfDir[axis]===sign) ? 0 : sign;
+  rebuildGroupsPanel();
+}
+function gpResetCF(gi){
+  const g = groups[gi]; if(!g) return;
+  g.cfDir = {x:0,y:0,z:0};
+  g.cfOn = false;
+  // Do NOT wipe velocities — bodies keep their momentum when the force is removed
+  rebuildGroupsPanel();
+  setHint(`${g.name} Constant Force reset`);
+}
+
+// ── Global (All Bodies) force toggles ─────────────────────
+function toggleAllGroupsCom(){
+  allGroupsComOn = !allGroupsComOn;
+  // Apply to every group
+  for(const g of groups){
+    g.showCom = allGroupsComOn;
+    if(!g.showCom) g.comMesh.visible = false;
+  }
+  setTimeout(()=>rebuildGroupsPanel(), 0);
+  setHint('All group CoM markers: '+(allGroupsComOn?'ON':'OFF'));
+}
+
+function toggleGlobalGrav(){
+  globalGravOn = !globalGravOn;
+  // Propagate to all groups as master switch
+  for(const g of groups) g.gravOn = globalGravOn;
+  rebuildGroupsPanel();
+  setHint('Global Gravity '+(globalGravOn?'ON — applied to all groups':'OFF — disabled for all groups'));
+}
+function toggleGlobalCoulomb(){
+  globalCoulombOn = !globalCoulombOn;
+  // Propagate to all groups as master switch
+  for(const g of groups) g.coulombOn = globalCoulombOn;
+  rebuildGroupsPanel();
+  setHint('Global Coulomb '+(globalCoulombOn?'ON — applied to all groups':'OFF — disabled for all groups'));
+}
+function toggleGlobalCF(){
+  globalCfOn = !globalCfOn;
+  // Propagate to all groups as master switch
+  // When turning ON, if a group has no direction set, default to +Y so it does something
+  for(const g of groups){
+    g.cfOn = globalCfOn;
+    if(g.cfOn && g.cfDir.x===0 && g.cfDir.y===0 && g.cfDir.z===0) g.cfDir.y = 1;
+  }
+  rebuildGroupsPanel();
+  setHint('Global Const. Force '+(globalCfOn?'ON — applied to all groups':'OFF — disabled for all groups'));
+}
+function setGlobalCFDir(axis, sign){
+  globalCfDir[axis] = (globalCfDir[axis]===sign) ? 0 : sign;
+  rebuildGroupsPanel();
+}
+function resetGlobalCF(){
+  globalCfDir.x=0; globalCfDir.y=0; globalCfDir.z=0;
+  globalCfOn = false;
+  // Do NOT wipe velocities — bodies keep their momentum when the force is removed
+  rebuildGroupsPanel();
+  setHint('All-Bodies Const. Force reset');
+}
+
+function gpSetActive(gi){
+  setActiveGroup(gi);
+  rebuildGroupsPanel();
+}
+
+function gpRemoveBody(gidStr, bidStr){
+  const gid = parseFloat(gidStr);
+  // body id was stored as float string — use find with tolerance
+  const g = groups.find(g=>g.id===gid);
+  if(!g) return;
+  // Match by string since body.id = Date.now()+Math.random() may lose precision via parseFloat
+  const b = bodies.find(b=>String(b.id)===bidStr);
+  if(!b) return;
+  g.members.delete(b.id);
+  const bIdx = bodies.indexOf(b);
+  setHint(`Body ${bIdx+1} removed from ${g.name}`);
+  syncBodyColors();
+  rebuildGroupsPanel();
+  rebuildGroupTabs();
+}
+
+function openExtForcePanel(){
+  const p = document.getElementById('const-force-panel');
+  p.classList.remove('collapsed');
+  p.scrollIntoView && p.scrollIntoView({behavior:'smooth', block:'nearest'});
+  setHint('Constant Force panel opened');
+}
+
+// CF target note is updated inside updateStats directly
+
+let editTargetBody = null;
+let ebChargeSign = 0;
+let ebChargeMag = 10;
+
+const editPanel = document.getElementById('edit-body-panel');
+const editPanelHeader = document.getElementById('edit-body-panel-header');
+
+// Draggable edit panel
+(function(){
+  let grabX=0, grabY=0, startL=0, startT=0, active=false;
+  editPanelHeader.addEventListener('pointerdown', e=>{
+    if(e.target.id==='edit-body-close') return;
+    e.preventDefault(); e.stopPropagation();
+    const r = editPanel.getBoundingClientRect();
+    editPanel.style.transform='none';
+    editPanel.style.left = r.left+'px'; editPanel.style.top = r.top+'px';
+    active=true; grabX=e.clientX; grabY=e.clientY;
+    startL=parseFloat(editPanel.style.left); startT=parseFloat(editPanel.style.top);
+    editPanelHeader.setPointerCapture(e.pointerId);
+  });
+  editPanelHeader.addEventListener('pointermove', e=>{
+    if(!active) return;
+    let nx=startL+(e.clientX-grabX), ny=startT+(e.clientY-grabY);
+    nx=Math.max(0,Math.min(window.innerWidth-editPanel.offsetWidth,nx));
+    ny=Math.max(0,Math.min(window.innerHeight-editPanel.offsetHeight,ny));
+    editPanel.style.left=nx+'px'; editPanel.style.top=ny+'px';
+  });
+  editPanelHeader.addEventListener('pointerup', ()=>{ active=false; });
+  editPanelHeader.addEventListener('pointercancel', ()=>{ active=false; });
+})();
+
+// Build color swatches once
+(function(){
+  const row = document.getElementById('eb-color-row');
+  COLORS.forEach(c=>{
+    const dot = document.createElement('div');
+    dot.className = 'eb-color-dot';
+    dot.style.background = c;
+    dot.dataset.color = c;
+    dot.onclick = () => ebSetColor(c);
+    row.appendChild(dot);
+  });
+})();
+
+function openEditPanel(body, px, py){
+  editTargetBody = body;
+  // Sync charge sign/mag from body's current charge
+  const q = body.charge;
+  ebChargeSign = q > 0 ? 1 : q < 0 ? -1 : 0;
+  ebChargeMag  = Math.abs(q) || 10;
+  ebSyncSignBtns();
+  ebSyncChargeMagBtns();
+
+  refreshEditPanel();
+
+  // Position: try to appear near tap, keep on screen
+  editPanel.style.display = 'flex';
+  const pw = 240, ph = editPanel.offsetHeight || 460;
+  let lx = px + 8, ly = py - 20;
+  lx = Math.max(4, Math.min(window.innerWidth - pw - 4, lx));
+  ly = Math.max(4, Math.min(window.innerHeight - ph - 4, ly));
+  editPanel.style.left = lx+'px';
+  editPanel.style.top  = ly+'px';
+  editPanel.classList.add('show');
+  _editJustOpened = true;
+}
+
+function closeEditPanel(){
+  editPanel.classList.remove('show');
+  editPanel.style.display = 'none';
+  editTargetBody = null;
+}
+
+function refreshEditPanel(){
+  if(!editTargetBody) return;
+  const b = editTargetBody;
+  const idx = bodies.indexOf(b);
+  document.getElementById('edit-body-title').textContent = `✎ BODY ${idx+1}`;
+
+  // Mass
+  document.getElementById('eb-cur-mass').textContent = b.mass+' kg';
+  document.querySelectorAll('#eb-mass-quick .eb-qbtn').forEach(btn=>{
+    btn.classList.toggle('active', parseInt(btn.textContent)===b.mass);
+  });
+
+  // Charge
+  const q = b.charge;
+  const chEl = document.getElementById('eb-cur-charge');
+  chEl.textContent = (q>0?'+':'')+q+' C';
+  chEl.style.color = q>0?'#f87171': q<0?'#60a5fa':'#a78bfa';
+
+  // Color swatches
+  document.querySelectorAll('#eb-color-row .eb-color-dot').forEach(dot=>{
+    dot.classList.toggle('active', dot.dataset.color === b.color);
+  });
+
+  // Velocity
+  document.getElementById('eb-vx').textContent = b.vx.toFixed(2);
+  document.getElementById('eb-vy').textContent = b.vy.toFixed(2);
+  document.getElementById('eb-vz').textContent = b.vz.toFixed(2);
+}
+
+function ebSyncSignBtns(){
+  ['pos','zero','neg'].forEach(id=>document.getElementById('eb-csign-'+id).classList.remove('active'));
+  if(ebChargeSign===1) document.getElementById('eb-csign-pos').classList.add('active');
+  else if(ebChargeSign===0) document.getElementById('eb-csign-zero').classList.add('active');
+  else document.getElementById('eb-csign-neg').classList.add('active');
+  // recolor quick charge buttons
+  document.querySelectorAll('#eb-charge-quick .eb-qbtn').forEach(btn=>{
+    btn.classList.remove('charge-pos','charge-neg','charge-zero');
+    btn.classList.add(ebChargeSign<0?'charge-neg': ebChargeSign>0?'charge-pos':'charge-zero');
+  });
+}
+
+function ebSyncChargeMagBtns(){
+  document.querySelectorAll('#eb-charge-quick .eb-qbtn').forEach(btn=>{
+    btn.classList.toggle('active', parseInt(btn.textContent)===ebChargeMag);
+  });
+}
+
+function ebSetChargeSign(s){
+  ebChargeSign = s;
+  ebSyncSignBtns();
+  ebSyncChargeMagBtns();
+}
+
+function ebSetChargeMagQuick(m){
+  ebChargeMag = m;
+  document.getElementById('eb-charge-input').value='';
+  ebSyncChargeMagBtns();
+}
+
+function ebSetMassQuick(m){
+  if(!editTargetBody) return;
+  editTargetBody.mass = m;
+  removeBodyMesh(editTargetBody);
+  editTargetBody.trail3d=[]; editTargetBody.trailLine=null;
+  createBodyMesh(editTargetBody);
+  syncBodyColors(); // restore group color & ring after mesh rebuild
+  rebuildTrailPanel();
+  refreshEditPanel();
+  setHint(`Body ${bodies.indexOf(editTargetBody)+1} mass → ${m} kg`);
+}
+
+function ebApplyMass(){
+  if(!editTargetBody) return;
+  const raw = document.getElementById('eb-mass-input').value;
+  const v = parseInt(raw);
+  if(isNaN(v)||v<0){ setHint('Enter valid mass ≥ 0'); return; }
+  const m = Math.min(v, 9999);
+  editTargetBody.mass = m;
+  removeBodyMesh(editTargetBody);
+  editTargetBody.trail3d=[]; editTargetBody.trailLine=null;
+  createBodyMesh(editTargetBody);
+  syncBodyColors(); // restore group color & ring after mesh rebuild
+  rebuildTrailPanel();
+  document.getElementById('eb-mass-input').value='';
+  refreshEditPanel();
+  setHint(`Body ${bodies.indexOf(editTargetBody)+1} mass → ${m} kg`);
+}
+
+function ebApplyCharge(){
+  if(!editTargetBody) return;
+  const raw = document.getElementById('eb-charge-input').value;
+  let mag = parseFloat(raw);
+  if(!isNaN(mag) && mag >= 0) ebChargeMag = Math.min(mag, 9999);
+  const q = ebChargeSign * ebChargeMag;
+  editTargetBody.charge = q;
+  updateChargeVisual(editTargetBody);
+  document.getElementById('eb-charge-input').value='';
+  refreshEditPanel();
+  setHint(`Body ${bodies.indexOf(editTargetBody)+1} charge → ${q>0?'+':''}${q} C`);
+}
+
+function ebSetColor(color){
+  if(!editTargetBody) return;
+  editTargetBody.color = color;
+  editTargetBody.baseColor = color; // update base so syncBodyColors doesn't revert it
+  // Update mesh color
+  if(editTargetBody.mesh){
+    const col = hexToThree(color);
+    editTargetBody.mesh.material.color.set(col);
+    if(!editTargetBody._flashTime) editTargetBody.mesh.material.emissive.set(col.clone().multiplyScalar(0.35));
+    // Update glow sprite (first child)
+    if(editTargetBody.mesh.children[0] && editTargetBody.mesh.children[0].material){
+      editTargetBody.mesh.children[0].material.color.set(col);
+    }
+  }
+  if(editTargetBody.trailLine){
+    editTargetBody.trailLine.material.color.set(hexToThree(color));
+  }
+  rebuildTrailPanel();
+  refreshEditPanel();
+  setHint(`Body ${bodies.indexOf(editTargetBody)+1} color updated`);
+}
+
+function ebResetVelocity(){
+  if(!editTargetBody) return;
+  editTargetBody.vx=0; editTargetBody.vy=0; editTargetBody.vz=0;
+  editTargetBody.ax=0; editTargetBody.ay=0; editTargetBody.az=0;
+  refreshEditPanel();
+  setHint(`Body ${bodies.indexOf(editTargetBody)+1} velocity reset`);
+}
+
+function ebRemoveBody(){
+  if(!editTargetBody) return;
+  const idx = bodies.indexOf(editTargetBody);
+  removeBodyMesh(editTargetBody);
+  for(const g of groups) g.members.delete(editTargetBody.id);
+  bodies.splice(idx, 1);
+  rebuildTrailPanel();
+  rebuildGroupTabs();
+  rebuildGroupsPanel();
+  rebuildCamButtons();
+  rebuildAllBodyLabels();
+  syncBodyColors();
+  forceUpdateStats();
+  setHint(`Body ${idx+1} removed`);
+  closeEditPanel();
+}
+
+// Keyboard support for edit panel inputs
+document.getElementById('eb-mass-input').addEventListener('keydown',e=>{if(e.key==='Enter')ebApplyMass();e.stopPropagation();});
+document.getElementById('eb-charge-input').addEventListener('keydown',e=>{if(e.key==='Enter')ebApplyCharge();e.stopPropagation();});
+
+// Close edit panel if clicking outside it (and not on a body)
+// _editJustOpened flag prevents the same pointerdown that opened it from closing it.
+let _editJustOpened = false;
+document.addEventListener('pointerdown', e=>{
+  if(_editJustOpened){ _editJustOpened = false; return; }
+  if(editPanel.classList.contains('show') && !editPanel.contains(e.target) && e.target !== canvas3d){
+    closeEditPanel();
+  }
+}, true);
+
+// ── End Edit Body Panel ──────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════
+// CAMERA SWITCHER SYSTEM
+// ═══════════════════════════════════════════════════════════
+let activeCamMode = 'all'; // 'all' | body index (number)
+
+// Smooth follow state for all-view
+const _allCamState = {
+  posX: 0, posY: 150, posZ: 400,
+  targetX: 0, targetY: 0, targetZ: 0,
+  smoothDist: 1200,
+  orbitDirX: 0, orbitDirY: 0.124, orbitDirZ: 0.992 // normalised (0,150,1200)/|...|
+};
+
+// Per-body camera smooth state: keyed by body id
+const _bodyCamState = {};
+
+function getBodyCamState(id){
+  if(!_bodyCamState[id]) _bodyCamState[id] = {
+    posX:0, posY:0, posZ:0, targetX:0, targetY:0, targetZ:0, inited:false
+  };
+  return _bodyCamState[id];
+}
+
+function setCameraMode(camMode){
+  activeCamMode = camMode;
+  // Update button highlights
+  document.querySelectorAll('.cam-btn').forEach(b=>b.classList.remove('active'));
+  if(camMode === 'all'){
+    const ab = document.getElementById('cam-btn-all');
+    if(ab) ab.classList.add('active');
+    // Seed all-view state from current camera so no snap
+    _allCamState.posX = camera.position.x; _allCamState.posY = camera.position.y; _allCamState.posZ = camera.position.z;
+    _allCamState.targetX = panOffset.x; _allCamState.targetY = panOffset.y; _allCamState.targetZ = panOffset.z;
+    // Seed orbit dir
+    const dx = camera.position.x - panOffset.x, dy = camera.position.y - panOffset.y, dz = camera.position.z - panOffset.z;
+    const dl = Math.sqrt(dx*dx+dy*dy+dz*dz)||1;
+    _allCamState.orbitDirX = dx/dl; _allCamState.orbitDirY = dy/dl; _allCamState.orbitDirZ = dz/dl;
+    _allCamState.smoothDist = dl;
+  } else if(camMode === 'free'){
+    const fb = document.getElementById('cam-btn-free');
+    if(fb) fb.classList.add('active');
+    // Seed orbit controls from current camera position so no jump
+    const rel = new THREE.Vector3().subVectors(camera.position, panOffset);
+    orbitRadius = rel.length();
+    orbitPhi = Math.acos(Math.max(-1, Math.min(1, rel.y / orbitRadius)));
+    orbitTheta = Math.atan2(rel.x, rel.z);
+  } else {
+    const bb = document.getElementById('cam-btn-body-'+camMode);
+    if(bb) bb.classList.add('active');
+    // Always re-seed body cam from current camera so no snap on switch
+    if(typeof camMode === 'number' && bodies[camMode]){
+      const b = bodies[camMode];
+      const s = getBodyCamState(b.id);
+      s.posX = camera.position.x; s.posY = camera.position.y; s.posZ = camera.position.z;
+      s.targetX = b.x; s.targetY = b.y; s.targetZ = b.z;
+      // Seed smoothed offset direction from current cam-to-body vector
+      const dx = camera.position.x - b.x, dy = camera.position.y - b.y, dz = camera.position.z - b.z;
+      const dl = Math.sqrt(dx*dx+dy*dy+dz*dz)||1;
+      s.offX = dx/dl; s.offY = dy/dl; s.offZ = dz/dl;
+      s.inited = true;
+    }
+  }
+}
+
+// Rebuild the camera buttons whenever bodies change
+function rebuildCamButtons(){
+  const sw = document.getElementById('cam-switcher');
+  if(!sw) return;
+  // Remove all body cam buttons (keep the All View and Free Orbit ones)
+  sw.querySelectorAll('.cam-btn:not(#cam-btn-all):not(#cam-btn-free)').forEach(b=>b.remove());
+  // If the currently active body cam index is now out of range, switch to all
+  if(typeof activeCamMode === 'number' && !bodies[activeCamMode]){
+    setCameraMode('all');
+  }
+  bodies.forEach((b, i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'cam-btn' + (activeCamMode === i ? ' active' : '');
+    btn.id = 'cam-btn-body-' + i;
+    btn.style.borderColor = b.color + '88';
+    btn.style.color = activeCamMode === i ? '#fff' : b.color;
+    btn.textContent = `⦿ Body ${i+1}`;
+    btn.onclick = () => setCameraMode(i);
+    sw.appendChild(btn);
+  });
+}
+
+// Called every frame — updates camera position/lookat based on active mode
+function tickCameraSystem(dt){
+  // Exponential decay lerp: half-life in seconds → per-frame alpha
+  // halfLife=0.12s → feels live but smooth; halfLife=0.08s → tighter follow
+  const LERP_POS = 1 - Math.pow(0.5, dt / 0.10); // camera position half-life 100ms
+  const LERP_TGT = 1 - Math.pow(0.5, dt / 0.07); // look-at target half-life 70ms
+  const LERP_DIR = 1 - Math.pow(0.5, dt / 0.18); // offset direction half-life 180ms (slow, no jitter)
+  const W = window.innerWidth, H = window.innerHeight;
+
+  if(activeCamMode === 'all'){
+    // ── All-view: fit bounding sphere of all bodies ──────────
+    if(!bodies.length){
+      _allCamState.targetX = 0; _allCamState.targetY = 0; _allCamState.targetZ = 0;
+      _allCamState.posX = 0; _allCamState.posY = 150; _allCamState.posZ = 400;
+      panOffset.set(0,0,0);
+      return;
+    }
+    // Compute centroid
+    let cx=0, cy=0, cz=0;
+    for(const b of bodies){ cx+=b.x; cy+=b.y; cz+=b.z; }
+    cx/=bodies.length; cy/=bodies.length; cz/=bodies.length;
+
+    // Max distance from centroid → bounding radius
+    let radius = 60;
+    for(const b of bodies){
+      const d = Math.sqrt((b.x-cx)**2+(b.y-cy)**2+(b.z-cz)**2) + (b.r||8);
+      if(d > radius) radius = d;
+    }
+
+    // Distance needed to fit bounding sphere in FOV with padding
+    const fovY = camera.fov * Math.PI / 180;
+    const fovX = 2 * Math.atan(Math.tan(fovY/2) * (W/H));
+    const fov = Math.min(fovX, fovY);
+    const desiredDist = (radius / Math.sin(fov / 2)) * 1.35;
+
+    // Smooth the desired distance
+    _allCamState.smoothDist += (desiredDist - _allCamState.smoothDist) * LERP_POS;
+
+    // Smooth the look-at target (centroid)
+    _allCamState.targetX += (cx - _allCamState.targetX) * LERP_TGT;
+    _allCamState.targetY += (cy - _allCamState.targetY) * LERP_TGT;
+    _allCamState.targetZ += (cz - _allCamState.targetZ) * LERP_TGT;
+
+    // Desired camera = smoothed target + stored orbit dir * smoothed dist
+    const desX = _allCamState.targetX + _allCamState.orbitDirX * _allCamState.smoothDist;
+    const desY = _allCamState.targetY + _allCamState.orbitDirY * _allCamState.smoothDist;
+    const desZ = _allCamState.targetZ + _allCamState.orbitDirZ * _allCamState.smoothDist;
+
+    _allCamState.posX += (desX - _allCamState.posX) * LERP_POS;
+    _allCamState.posY += (desY - _allCamState.posY) * LERP_POS;
+    _allCamState.posZ += (desZ - _allCamState.posZ) * LERP_POS;
+
+    camera.position.set(_allCamState.posX, _allCamState.posY, _allCamState.posZ);
+    panOffset.set(_allCamState.targetX, _allCamState.targetY, _allCamState.targetZ);
+    camera.lookAt(_allCamState.targetX, _allCamState.targetY, _allCamState.targetZ);
+
+  } else if(typeof activeCamMode === 'number'){
+    // ── Per-body cam: follow that specific body ──────────────
+    const b = bodies[activeCamMode];
+    if(!b) { setCameraMode('all'); return; }
+    const s = getBodyCamState(b.id);
+
+    const FOLLOW_DIST = Math.max(80, b.r * 8);
+
+    // Smooth the offset direction independently — prevents jitter from velocity noise
+    const speed = Math.sqrt(b.vx**2 + b.vy**2 + b.vz**2);
+    let rawOffX, rawOffY, rawOffZ;
+    if(speed > 2){
+      rawOffX = -b.vx/speed; rawOffY = -b.vy/speed + 0.4; rawOffZ = -b.vz/speed;
+    } else {
+      // Default: above-and-back
+      rawOffX = 0; rawOffY = 0.7; rawOffZ = 0.7;
+    }
+    const rawLen = Math.sqrt(rawOffX**2 + rawOffY**2 + rawOffZ**2) || 1;
+    rawOffX /= rawLen; rawOffY /= rawLen; rawOffZ /= rawLen;
+
+    // Initialise smoothed direction on first use
+    if(!s.offX && !s.offY && !s.offZ){ s.offX = rawOffX; s.offY = rawOffY; s.offZ = rawOffZ; }
+    // Slerp-approximate: lerp then renormalise
+    s.offX += (rawOffX - s.offX) * LERP_DIR;
+    s.offY += (rawOffY - s.offY) * LERP_DIR;
+    s.offZ += (rawOffZ - s.offZ) * LERP_DIR;
+    const sLen = Math.sqrt(s.offX**2 + s.offY**2 + s.offZ**2) || 1;
+    s.offX /= sLen; s.offY /= sLen; s.offZ /= sLen;
+
+    const desX = b.x + s.offX * FOLLOW_DIST;
+    const desY = b.y + s.offY * FOLLOW_DIST;
+    const desZ = b.z + s.offZ * FOLLOW_DIST;
+
+    s.posX += (desX - s.posX) * LERP_POS;
+    s.posY += (desY - s.posY) * LERP_POS;
+    s.posZ += (desZ - s.posZ) * LERP_POS;
+    s.targetX += (b.x - s.targetX) * LERP_TGT;
+    s.targetY += (b.y - s.targetY) * LERP_TGT;
+    s.targetZ += (b.z - s.targetZ) * LERP_TGT;
+
+    camera.position.set(s.posX, s.posY, s.posZ);
+    panOffset.set(s.targetX, s.targetY, s.targetZ);
+    camera.lookAt(s.targetX, s.targetY, s.targetZ);
+  }
+  camera.updateProjectionMatrix();
+}
+
+// ── End Camera Switcher System ───────────────────────────────
+
+// ═══════════════════════════════════════════════════════════
+// SPACE FIELD FORCES
+// Fields that permeate all space — every body is affected automatically.
+// ═══════════════════════════════════════════════════════════
+const fieldState = {
+  spring:  { on: false, k: 0.05,   cx: 0, cy: 0, cz: 0 },  // matches fld-spring-k slider default (0.05)
+  radial:  { on: false, strength: 20.0, cx: 0, cy: 0, cz: 0 }, // matches fld-radial-f slider default (20)
+  vortex:  { on: false, omega: 0.8, axis: 'Y' },               // matches fld-vortex-w slider default (0.8) ✓
+  wind:    { on: false, mag: 15.0,  dx: 0, dy: 1, dz: 0 }   // matches fld-wind-f slider default (15)
+};
+
+function toggleField(name){
+  const s = fieldState[name];
+  s.on = !s.on;
+  const btn = document.getElementById('fld-'+name+'-btn');
+  const labels = { spring:'⟳ Spring', radial:'◎ Radial', vortex:'⟳ Vortex', wind:'💨 Wind' };
+  btn.textContent = labels[name] + ': ' + (s.on ? 'ON' : 'OFF');
+  btn.classList.toggle('active', s.on);
+}
+
+function updateFieldCenter(name){
+  const s = fieldState[name];
+  s.cx = parseFloat(document.getElementById('fld-'+name+'-cx').value);
+  s.cy = parseFloat(document.getElementById('fld-'+name+'-cy').value);
+  s.cz = parseFloat(document.getElementById('fld-'+name+'-cz').value);
+  document.getElementById('fld-'+name+'-cx-v').textContent = s.cx;
+  document.getElementById('fld-'+name+'-cy-v').textContent = s.cy;
+  document.getElementById('fld-'+name+'-cz-v').textContent = s.cz;
+}
+
+function setVortexAxis(axis){
+  fieldState.vortex.axis = axis;
+  ['X','Y','Z'].forEach(a=>{
+    document.getElementById('fld-vortex-ax-'+a).classList.toggle('active', a===axis);
+  });
+}
+
+function setWindDir(x, y, z){
+  fieldState.wind.dx = x; fieldState.wind.dy = y; fieldState.wind.dz = z;
+  // Highlight the right button
+  document.querySelectorAll('.wind-dir-btn[id^="wdb-"]').forEach(b=>b.classList.remove('active'));
+  const key = (x===1?'+X':x===-1?'-X':y===1?'+Y':y===-1?'-Y':z===1?'+Z':'-Z');
+  const btn = document.getElementById('wdb-'+key);
+  if(btn) btn.classList.add('active');
+}
+
+function applySpaceFields(dt){
+  // All field forces use correct Newtonian integration: Δv = (F/m) · dt
+  // dt is already clamped in the animate loop; no re-clamp needed here.
+  const clampedDt = dt;
+  const sf = fieldState.spring;
+  const rf = fieldState.radial;
+  const vf = fieldState.vortex;
+  const wf = fieldState.wind;
+  const anyFieldOn = sf.on || rf.on || vf.on || wf.on;
+  if(!anyFieldOn) return;
+
+  for(const b of bodies){
+    const im = 1 / Math.max(b.mass, MIN_INERTIAL_MASS);
+
+    // ① Spring: F = −k · displacement  →  a = F/m = −k·dx/m
+    //    Hooke's law: force proportional to displacement, divided by mass
+    if(sf.on){
+      const dx = b.x - sf.cx, dy = b.y - sf.cy, dz = b.z - sf.cz;
+      // a = -k * displacement / mass;  Δv = a * dt
+      b.vx -= sf.k * dx * im * clampedDt;
+      b.vy -= sf.k * dy * im * clampedDt;
+      b.vz -= sf.k * dz * im * clampedDt;
+    }
+
+    // ② Radial: F = strength / r²  (inverse-square law, no magic constants)
+    //    a = F/m = strength / (r² · mass);  Δv = a * dt
+    if(rf.on){
+      const dx = b.x - rf.cx, dy = b.y - rf.cy, dz = b.z - rf.cz;
+      const distSq = dx*dx + dy*dy + dz*dz;
+      const dist   = Math.sqrt(distSq) || 0.001;
+      // Acceleration magnitude: a = strength / (r² · m)
+      const accelMag = rf.strength * im / distSq;
+      // Apply along outward unit vector
+      b.vx += accelMag * (dx/dist) * clampedDt;
+      b.vy += accelMag * (dy/dist) * clampedDt;
+      b.vz += accelMag * (dz/dist) * clampedDt;
+    }
+
+    // ③ Vortex: tangential acceleration = omega × r (pure rotation field)
+    //    For a rotation field, a_tangential = omega · r_perp
+    //    Δv = a · dt.  No mass-dependence for a pure velocity field;
+    //    use im to treat it as force/mass if desired (matches centripetal sense).
+    if(vf.on){
+      // dv/dt = omega × position  →  Δv = (omega × pos) * dt
+      const w = vf.omega * clampedDt;
+      if(vf.axis === 'Y'){
+        b.vx += -b.z * w;
+        b.vz +=  b.x * w;
+      } else if(vf.axis === 'X'){
+        b.vy += -b.z * w;
+        b.vz +=  b.y * w;
+      } else { // Z
+        b.vx += -b.y * w;
+        b.vy +=  b.x * w;
+      }
+    }
+
+    // ④ Wind: uniform constant force field  →  a = F_wind / m;  Δv = a * dt
+    if(wf.on){
+      const accelMag = wf.mag * im;
+      b.vx += wf.dx * accelMag * clampedDt;
+      b.vy += wf.dy * accelMag * clampedDt;
+      b.vz += wf.dz * accelMag * clampedDt;
+    }
+  }
+}
+
+// ── End Space Field Forces ──────────────────────────────────
+
+// Main render loop
+let _firstFrame = true;
+const _patchedAnimate = function(now){
+  requestAnimationFrame(_patchedAnimate);
+  if(_firstFrame){ lastFrameTime = now; _firstFrame = false; }
+  // Clamp the real elapsed time first (guards against tab-sleep spikes),
+  // THEN scale by timeScale. Inner functions must NOT re-clamp dt or the
+  // timeScale factor is silently discarded at speeds above ×1.
+  const realDt = Math.min((now - lastFrameTime) / 1000, 0.05);
+  const dt = realDt * timeScale;
+  lastFrameTime = now;
+  const nowMs = now;
+
+  // Any group force active?
+  const anyGroupGrav = groups.some(g=>g.gravOn);
+  const anyGroupCoulomb = groups.some(g=>g.coulombOn);
+  if(gravityOn || coulombOn || anyGroupGrav || anyGroupCoulomb || globalGravOn || globalCoulombOn) applyForces(dt);
+  if(cfOn) applyConstantForce(dt);
+  // Global constant force (all bodies across all groups)
+  if(globalCfOn){
+    for(const b of bodies){
+      const im = 1/Math.max(b.mass, MIN_INERTIAL_MASS);
+      b.vx += globalCfDir.x * globalCfMag * im * dt;
+      b.vy += globalCfDir.y * globalCfMag * im * dt;
+      b.vz += globalCfDir.z * globalCfMag * im * dt;
+    }
+  }
+  // Per-group constant force
+  for(const g of groups){
+    if(!g.cfOn) continue;
+    const gBods = getGroupBodies(g);
+    for(const b of gBods){
+      const im = 1/Math.max(b.mass, MIN_INERTIAL_MASS);
+      b.vx += g.cfDir.x * g.cfMag * im * dt;
+      b.vy += g.cfDir.y * g.cfMag * im * dt;
+      b.vz += g.cfDir.z * g.cfMag * im * dt;
+    }
+  }
+  applySpaceFields(dt);
+
+  // Integrate velocity → position: x += v * dt  (correct Euler)
+  // applyForces already updated velocities via Δv = a*dt.
+  {
+    const clampedDt = dt; // already clamped above in the animate loop
+    resolveCollisions();
+    const MAX_SPEED = 3000; // units/s — prevents bodies flying off screen
+    const DAMPING_PER_SEC = 0.05; // 5% velocity loss per simulated second
+    // Correct: pow(1-r, dt) where dt is in seconds — gives exactly r loss per second
+    const damp = Math.pow(1 - DAMPING_PER_SEC, clampedDt);
+    for(const b of bodies){
+      b.vx *= damp; b.vy *= damp; b.vz *= damp;
+      const spd = Math.sqrt(b.vx*b.vx + b.vy*b.vy + b.vz*b.vz);
+      if(spd > MAX_SPEED){ const f = MAX_SPEED/spd; b.vx*=f; b.vy*=f; b.vz*=f; }
+      // x += v * dt  — correct position integration
+      b.x += b.vx * clampedDt;
+      b.y += b.vy * clampedDt;
+      b.z += b.vz * clampedDt;
+    }
+  }
+
+  for(const b of bodies){
+    if(b.mesh) b.mesh.position.set(b.x, b.y, b.z);
+    // Decay force flash
+    if(b._flashTime && b.mesh && b.mesh.material){
+      const age = (nowMs - b._flashTime) / 280; // 280ms fade
+      if(age >= 1){
+        const col = hexToThree(b.color);
+        b.mesh.material.emissive.set(col.clone().multiplyScalar(0.35));
+        b._flashTime = 0;
+      } else {
+        const t = 1 - age;
+        const base = hexToThree(b.color).multiplyScalar(0.35);
+        b.mesh.material.emissive.set(base.lerp(new THREE.Color(1,1,1), t * 0.85));
+      }
+    }
+  }
+  if(nowMs - lastTrailTime >= TRAIL_INTERVAL){
+    lastTrailTime = nowMs;
+    updateTrails();
+  }
+  tickCameraInertia();
+  // Camera system: All-view / per-body cams override the orbit camera
+  if(activeCamMode !== 'free'){
+    tickCameraSystem(realDt);
+  } else {
+    updateCamera();
+  }
+  updateSelectionRings(nowMs);
+  updateComMarkers(nowMs);
+  liveUpdateGroupCoM();
+  // Spin application point torus
+  if(appPointMesh && appPointMesh.visible){
+    const t = nowMs * 0.001;
+    // Last child is the torus (index 4)
+    const torus = appPointMesh.children[appPointMesh.children.length - 1];
+    if(torus){ torus.rotation.x = t; torus.rotation.z = t * 0.7; }
+  }
+  // Refresh edit panel velocity live
+  if(editTargetBody && editPanel.classList.contains('show')){
+    const vxEl=document.getElementById('eb-vx'),vyEl=document.getElementById('eb-vy'),vzEl=document.getElementById('eb-vz');
+    if(vxEl) vxEl.textContent=editTargetBody.vx.toFixed(2);
+    if(vyEl) vyEl.textContent=editTargetBody.vy.toFixed(2);
+    if(vzEl) vzEl.textContent=editTargetBody.vz.toFixed(2);
+  }
+  renderer.render(scene, camera);
+};
+
+
+function makeDraggable(panelId, handleId){
+  const panel=document.getElementById(panelId);
+  function pin(){
+    const r=panel.getBoundingClientRect();
+    panel.style.transform='none'; panel.style.right='auto'; panel.style.bottom='auto';
+    panel.style.left=r.left+'px'; panel.style.top=r.top+'px';
+  }
+  let grabX=0,grabY=0,startL=0,startT=0,active=false,moved=false;
+  const DRAG_THRESHOLD = 6;
+
+  function startDrag(e){
+    if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
+    if(e.target.classList.contains('toggle-icon')) return;
+    e.stopPropagation();
+    grabX=e.clientX; grabY=e.clientY; moved=false; active=true;
+    const r=panel.getBoundingClientRect();
+    startL=parseFloat(panel.style.left)||r.left;
+    startT=parseFloat(panel.style.top)||r.top;
+    panel.setPointerCapture(e.pointerId);
+  }
+
+  // Drag from header (always works)
+  const header = panel.querySelector('.panel-header');
+  if(header){
+    header.addEventListener('pointerdown', startDrag);
+  }
+
+  // Drag from bottom grip bar (always works)
+  const grip = panel.querySelector('.panel-grip');
+  if(grip){
+    grip.addEventListener('pointerdown', startDrag);
+  }
+
+  // Drag from panel-body only when NOT scrollable
+  panel.addEventListener('pointerdown',e=>{
+    if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA') return;
+    if(e.target.classList.contains('toggle-icon')) return;
+    if(e.target.closest('.panel-header')) return; // already handled above
+    if(e.target.closest('.panel-grip')) return;   // already handled above
+    if(e.target.closest('.panel-body')){
+      const body=panel.querySelector('.panel-body');
+      if(body && body.scrollHeight > body.clientHeight+2) return; // scrollable — don't steal
+    }
+    e.stopPropagation();
+    grabX=e.clientX; grabY=e.clientY; moved=false; active=true;
+    const r=panel.getBoundingClientRect();
+    startL=parseFloat(panel.style.left)||r.left;
+    startT=parseFloat(panel.style.top)||r.top;
+    panel.setPointerCapture(e.pointerId);
+  });
+
+  panel.addEventListener('pointermove',e=>{
+    if(!active) return;
+    const dx=e.clientX-grabX, dy=e.clientY-grabY;
+    if(!moved && Math.sqrt(dx*dx+dy*dy) < DRAG_THRESHOLD) return;
+    if(!moved){ moved=true; pin(); panel.classList.add('dragging');
+      startL=parseFloat(panel.style.left); startT=parseFloat(panel.style.top); }
+    let nx=startL+(e.clientX-grabX), ny=startT+(e.clientY-grabY);
+    nx=Math.max(0,Math.min(window.innerWidth-panel.offsetWidth,nx));
+    ny=Math.max(0,Math.min(window.innerHeight-panel.offsetHeight,ny));
+    panel.style.left=nx+'px'; panel.style.top=ny+'px';
+  });
+
+  const end=()=>{active=false;moved=false;panel.classList.remove('dragging');};
+  panel.addEventListener('pointerup',end);
+  panel.addEventListener('pointercancel',end);
+}
+
+function pinPanel(id){
+  const p=document.getElementById(id);
+  const r=p.getBoundingClientRect();
+  p.style.transform='none'; p.style.right='auto'; p.style.bottom='auto';
+  p.style.left=r.left+'px'; p.style.top=r.top+'px';
+}
+
+// ── Resize ─────────────────────────────────────────────────
+window.addEventListener('resize',()=>{
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.far = 50000;
+  camera.updateProjectionMatrix();
+});
+
+// Init panels
+requestAnimationFrame(()=>{
+  ['info-panel','ctrl-panel','force-panel','trail-panel','groups-panel','const-force-panel','field-panel'].forEach(id=>{
+    pinPanel(id);
+    makeDraggable(id);
+  });
+  // Auto-create Group 1 so balls are always assigned from the start
+  createGroup();
+  rebuildGroupTabs();
+  rebuildTrailGroupList();
+  rebuildGroupsPanel();
+  rebuildCamButtons();
+  // Mark the initial camera mode button as active
+  const initCamBtn = document.getElementById('cam-btn-all');
+  if(initCamBtn) initCamBtn.classList.add('active');
+  setHint('Tap to add balls — they auto-join the active group · Create new group to switch');
+});
+
+_patchedAnimate(performance.now());
+</script>
+</body>
+</html>
