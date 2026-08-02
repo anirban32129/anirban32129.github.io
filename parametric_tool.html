@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parametric Functions — Water Flow Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0a0f1e;
+    --panel: #0e1628;
+    --border: #1e2d50;
+    --water: #00d4ff;
+    --water2: #0080ff;
+    --x-col: #ff6b35;
+    --y-col: #39d98a;
+    --t-col: #f5c518;
+    --r-col: #bf5fff;
+    --text: #c8d8f0;
+    --muted: #4a6080;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--panel);
+  }
+  header .logo {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--water), var(--water2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  header h1 { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; }
+  header p { font-size: 0.75rem; color: var(--muted); font-family: 'Space Mono', monospace; margin-top: 2px; }
+
+  .badge {
+    margin-left: auto;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--water);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr 280px;
+    height: calc(100vh - 61px);
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section-title {
+    font-size: 0.65rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* PRESET BUTTONS */
+  .presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .preset-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 8px;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    line-height: 1.5;
+  }
+  .preset-btn:hover, .preset-btn.active {
+    border-color: var(--water);
+    background: rgba(0,212,255,0.08);
+    color: var(--water);
+  }
+
+  /* FORMULA INPUTS */
+  .formula-block {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .formula-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .formula-row:last-child { margin-bottom: 0; }
+  .formula-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    min-width: 28px;
+  }
+  .formula-label.t { color: var(--t-col); }
+  .formula-label.x { color: var(--x-col); }
+  .formula-label.y { color: var(--y-col); }
+  .formula-label.r { color: var(--r-col); }
+  .formula-input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .formula-input:focus { border-color: var(--water); }
+
+  /* SLIDERS */
+  .slider-group { display: flex; flex-direction: column; gap: 14px; }
+  .slider-row label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    margin-bottom: 5px;
+    color: var(--text);
+  }
+  .slider-row label span { font-family: 'Space Mono', monospace; color: var(--water); }
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--water);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0,212,255,0.5);
+  }
+
+  /* PLAY CONTROLS */
+  .controls { display: flex; gap: 8px; }
+  .ctrl-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.2s;
+  }
+  .ctrl-btn:hover { border-color: var(--water); color: var(--water); }
+  .ctrl-btn.primary {
+    background: linear-gradient(135deg, #0080ff, #00d4ff);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 700;
+  }
+  .ctrl-btn.primary:hover { opacity: 0.85; }
+
+  /* CENTER CANVAS */
+  .center {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 30% 40%, rgba(0,80,160,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 60%, rgba(0,40,80,0.06) 0%, transparent 50%),
+                var(--bg);
+  }
+
+  canvas#main { display: block; }
+
+  /* T TICKER */
+  .t-ticker {
+    position: absolute;
+    top: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(10,15,30,0.9);
+    border: 1px solid rgba(245,197,24,0.4);
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--t-col);
+    display: flex; gap: 20px;
+    backdrop-filter: blur(10px);
+  }
+  .t-ticker span { color: var(--muted); }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* LIVE VALUES */
+  .live-card {
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    padding: 14px;
+  }
+  .live-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.78rem;
+  }
+  .live-row:last-child { border-bottom: none; }
+  .live-row .key { font-family: 'Space Mono', monospace; font-weight: 700; }
+  .live-row .val { font-family: 'Space Mono', monospace; }
+  .live-row.t .key,.live-row.t .val { color: var(--t-col); }
+  .live-row.x .key,.live-row.x .val { color: var(--x-col); }
+  .live-row.y .key,.live-row.y .val { color: var(--y-col); }
+  .live-row.r .key,.live-row.r .val { color: var(--r-col); }
+
+  /* CONCEPT BOXES */
+  .concept {
+    background: rgba(0,0,0,0.2);
+    border-left: 3px solid var(--water);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 14px;
+    font-size: 0.75rem;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .concept strong { color: var(--water); }
+  .concept.x { border-color: var(--x-col); }
+  .concept.x strong { color: var(--x-col); }
+  .concept.y { border-color: var(--y-col); }
+  .concept.y strong { color: var(--y-col); }
+  .concept.r { border-color: var(--r-col); }
+  .concept.r strong { color: var(--r-col); }
+  .concept.t { border-color: var(--t-col); }
+  .concept.t strong { color: var(--t-col); }
+
+  /* MINI GRAPH */
+  canvas.mini { border-radius: 8px; width: 100%; display: block; }
+
+  /* TRAIL TOGGLE */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; }
+  .toggle {
+    width: 36px; height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle.on { background: var(--water); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: left 0.2s;
+  }
+  .toggle.on::after { left: 19px; }
+
+  .divider { border: none; border-top: 1px solid var(--border); }
+
+  /* WATER PIPE ANIMATION overlay labels */
+  .pipe-label {
+    position: absolute;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+
+<header>
+  <div class="logo">〜</div>
+  <div>
+    <h1>Parametric Functions</h1>
+    <p>Water Flow Visualizer</p>
+  </div>
+  <div class="badge">INTERACTIVE</div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT -->
+  <div class="left-panel">
+
+    <div>
+      <div class="section-title">⬡ Preset Curves</div>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div>
+      <div class="section-title">⌁ Custom Formulas</div>
+      <div class="formula-block">
+        <div class="formula-row">
+          <div class="formula-label t">t =</div>
+          <div style="font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--muted)">flows from t<sub>min</sub> → t<sub>max</sub></div>
+        </div>
+        <div class="formula-row">
+          <div class="formula-label x">x(t) =</div>
+          <input class="formula-input" id="xFormula" value="Math.cos(t)" spellcheck="false">
+        </div>
+        <div class="formula-row">
+          <div class="formula-label y">y(t) =</div>
+          <input class="formula-input" id="yFormula" value="Math.sin(t)" spellcheck="false">
+        </div>
+        <div class="formula-row" style="margin-top:6px;padding-top:8px;border-top:1px solid var(--border);">
+          <div class="formula-label r">r⃗(t) =</div>
+          <div style="font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--r-col)">⟨ x(t), y(t) ⟩</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">⚙ Parameters</div>
+      <div class="slider-group">
+        <div class="slider-row">
+          <label>t<sub>min</sub> <span id="tMinVal">0</span></label>
+          <input type="range" id="tMin" min="-20" max="0" step="0.5" value="0">
+        </div>
+        <div class="slider-row">
+          <label>t<sub>max</sub> <span id="tMaxVal">6.28</span></label>
+          <input type="range" id="tMax" min="1" max="40" step="0.5" value="6.28">
+        </div>
+        <div class="slider-row">
+          <label>Speed <span id="speedVal">1.0×</span></label>
+          <input type="range" id="speed" min="0.1" max="5" step="0.1" value="1">
+        </div>
+        <div class="slider-row">
+          <label>Scale <span id="scaleVal">1.0×</span></label>
+          <input type="range" id="scale" min="0.3" max="3" step="0.1" value="1">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">▶ Playback</div>
+      <div class="controls">
+        <button class="ctrl-btn primary" id="playBtn">▶ Play</button>
+        <button class="ctrl-btn" id="resetBtn">↺ Reset</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">◈ Options</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="toggle-row">
+          Show Trail
+          <div class="toggle on" id="trailToggle"></div>
+        </div>
+        <div class="toggle-row">
+          Show Grid
+          <div class="toggle on" id="gridToggle"></div>
+        </div>
+        <div class="toggle-row">
+          Show Pipes
+          <div class="toggle on" id="pipeToggle"></div>
+        </div>
+        <div class="toggle-row">
+          Show Axes Labels
+          <div class="toggle on" id="axisToggle"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CENTER -->
+  <div class="center" id="centerDiv">
+    <canvas id="main"></canvas>
+    <div class="t-ticker" id="ticker">
+      <div><span>t = </span><span id="tDisplay">0.00</span></div>
+      <div><span>x = </span><span id="xDisplay" style="color:var(--x-col)">—</span></div>
+      <div><span>y = </span><span id="yDisplay" style="color:var(--y-col)">—</span></div>
+      <div><span>|r⃗| = </span><span id="rDisplay" style="color:var(--r-col)">—</span></div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-panel">
+
+    <div>
+      <div class="section-title">📡 Live Values</div>
+      <div class="live-card">
+        <div class="live-row t"><span class="key">t (parameter)</span><span class="val" id="liveT">0.00</span></div>
+        <div class="live-row x"><span class="key">x(t)</span><span class="val" id="liveX">—</span></div>
+        <div class="live-row y"><span class="key">y(t)</span><span class="val" id="liveY">—</span></div>
+        <div class="live-row r"><span class="key">r⃗(t)</span><span class="val" id="liveR">—</span></div>
+        <div class="live-row r" style="opacity:0.8"><span class="key">|r⃗(t)|</span><span class="val" id="liveRmag">—</span></div>
+        <div class="live-row" style="color:var(--muted)"><span class="key">point</span><span class="val" id="liveP">—</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">📈 x(t) Graph</div>
+      <canvas class="mini" id="miniX" height="80"></canvas>
+    </div>
+
+    <div>
+      <div class="section-title">📈 y(t) Graph</div>
+      <canvas class="mini" id="miniY" height="80"></canvas>
+    </div>
+
+    <div>
+      <div class="section-title" style="color:var(--r-col)">📈 |r⃗(t)| Graph</div>
+      <canvas class="mini" id="miniR" height="80"></canvas>
+    </div>
+
+    <hr class="divider">
+
+    <div>
+      <div class="section-title">💡 Understanding</div>
+      <div class="concept t">
+        <strong>t — The Source</strong><br>
+        t is like the water source. It flows forward in time. Every value of t produces exactly one output.
+      </div>
+    </div>
+    <div>
+      <div class="concept x">
+        <strong>x(t) — Horizontal Branch</strong><br>
+        The X-pipe controls <em>left/right</em> position. Its tube width represents how fast x changes — a wider tube means faster change.
+      </div>
+    </div>
+    <div>
+      <div class="concept y">
+        <strong>y(t) — Vertical Branch</strong><br>
+        The Y-pipe controls <em>up/down</em> position. Together, x(t) and y(t) draw a path no single function y=f(x) could describe.
+      </div>
+    </div>
+    <div>
+      <div class="concept r">
+        <strong>r⃗(t) — The Position Vector</strong><br>
+        r⃗(t) = ⟨x(t), y(t)⟩ is the <em>vector from the origin to the point</em>. Its magnitude |r⃗| = √(x²+y²) is the distance from origin. The arrow you see on the canvas IS r⃗, born from the merger of both pipes.
+      </div>
+    </div>
+
+    <div style="font-size:0.68rem;color:var(--muted);line-height:1.7;font-family:'Space Mono',monospace;">
+      KEY INSIGHT:<br>
+      At each moment t, the water flows into BOTH branches simultaneously, producing a 2D point (x, y). The curve is the trace of all these points.
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  PRESETS
+// ============================================================
+const PRESETS = [
+  { name: "Circle", x: "Math.cos(t)", y: "Math.sin(t)", tMin: 0, tMax: 6.28, scale: 1.5 },
+  { name: "Lissajous 3:2", x: "Math.sin(3*t)", y: "Math.sin(2*t)", tMin: 0, tMax: 6.28, scale: 1.5 },
+  { name: "Spiral", x: "t*Math.cos(t)", y: "t*Math.sin(t)", tMin: 0, tMax: 20, scale: 0.4 },
+  { name: "Heart", x: "16*Math.pow(Math.sin(t),3)/16", y: "-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))/16", tMin: 0, tMax: 6.28, scale: 1.4 },
+  { name: "Butterfly", x: "Math.sin(t)*(Math.exp(Math.cos(t))-2*Math.cos(4*t))", y: "Math.cos(t)*(Math.exp(Math.cos(t))-2*Math.cos(4*t))", tMin: 0, tMax: 12.57, scale: 0.5 },
+  { name: "Parabola", x: "t", y: "t*t/4", tMin: -4, tMax: 4, scale: 0.5 },
+  { name: "Hypotrochoid", x: "2*Math.cos(t)+5*Math.cos(2*t/3)", y: "2*Math.sin(t)-5*Math.sin(2*t/3)", tMin: 0, tMax: 18.85, scale: 0.5 },
+  { name: "Sine Wave", x: "t", y: "Math.sin(2*t)", tMin: -6.28, tMax: 6.28, scale: 0.5 },
+];
+
+// ============================================================
+//  STATE
+// ============================================================
+const state = {
+  t: 0, playing: false,
+  trail: true, grid: true, pipes: true, axes: true,
+  preset: 0,
+  xFn: null, yFn: null,
+  tMin: 0, tMax: 6.28,
+  speed: 1, scale: 1,
+  trailPoints: [],
+  animId: null,
+  lastTime: null,
+};
+
+function parseFormulas() {
+  try {
+    const xStr = document.getElementById('xFormula').value;
+    const yStr = document.getElementById('yFormula').value;
+    state.xFn = new Function('t', `return ${xStr}`);
+    state.yFn = new Function('t', `return ${yStr}`);
+    return true;
+  } catch(e) { return false; }
+}
+
+function evalXY(t) {
+  try {
+    const x = state.xFn(t);
+    const y = state.yFn(t);
+    return isFinite(x) && isFinite(y) ? [x, y] : null;
+  } catch { return null; }
+}
+
+// ============================================================
+//  CANVAS SETUP
+// ============================================================
+const canvas = document.getElementById('main');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const div = document.getElementById('centerDiv');
+  canvas.width = div.clientWidth;
+  canvas.height = div.clientHeight;
+}
+window.addEventListener('resize', () => { resize(); draw(); });
+resize();
+
+// Mini canvases
+const miniX = document.getElementById('miniX');
+const miniY = document.getElementById('miniY');
+function resizeMini() {
+  const w = miniX.parentElement.clientWidth - 40;
+  miniX.width = w; miniY.width = w;
+}
+resizeMini();
+
+// ============================================================
+//  COORDINATE HELPERS
+// ============================================================
+function toScreen(x, y) {
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const sc = Math.min(canvas.width, canvas.height) * 0.35 * state.scale;
+  return [cx + x * sc, cy - y * sc];
+}
+
+// ============================================================
+//  DRAW GRID
+// ============================================================
+function drawGrid() {
+  if (!state.grid) return;
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const sc = Math.min(canvas.width, canvas.height) * 0.35 * state.scale;
+  const step = 1;
+  const maxX = Math.ceil(canvas.width / 2 / sc) + 1;
+  const maxY = Math.ceil(canvas.height / 2 / sc) + 1;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(30,45,80,0.8)';
+  ctx.lineWidth = 1;
+
+  for (let xi = -maxX; xi <= maxX; xi++) {
+    const sx = cx + xi * sc;
+    ctx.beginPath();
+    ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height);
+    ctx.stroke();
+  }
+  for (let yi = -maxY; yi <= maxY; yi++) {
+    const sy = cy - yi * sc;
+    ctx.beginPath();
+    ctx.moveTo(0, sy); ctx.lineTo(canvas.width, sy);
+    ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(100,130,180,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height); ctx.stroke();
+
+  // Labels
+  if (!state.axes) { ctx.restore(); return; }
+  ctx.fillStyle = 'rgba(100,130,180,0.7)';
+  ctx.font = '11px Space Mono, monospace';
+  for (let xi = -maxX; xi <= maxX; xi++) {
+    if (xi === 0) continue;
+    const sx = cx + xi * sc;
+    ctx.fillText(xi, sx - 4, cy + 14);
+  }
+  for (let yi = -maxY; yi <= maxY; yi++) {
+    if (yi === 0) continue;
+    const sy = cy - yi * sc;
+    ctx.fillText(yi, cx + 6, sy + 4);
+  }
+  // Axis labels
+  ctx.fillStyle = 'rgba(255,107,53,0.8)';
+  ctx.font = 'bold 13px Syne, sans-serif';
+  ctx.fillText('x', canvas.width - 24, cy - 10);
+  ctx.fillStyle = 'rgba(57,217,138,0.8)';
+  ctx.fillText('y', cx + 10, 16);
+
+  ctx.restore();
+}
+
+// ============================================================
+//  DRAW PIPES (water animation) — RHOMBUS / DIAMOND LAYOUT
+//
+//          [t]          ← TOP (source)
+//         /   \
+//       [x]   [y]      ← LEFT & RIGHT (symmetric branches)
+//         \   /
+//          [r]          ← BOTTOM (merge / output)
+// ============================================================
+function drawPipes() {
+  if (!state.pipes) return;
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const now = Date.now();
+
+  const pt = evalXY(state.t);
+  const [sx, sy] = pt ? toScreen(pt[0], pt[1]) : [cx, cy];
+
+  // ── Rhombus anchor points (pipe diagram zone: left half of canvas) ──
+  // We place the whole diamond in the left ~55% so the math canvas
+  // is still visible on the right.
+  const diagCX = cx - W * 0.10;   // horizontal centre of the diamond
+  const diagCY = cy;               // vertical  centre of the diamond
+  const armH   = H * 0.22;        // half-height of diamond
+  const armW   = W * 0.16;        // half-width  of diamond
+
+  // Four diamond corners
+  const tX = diagCX,         tY = diagCY - armH;   // TOP    — t source
+  const xX = diagCX - armW,  xY = diagCY;           // LEFT   — x node
+  const yX = diagCX + armW,  yY = diagCY;           // RIGHT  — y node
+  const rX = diagCX,         rY = diagCY + armH;    // BOTTOM — r merge
+
+  // ── Node radii driven by NOMINAL value of x(t) and y(t) ─────
+  // Base radius + scaled by |value|, clamped to reasonable range
+  const tR = 30;
+  const xVal = pt ? Math.abs(pt[0]) : 0;
+  const yVal = pt ? Math.abs(pt[1]) : 0;
+  const rMagNom = pt ? Math.sqrt(pt[0]*pt[0] + pt[1]*pt[1]) : 0;
+
+  // Node radii: base 14, grow up to 36 based on |value|
+  const xR = Math.max(14, Math.min(36, 14 + xVal * 10));
+  const yR = Math.max(14, Math.min(36, 14 + yVal * 10));
+  const rR = Math.max(18, Math.min(42, 18 + rMagNom * 7));
+
+  // ── Pipe widths: t→x and t→y driven by NOMINAL |x(t)|, |y(t)| ─
+  // (rate of change still shapes the lower x→r, y→r pipes)
+  const xWidthTop = Math.max(5, Math.min(26, 5 + xVal * 12));   // t→x pipe
+  const yWidthTop = Math.max(5, Math.min(26, 5 + yVal * 12));   // t→y pipe
+
+  let xWidthBot = xWidthTop, yWidthBot = yWidthTop;
+  if (state.t < state.tMax - 0.05) {
+    const p1 = evalXY(state.t), p2 = evalXY(state.t + 0.05);
+    if (p1 && p2) {
+      xWidthBot = Math.min(22, 6 + Math.abs(p2[0] - p1[0]) * 30);
+      yWidthBot = Math.min(22, 6 + Math.abs(p2[1] - p1[1]) * 30);
+    }
+  }
+  // Aliases kept for pipe drawing calls
+  const xWidth = xWidthTop;
+  const yWidth = yWidthTop;
+  const rOutWidth = Math.min(26, Math.sqrt(xWidthBot * xWidthBot + yWidthBot * yWidthBot) * 0.7 + 5);
+
+  // ── PIPES (draw first so nodes sit on top) ───────────────────
+  // t → x  (top to left)  — width = nominal |x(t)|
+  drawFlowPipe(tX - tR * 0.7, tY + tR * 0.7, xX + xR * 0.7, xY - xR * 0.7, xWidthTop, '#ff6b35', now, 1.5);
+  // t → y  (top to right) — width = nominal |y(t)|
+  drawFlowPipe(tX + tR * 0.7, tY + tR * 0.7, yX - yR * 0.7, yY - yR * 0.7, yWidthTop, '#39d98a', now, 0.8);
+  // x → r  (left to bottom) — width = rate of change Δx/Δt
+  drawFlowPipe(xX + xR * 0.7, xY + xR * 0.7, rX - rR * 0.7, rY - rR * 0.7, xWidthBot, '#ff6b35', now, 1.3);
+  // y → r  (right to bottom) — width = rate of change Δy/Δt
+  drawFlowPipe(yX - yR * 0.7, yY + yR * 0.7, rX + rR * 0.7, rY - rR * 0.7, yWidthBot, '#39d98a', now, 0.9);
+
+  // Pipe labels
+  ctx.save();
+  ctx.font = '9px Space Mono, monospace';
+  ctx.textAlign = 'center';
+  // t→x label (upper-left diagonal)
+  ctx.fillStyle = 'rgba(255,107,53,0.85)';
+  ctx.fillText('x(t)', (tX + xX) / 2 - 18, (tY + xY) / 2 - 6);
+  // t→y label (upper-right diagonal)
+  ctx.fillStyle = 'rgba(57,217,138,0.85)';
+  ctx.fillText('y(t)', (tX + yX) / 2 + 18, (tY + yY) / 2 - 6);
+  // x→r label (lower-left diagonal)
+  ctx.fillStyle = 'rgba(255,107,53,0.75)';
+  ctx.fillText('Δx/Δt', (xX + rX) / 2 - 20, (xY + rY) / 2 + 10);
+  // y→r label (lower-right diagonal)
+  ctx.fillStyle = 'rgba(57,217,138,0.75)';
+  ctx.fillText('Δy/Δt', (yX + rX) / 2 + 20, (yY + rY) / 2 + 10);
+  ctx.restore();
+
+  // ── T SOURCE (top) ───────────────────────────────────────────
+  const tGrad = ctx.createRadialGradient(tX, tY, 0, tX, tY, tR * 2.5);
+  tGrad.addColorStop(0, 'rgba(245,197,24,0.28)');
+  tGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = tGrad;
+  ctx.beginPath(); ctx.arc(tX, tY, tR * 2.5, 0, Math.PI * 2); ctx.fill();
+
+  const pulse = 0.5 + 0.5 * Math.sin(now * 0.005);
+  ctx.strokeStyle = `rgba(245,197,24,${0.4 + 0.3 * pulse})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(tX, tY, tR + 6 + pulse * 5, 0, Math.PI * 2); ctx.stroke();
+
+  ctx.fillStyle = '#1a1200';
+  ctx.strokeStyle = '#f5c518';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(tX, tY, tR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = '#f5c518';
+  ctx.font = 'bold 17px Space Mono, monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('t', tX, tY - 2);
+  ctx.font = '10px Space Mono, monospace';
+  ctx.fillStyle = 'rgba(245,197,24,0.75)';
+  ctx.fillText(state.t.toFixed(2), tX, tY - tR - 14);
+
+  // ── X NODE (left) ────────────────────────────────────────────
+  drawBranchNode(xX, xY, 'x', '#ff6b35', pt ? pt[0].toFixed(2) : '—', xR);
+
+  // ── Y NODE (right) ───────────────────────────────────────────
+  drawBranchNode(yX, yY, 'y', '#39d98a', pt ? pt[1].toFixed(2) : '—', yR);
+
+  // ── R⃗ MERGE NODE (bottom) ────────────────────────────────────
+  const c = '191,95,255';
+  const rGrad = ctx.createRadialGradient(rX, rY, 0, rX, rY, rR * 2.5);
+  rGrad.addColorStop(0, `rgba(${c},0.35)`);
+  rGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = rGrad;
+  ctx.beginPath(); ctx.arc(rX, rY, rR * 2.5, 0, Math.PI * 2); ctx.fill();
+
+  const pulse2 = 0.5 + 0.5 * Math.sin(now * 0.006 + 1.2);
+  ctx.strokeStyle = `rgba(${c},${0.45 + 0.3 * pulse2})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(rX, rY, rR + 7 + pulse2 * 4, 0, Math.PI * 2); ctx.stroke();
+
+  ctx.fillStyle = '#120920';
+  ctx.strokeStyle = `rgba(${c},1)`;
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(rX, rY, rR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = `rgba(${c},1)`;
+  const rFs = Math.max(9, Math.min(15, Math.round(rR * 0.48)));
+  ctx.font = `bold ${rFs}px Space Mono, monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('r⃗(t)', rX, rY - rR * 0.2);
+  const rMagVal = pt ? Math.sqrt(pt[0] * pt[0] + pt[1] * pt[1]).toFixed(2) : '—';
+  ctx.font = `${Math.max(8, rFs - 3)}px Space Mono, monospace`;
+  ctx.fillStyle = 'rgba(220,200,255,0.95)';
+  ctx.fillText('|r⃗|=' + rMagVal, rX, rY + rR * 0.35);
+
+  // ── OUTPUT PIPE: r⃗ → downward arrow ─────────────────────────
+  const arrY = rY + rR + H * 0.07;
+  drawFlowPipe(rX, rY + rR, rX, arrY, rOutWidth, '#bf5fff', now, 1.2);
+
+  // Arrowhead (pointing down)
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(rX, arrY + 13);
+  ctx.lineTo(rX - 8, arrY - 1);
+  ctx.lineTo(rX + 8, arrY - 1);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(191,95,255,0.95)';
+  ctx.fill();
+  ctx.restore();
+
+  // Output label
+  ctx.save();
+  ctx.font = '9px Space Mono, monospace';
+  ctx.fillStyle = 'rgba(191,95,255,0.8)';
+  ctx.textAlign = 'center';
+  ctx.fillText('⟨x,y⟩ out', rX + rOutWidth / 2 + 28, arrY - 4);
+  ctx.restore();
+
+  // ── DIAMOND OUTLINE (subtle) to show the rhombus shape ───────
+  ctx.save();
+  ctx.setLineDash([4, 8]);
+  ctx.strokeStyle = 'rgba(100,130,180,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(tX, tY);
+  ctx.lineTo(xX, xY);
+  ctx.lineTo(rX, rY);
+  ctx.lineTo(yX, yY);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // ── CROSSHAIR DASHES from x/y nodes to the current plotted point ─
+  if (pt) {
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = 'rgba(255,107,53,0.35)';
+    ctx.beginPath(); ctx.moveTo(xX + xR + 4, xY); ctx.lineTo(sx, xY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx, xY); ctx.lineTo(sx, sy); ctx.stroke();
+    ctx.strokeStyle = 'rgba(57,217,138,0.35)';
+    ctx.beginPath(); ctx.moveTo(yX - yR - 4, yY); ctx.lineTo(cx, yY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, yY); ctx.lineTo(cx, sy); ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+function drawFlowPipe(x1, y1, x2, y2, w, color, now, speedMult = 1) {
+  const ddx = x2 - x1, ddy = y2 - y1;
+  const len  = Math.sqrt(ddx * ddx + ddy * ddy);
+  const nx   = -ddy / len, ny = ddx / len;   // perpendicular normal
+  const c    = hexToRgb(color);
+
+  // Tube geometry: outer radius = w/2, inner (hollow) radius = w*0.30
+  // The "wall" is the ring between inner and outer edges.
+  // We draw it as a cross-section gradient so it looks like a 3-D glass tube.
+  const outer = w / 2;          // half total width
+  const inner = outer * 0.42;   // hollow bore — particles visible here
+  const wall  = outer - inner;  // physical wall thickness
+
+  // Helper: build a 4-point quad along pipe axis offset by ±dist from centre
+  function quad(d1, d2) {
+    ctx.beginPath();
+    ctx.moveTo(x1 + nx * d1, y1 + ny * d1);
+    ctx.lineTo(x2 + nx * d1, y2 + ny * d1);
+    ctx.lineTo(x2 + nx * d2, y2 + ny * d2);
+    ctx.lineTo(x1 + nx * d2, y1 + ny * d2);
+    ctx.closePath();
+  }
+
+  ctx.save();
+
+  // ── STEP 1: Outer ambient glow (wide soft halo around entire pipe) ──
+  const haloW = outer + 10;
+  const haloGrad = ctx.createLinearGradient(
+    x1 + nx * haloW, y1 + ny * haloW,
+    x1 - nx * haloW, y1 - ny * haloW
+  );
+  haloGrad.addColorStop(0,   `rgba(${c},0)`);
+  haloGrad.addColorStop(0.25,`rgba(${c},0.12)`);
+  haloGrad.addColorStop(0.5, `rgba(${c},0.22)`);
+  haloGrad.addColorStop(0.75,`rgba(${c},0.12)`);
+  haloGrad.addColorStop(1,   `rgba(${c},0)`);
+  quad(haloW, -haloW);
+  ctx.fillStyle = haloGrad;
+  ctx.fill();
+
+  // ── STEP 2: UPPER WALL (positive-normal side) ─────────────────
+  // Fills from +outer down to +inner  →  solid thick rim
+  const topWallGrad = ctx.createLinearGradient(
+    x1 + nx * outer, y1 + ny * outer,
+    x1 + nx * inner, y1 + ny * inner
+  );
+  topWallGrad.addColorStop(0,   `rgba(${c}, 0.25)`);   // outer edge (tapers off)
+  topWallGrad.addColorStop(0.15,`rgba(${c}, 0.82)`);   // main solid wall body
+  topWallGrad.addColorStop(0.7, `rgba(${c}, 0.70)`);
+  topWallGrad.addColorStop(1,   `rgba(${c}, 0.30)`);   // inner rim
+  quad(outer, inner);
+  ctx.fillStyle = topWallGrad;
+  ctx.fill();
+
+  // ── STEP 3: LOWER WALL (negative-normal side) ─────────────────
+  const botWallGrad = ctx.createLinearGradient(
+    x1 - nx * outer, y1 - ny * outer,
+    x1 - nx * inner, y1 - ny * inner
+  );
+  botWallGrad.addColorStop(0,   `rgba(${c}, 0.20)`);
+  botWallGrad.addColorStop(0.15,`rgba(${c}, 0.68)`);
+  botWallGrad.addColorStop(0.7, `rgba(${c}, 0.58)`);
+  botWallGrad.addColorStop(1,   `rgba(${c}, 0.28)`);
+  quad(-inner, -outer);
+  ctx.fillStyle = botWallGrad;
+  ctx.fill();
+
+  // ── STEP 4: Hard outer edge lines ────────────────────────────
+  // Outer bright rim line (top)
+  ctx.beginPath();
+  ctx.moveTo(x1 + nx * outer, y1 + ny * outer);
+  ctx.lineTo(x2 + nx * outer, y2 + ny * outer);
+  ctx.strokeStyle = `rgba(${c}, 0.95)`;
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+  // Outer rim line (bottom)
+  ctx.beginPath();
+  ctx.moveTo(x1 - nx * outer, y1 - ny * outer);
+  ctx.lineTo(x2 - nx * outer, y2 - ny * outer);
+  ctx.strokeStyle = `rgba(${c}, 0.80)`;
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+  // Specular highlight ~80% toward outer edge (top)
+  const specD = outer * 0.72;
+  ctx.beginPath();
+  ctx.moveTo(x1 + nx * specD, y1 + ny * specD);
+  ctx.lineTo(x2 + nx * specD, y2 + ny * specD);
+  ctx.strokeStyle = `rgba(255,255,255,0.30)`;
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+
+  // ── STEP 5: Inner bore lines (glass tube inner wall) ─────────
+  ctx.beginPath();
+  ctx.moveTo(x1 + nx * inner, y1 + ny * inner);
+  ctx.lineTo(x2 + nx * inner, y2 + ny * inner);
+  ctx.strokeStyle = `rgba(${c}, 0.55)`;
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x1 - nx * inner, y1 - ny * inner);
+  ctx.lineTo(x2 - nx * inner, y2 - ny * inner);
+  ctx.strokeStyle = `rgba(${c}, 0.45)`;
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+
+  // ── STEP 6: Glowing particles inside the hollow bore ─────────
+  // Clip to the inner bore so particles stay inside the tube
+  quad(inner, -inner);
+  ctx.clip();
+
+  const numDrops = 7;
+  const phase    = (now * 0.0022 * speedMult) % 1;
+
+  for (let i = 0; i < numDrops; i++) {
+    const p  = (i / numDrops + phase) % 1;
+    const px = x1 + p * ddx;
+    const py = y1 + p * ddy;
+
+    // Wide outer glow bloom — fills the bore with color light
+    const bloom = ctx.createRadialGradient(px, py, 0, px, py, inner * 1.6);
+    bloom.addColorStop(0,   `rgba(${c}, 0.70)`);
+    bloom.addColorStop(0.4, `rgba(${c}, 0.30)`);
+    bloom.addColorStop(1,   `rgba(${c}, 0.00)`);
+    ctx.fillStyle = bloom;
+    ctx.beginPath();
+    ctx.arc(px, py, inner * 1.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mid halo — strong colored ring
+    const halo = ctx.createRadialGradient(px, py, 0, px, py, inner * 0.75);
+    halo.addColorStop(0,   `rgba(${c}, 0.95)`);
+    halo.addColorStop(0.6, `rgba(${c}, 0.55)`);
+    halo.addColorStop(1,   `rgba(${c}, 0.00)`);
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(px, py, inner * 0.75, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bright white-hot core with shadowBlur glow
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 14;
+    ctx.fillStyle   = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(px, py, inner * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function drawBranchNode(x, y, label, color, val, r) {
+  if (r === undefined) r = 22;
+  const c = hexToRgb(color);
+
+  // Glow — scales with node radius
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r * 2.2);
+  g.addColorStop(0, `rgba(${c},0.35)`);
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, Math.PI * 2); ctx.fill();
+
+  // Body
+  ctx.fillStyle = '#0a0f1e';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+  // Label — scale font with radius
+  const fs = Math.max(9, Math.min(15, Math.round(r * 0.55)));
+  ctx.fillStyle = color;
+  ctx.font = `bold ${fs}px Space Mono, monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label + '(t)', x, y - r * 0.22);
+  ctx.font = `${Math.max(8, fs - 3)}px Space Mono, monospace`;
+  ctx.fillStyle = 'rgba(200,216,240,0.8)';
+  ctx.fillText(val, x, y + r * 0.38);
+}
+
+function hexToRgb(hex) {
+  // Also accepts css color names via lookup
+  const map = { '#ff6b35': '255,107,53', '#39d98a': '57,217,138', '#f5c518': '245,197,24', '#00d4ff': '0,212,255', '#bf5fff': '191,95,255' };
+  return map[hex] || '200,216,240';
+}
+
+// ============================================================
+//  DRAW TRAIL
+// ============================================================
+function drawTrail() {
+  if (!state.trail || state.trailPoints.length < 2) return;
+  const pts = state.trailPoints;
+
+  // Gradient trail
+  for (let i = 1; i < pts.length; i++) {
+    const t0 = (i - 1) / pts.length;
+    const alpha = t0 * 0.85;
+    const hue = 180 + t0 * 60;
+    ctx.strokeStyle = `hsla(${hue},100%,60%,${alpha})`;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    const [x1, y1] = toScreen(pts[i - 1][0], pts[i - 1][1]);
+    const [x2, y2] = toScreen(pts[i][0], pts[i][1]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+}
+
+// ============================================================
+//  DRAW POINT  (multi-layer pulsing glow)
+// ============================================================
+function drawPoint() {
+  const pt = evalXY(state.t);
+  if (!pt) return;
+  const [sx, sy] = toScreen(pt[0], pt[1]);
+  const now = Date.now();
+  const pulse  = 0.5 + 0.5 * Math.sin(now * 0.006);
+  const pulse2 = 0.5 + 0.5 * Math.sin(now * 0.006 + Math.PI);
+
+  // Layer 1: huge soft outer halo
+  const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, 55 + pulse * 10);
+  halo.addColorStop(0,   `rgba(0,212,255,${0.18 + 0.08 * pulse})`);
+  halo.addColorStop(0.5, `rgba(0,150,255,${0.10 + 0.05 * pulse})`);
+  halo.addColorStop(1,   'rgba(0,100,200,0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(sx, sy, 65, 0, Math.PI * 2); ctx.fill();
+
+  // Layer 2: mid glow ring
+  const midGlow = ctx.createRadialGradient(sx, sy, 0, sx, sy, 28 + pulse2 * 6);
+  midGlow.addColorStop(0,   `rgba(100,230,255,${0.55 + 0.2 * pulse2})`);
+  midGlow.addColorStop(0.6, `rgba(0,212,255,${0.25 + 0.1 * pulse2})`);
+  midGlow.addColorStop(1,   'rgba(0,212,255,0)');
+  ctx.fillStyle = midGlow;
+  ctx.beginPath(); ctx.arc(sx, sy, 34, 0, Math.PI * 2); ctx.fill();
+
+  // Layer 3: inner core glow
+  const coreGlow = ctx.createRadialGradient(sx, sy, 0, sx, sy, 12);
+  coreGlow.addColorStop(0,   'rgba(255,255,255,1)');
+  coreGlow.addColorStop(0.3, 'rgba(150,240,255,0.95)');
+  coreGlow.addColorStop(1,   'rgba(0,212,255,0)');
+  ctx.fillStyle = coreGlow;
+  ctx.beginPath(); ctx.arc(sx, sy, 12, 0, Math.PI * 2); ctx.fill();
+
+  // Layer 4: solid bright particle dot with shadowBlur glow
+  ctx.save();
+  ctx.shadowColor = '#00d4ff';
+  ctx.shadowBlur  = 18;
+  ctx.fillStyle   = '#ffffff';
+  ctx.strokeStyle = '#00eeff';
+  ctx.lineWidth   = 2.5;
+  ctx.beginPath(); ctx.arc(sx, sy, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+
+  // Layer 5: animated expanding ring pulse
+  const ringR = 10 + pulse * 14;
+  const ringA = 0.7 - pulse * 0.6;
+  ctx.save();
+  ctx.strokeStyle = `rgba(0,212,255,${ringA})`;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(sx, sy, ringR, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+
+  // Crosshair dashed lines
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  ctx.save();
+  ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = 'rgba(0,212,255,0.30)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(sx, cy); ctx.lineTo(sx, sy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, sy); ctx.lineTo(sx, sy); ctx.stroke();
+  ctx.restore();
+
+  // Axis projection dots with glow
+  ctx.save();
+  ctx.shadowColor = '#ff6b35'; ctx.shadowBlur = 10;
+  ctx.fillStyle = '#ff6b35';
+  ctx.beginPath(); ctx.arc(sx, cy, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowColor = '#39d98a'; ctx.shadowBlur = 10;
+  ctx.fillStyle = '#39d98a';
+  ctx.beginPath(); ctx.arc(cx, sy, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+// ============================================================
+//  DRAW VECTOR r⃗(t)
+// ============================================================
+function drawVector() {
+  const pt = evalXY(state.t);
+  if (!pt) return;
+  const [sx, sy] = toScreen(pt[0], pt[1]);
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const now = Date.now();
+
+  // Skip if point is at origin
+  const dx = sx - cx, dy = sy - cy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 3) return;
+
+  // Animated pulse along the vector
+  const pulse = 0.5 + 0.5 * Math.sin(now * 0.004);
+
+  // Glowing vector line
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(sx, sy);
+
+  const grad = ctx.createLinearGradient(cx, cy, sx, sy);
+  grad.addColorStop(0, `rgba(191,95,255,0.0)`);
+  grad.addColorStop(0.3, `rgba(191,95,255,${0.55 + 0.2 * pulse})`);
+  grad.addColorStop(1, `rgba(191,95,255,${0.9 + 0.1 * pulse})`);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([]);
+  ctx.stroke();
+  ctx.restore();
+
+  // Arrowhead
+  const angle = Math.atan2(dy, dx);
+  const headLen = 13;
+  const headAngle = Math.PI / 6;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(
+    sx - headLen * Math.cos(angle - headAngle),
+    sy - headLen * Math.sin(angle - headAngle)
+  );
+  ctx.lineTo(
+    sx - headLen * Math.cos(angle + headAngle),
+    sy - headLen * Math.sin(angle + headAngle)
+  );
+  ctx.closePath();
+  ctx.fillStyle = `rgba(191,95,255,${0.9 + 0.1 * pulse})`;
+  ctx.fill();
+  ctx.restore();
+
+  // Magnitude label near midpoint
+  const mx = cx + dx * 0.5;
+  const my = cy + dy * 0.5;
+  const mag = Math.sqrt(pt[0] * pt[0] + pt[1] * pt[1]).toFixed(2);
+
+  // Perpendicular offset for label
+  const nx = -dy / dist * 18;
+  const ny = dx / dist * 18;
+
+  ctx.save();
+  ctx.font = 'bold 11px Space Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // Shadow
+  ctx.fillStyle = 'rgba(10,15,30,0.8)';
+  ctx.fillText('|r⃗| = ' + mag, mx + nx + 1, my + ny + 1);
+  ctx.fillStyle = `rgba(191,95,255,${0.85 + 0.1 * pulse})`;
+  ctx.fillText('|r⃗| = ' + mag, mx + nx, my + ny);
+  ctx.restore();
+
+  // Origin dot
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(191,95,255,0.6)';
+  ctx.fill();
+  ctx.strokeStyle = '#bf5fff';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // Small "O" label
+  ctx.font = '9px Space Mono, monospace';
+  ctx.fillStyle = 'rgba(191,95,255,0.7)';
+  ctx.textAlign = 'left';
+  ctx.fillText('O', cx + 8, cy - 6);
+  ctx.restore();
+
+  // Animated traveling dot along vector
+  const phase = (now * 0.001) % 1;
+  const tdx = phase * dx;
+  const tdy = phase * dy;
+  const tGrad = ctx.createRadialGradient(cx + tdx, cy + tdy, 0, cx + tdx, cy + tdy, 7);
+  tGrad.addColorStop(0, 'rgba(191,95,255,0.9)');
+  tGrad.addColorStop(1, 'rgba(191,95,255,0)');
+  ctx.beginPath();
+  ctx.arc(cx + tdx, cy + tdy, 7, 0, Math.PI * 2);
+  ctx.fillStyle = tGrad;
+  ctx.fill();
+}
+
+
+// ============================================================
+function drawMiniGraph(cvs, label, color, fn) {
+  const ctx2 = cvs.getContext('2d');
+  const w = cvs.width, h = cvs.height;
+  ctx2.clearRect(0, 0, w, h);
+
+  // BG
+  ctx2.fillStyle = 'rgba(0,0,0,0.3)';
+  roundRect(ctx2, 0, 0, w, h, 8);
+  ctx2.fill();
+
+  // Compute values
+  const samples = 120;
+  const vals = [];
+  for (let i = 0; i <= samples; i++) {
+    const tt = state.tMin + (state.tMax - state.tMin) * i / samples;
+    try { vals.push(fn(tt)); } catch { vals.push(0); }
+  }
+  const minV = Math.min(...vals.filter(isFinite));
+  const maxV = Math.max(...vals.filter(isFinite));
+  const range = maxV - minV || 1;
+
+  const pad = 10;
+  const toY = v => h - pad - ((v - minV) / range) * (h - 2 * pad);
+  const toX = i => pad + (i / samples) * (w - 2 * pad);
+
+  // Gradient fill
+  const grad = ctx2.createLinearGradient(0, 0, 0, h);
+  const c = color === '#ff6b35' ? '255,107,53' : color === '#39d98a' ? '57,217,138' : color === '#bf5fff' ? '191,95,255' : '200,216,240';
+  grad.addColorStop(0, `rgba(${c},0.3)`);
+  grad.addColorStop(1, `rgba(${c},0)`);
+  ctx2.beginPath();
+  ctx2.moveTo(toX(0), toY(vals[0]));
+  for (let i = 1; i <= samples; i++) ctx2.lineTo(toX(i), toY(vals[i]));
+  ctx2.lineTo(toX(samples), h); ctx2.lineTo(toX(0), h); ctx2.closePath();
+  ctx2.fillStyle = grad; ctx2.fill();
+
+  // Line
+  ctx2.strokeStyle = color;
+  ctx2.lineWidth = 2;
+  ctx2.beginPath();
+  ctx2.moveTo(toX(0), toY(vals[0]));
+  for (let i = 1; i <= samples; i++) ctx2.lineTo(toX(i), toY(vals[i]));
+  ctx2.stroke();
+
+  // Current t marker
+  const tFrac = (state.t - state.tMin) / (state.tMax - state.tMin);
+  if (tFrac >= 0 && tFrac <= 1) {
+    const mx = pad + tFrac * (w - 2 * pad);
+    const curV = fn(state.t);
+    const my = isFinite(curV) ? toY(curV) : h / 2;
+    ctx2.strokeStyle = 'rgba(245,197,24,0.7)';
+    ctx2.lineWidth = 1;
+    ctx2.setLineDash([3, 3]);
+    ctx2.beginPath(); ctx2.moveTo(mx, pad); ctx2.lineTo(mx, h - pad); ctx2.stroke();
+    ctx2.setLineDash([]);
+    ctx2.fillStyle = color;
+    ctx2.beginPath(); ctx2.arc(mx, my, 5, 0, Math.PI * 2); ctx2.fill();
+  }
+}
+
+function roundRect(ctx2, x, y, w, h, r) {
+  ctx2.beginPath();
+  ctx2.moveTo(x + r, y);
+  ctx2.lineTo(x + w - r, y); ctx2.arcTo(x + w, y, x + w, y + r, r);
+  ctx2.lineTo(x + w, y + h - r); ctx2.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx2.lineTo(x + r, y + h); ctx2.arcTo(x, y + h, x, y + h - r, r);
+  ctx2.lineTo(x, y + r); ctx2.arcTo(x, y, x + r, y, r);
+  ctx2.closePath();
+}
+
+// ============================================================
+//  MAIN DRAW
+// ============================================================
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+  drawTrail();
+  drawPipes();
+  drawVector();
+  drawPoint();
+
+  // Mini graphs
+  if (state.xFn) drawMiniGraph(miniX, 'x', '#ff6b35', state.xFn);
+  if (state.yFn) drawMiniGraph(miniY, 'y', '#39d98a', state.yFn);
+  const miniREl = document.getElementById('miniR');
+  if (state.xFn && state.yFn && miniREl) {
+    drawMiniGraph(miniREl, '|r|', '#bf5fff', t => {
+      try {
+        const x = state.xFn(t), y = state.yFn(t);
+        return Math.sqrt(x * x + y * y);
+      } catch { return 0; }
+    });
+  }
+
+  // Update live display
+  const pt = evalXY(state.t);
+  const tStr = state.t.toFixed(3);
+  const xStr = pt ? pt[0].toFixed(3) : '—';
+  const yStr = pt ? pt[1].toFixed(3) : '—';
+  const rMag = pt ? Math.sqrt(pt[0] * pt[0] + pt[1] * pt[1]).toFixed(3) : '—';
+  const rVec = pt ? `⟨${xStr}, ${yStr}⟩` : '—';
+
+  document.getElementById('tDisplay').textContent = tStr;
+  document.getElementById('xDisplay').textContent = xStr;
+  document.getElementById('yDisplay').textContent = yStr;
+  document.getElementById('rDisplay').textContent = rMag;
+  document.getElementById('liveT').textContent = tStr;
+  document.getElementById('liveX').textContent = xStr;
+  document.getElementById('liveY').textContent = yStr;
+  document.getElementById('liveR').textContent = rVec;
+  document.getElementById('liveRmag').textContent = rMag;
+  document.getElementById('liveP').textContent = pt ? `(${xStr}, ${yStr})` : '—';
+}
+
+// ============================================================
+//  ANIMATION LOOP
+// ============================================================
+function loop(ts) {
+  if (!state.playing) return;
+  if (!state.lastTime) state.lastTime = ts;
+  const dt = (ts - state.lastTime) / 1000;
+  state.lastTime = ts;
+
+  const range = state.tMax - state.tMin;
+  state.t += dt * state.speed * (range / 10);
+
+  if (state.t > state.tMax) {
+    state.t = state.tMin;
+    state.trailPoints = [];
+  }
+
+  const pt = evalXY(state.t);
+  if (pt) state.trailPoints.push(pt);
+
+  draw();
+  state.animId = requestAnimationFrame(loop);
+}
+
+// ============================================================
+//  CONTROLS
+// ============================================================
+document.getElementById('playBtn').addEventListener('click', function () {
+  state.playing = !state.playing;
+  this.textContent = state.playing ? '⏸ Pause' : '▶ Play';
+  if (state.playing) {
+    state.lastTime = null;
+    state.animId = requestAnimationFrame(loop);
+  } else {
+    cancelAnimationFrame(state.animId);
+  }
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  state.t = state.tMin;
+  state.trailPoints = [];
+  draw();
+});
+
+// Sliders
+document.getElementById('tMin').addEventListener('input', function () {
+  state.tMin = parseFloat(this.value);
+  document.getElementById('tMinVal').textContent = this.value;
+  state.t = state.tMin; state.trailPoints = []; draw();
+});
+document.getElementById('tMax').addEventListener('input', function () {
+  state.tMax = parseFloat(this.value);
+  document.getElementById('tMaxVal').textContent = parseFloat(this.value).toFixed(2);
+  draw();
+});
+document.getElementById('speed').addEventListener('input', function () {
+  state.speed = parseFloat(this.value);
+  document.getElementById('speedVal').textContent = parseFloat(this.value).toFixed(1) + '×';
+});
+document.getElementById('scale').addEventListener('input', function () {
+  state.scale = parseFloat(this.value);
+  document.getElementById('scaleVal').textContent = parseFloat(this.value).toFixed(1) + '×';
+  draw();
+});
+
+// Formulas
+['xFormula', 'yFormula'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    if (parseFormulas()) { state.trailPoints = []; draw(); }
+  });
+});
+
+// Toggles
+function makeToggle(id, key) {
+  const el = document.getElementById(id);
+  el.addEventListener('click', () => {
+    state[key] = !state[key];
+    el.classList.toggle('on', state[key]);
+    draw();
+  });
+}
+makeToggle('trailToggle', 'trail');
+makeToggle('gridToggle', 'grid');
+makeToggle('pipeToggle', 'pipes');
+makeToggle('axisToggle', 'axes');
+
+// ============================================================
+//  PRESETS
+// ============================================================
+const presetContainer = document.getElementById('presets');
+PRESETS.forEach((p, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'preset-btn' + (i === 0 ? ' active' : '');
+  btn.textContent = p.name;
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('xFormula').value = p.x;
+    document.getElementById('yFormula').value = p.y;
+    document.getElementById('tMin').value = p.tMin;
+    document.getElementById('tMax').value = p.tMax;
+    document.getElementById('scale').value = p.scale;
+    state.tMin = p.tMin; state.tMax = p.tMax; state.scale = p.scale;
+    document.getElementById('tMinVal').textContent = p.tMin;
+    document.getElementById('tMaxVal').textContent = p.tMax.toFixed(2);
+    document.getElementById('scaleVal').textContent = p.scale.toFixed(1) + '×';
+    state.t = p.tMin; state.trailPoints = [];
+    parseFormulas(); draw();
+  });
+  presetContainer.appendChild(btn);
+});
+
+// ============================================================
+//  INIT
+// ============================================================
+parseFormulas();
+state.tMin = 0; state.tMax = 6.28; state.scale = 1.5;
+document.getElementById('scaleVal').textContent = '1.5×';
+document.getElementById('scale').value = 1.5;
+draw();
+</script>
+</body>
+</html>
