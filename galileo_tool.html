@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atmospheric Falling Simulation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --panel: #111827;
+    --border: #1e2d45;
+    --accent1: #00d4ff;
+    --accent2: #ff6b35;
+    --text: #e2e8f0;
+    --muted: #64748b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--accent1), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
+
+  .equation {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .equation span { color: var(--accent1); }
+
+  .main {
+    display: flex;
+    gap: 14px;
+    width: 100%;
+    max-width: 700px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    flex: 1 1 280px;
+    min-width: 260px;
+  }
+
+  canvas {
+    background: linear-gradient(180deg, #060b16 0%, #0d1a2e 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: block;
+    width: 100%;
+  }
+
+  .ground-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 4px;
+    letter-spacing: 0.1em;
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1 1 200px;
+    min-width: 200px;
+  }
+
+  .obj-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .obj-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .obj-card.obj1::before { background: var(--accent1); box-shadow: 0 0 8px var(--accent1); }
+  .obj-card.obj2::before { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+
+  .obj-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .obj-card.obj1 .obj-title { color: var(--accent1); }
+  .obj-card.obj2 .obj-title { color: var(--accent2); }
+
+  /* Shape Picker */
+  .shape-picker {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .shape-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 4px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.52rem;
+    color: var(--muted);
+    user-select: none;
+  }
+
+  .shape-btn svg { display: block; }
+
+  .obj-card.obj1 .shape-btn.active {
+    border-color: var(--accent1);
+    background: rgba(0,212,255,0.10);
+    color: var(--accent1);
+    box-shadow: 0 0 8px rgba(0,212,255,0.2);
+  }
+  .obj-card.obj2 .shape-btn.active {
+    border-color: var(--accent2);
+    background: rgba(255,107,53,0.10);
+    color: var(--accent2);
+    box-shadow: 0 0 8px rgba(255,107,53,0.2);
+  }
+
+  .cd-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    text-align: right;
+    margin-bottom: 8px;
+  }
+  .obj1 .cd-badge span { color: var(--accent1); }
+  .obj2 .cd-badge span { color: var(--accent2); }
+
+  .slider-row { margin-bottom: 10px; }
+
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+
+  .slider-label span:first-child {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  .slider-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+  }
+  .obj1 .slider-val { color: var(--accent1); }
+  .obj2 .slider-val { color: var(--accent2); }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  .obj1 input[type=range] {
+    background: linear-gradient(90deg, var(--accent1) var(--pct,50%), #1e2d45 var(--pct,50%));
+  }
+  .obj2 input[type=range] {
+    background: linear-gradient(90deg, var(--accent2) var(--pct,50%), #1e2d45 var(--pct,50%));
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 6px currentColor;
+  }
+  .obj1 input[type=range]::-webkit-slider-thumb { background: var(--accent1); color: var(--accent1); }
+  .obj2 input[type=range]::-webkit-slider-thumb { background: var(--accent2); color: var(--accent2); }
+
+  .ratio-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+  }
+  .ratio-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+  .ratio-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .obj1 .ratio-val { color: var(--accent1); }
+  .obj2 .ratio-val { color: var(--accent2); }
+
+  .stats-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .stats-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .stat-item {
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+  }
+  .stat-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .stat-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .stat-val.c1 { color: var(--accent1); }
+  .stat-val.c2 { color: var(--accent2); }
+
+  .btn-row { display: flex; gap: 8px; }
+  .btn {
+    flex: 1;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 9px 0;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-drop {
+    background: linear-gradient(135deg, var(--accent1), #0099cc);
+    color: #000;
+  }
+  .btn-reset {
+    background: rgba(255,255,255,0.06);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn:active { transform: scale(0.97); }
+
+  .winner {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    text-align: center;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .rho-card {
+    width: 100%;
+    max-width: 700px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .rho-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent1), var(--accent2));
+  }
+  .rho-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .rho-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .rho-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .rho-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(255,107,53,0.15));
+    color: #e2e8f0;
+  }
+  .rho-env {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: #a3e635;
+    min-width: 80px;
+    text-align: right;
+  }
+  input[type=range]#rho {
+    background: linear-gradient(90deg, var(--accent1) var(--pct,50%), #1e2d45 var(--pct,50%));
+  }
+  input[type=range]#rho::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    box-shadow: 0 0 6px var(--accent1);
+  }
+  .rho-presets {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .rho-preset {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.52rem;
+    padding: 3px 7px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .rho-preset:hover {
+    border-color: var(--accent1);
+    color: var(--accent1);
+    background: rgba(0,212,255,0.08);
+  }
+
+  /* ── Medium Picker Overlay ── */
+  #medium-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .mp-title {
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .mp-heading {
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: linear-gradient(90deg, var(--accent1), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .mp-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-bottom: 36px;
+    text-align: center;
+    max-width: 340px;
+    line-height: 1.7;
+  }
+  .mp-choices {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .mp-card {
+    width: 200px;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 18px;
+    padding: 26px 18px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+  }
+  .mp-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border-radius: 16px;
+  }
+  .mp-card.air::before { background: radial-gradient(circle at 50% 0%, rgba(0,212,255,0.12), transparent 70%); }
+  .mp-card.vac::before { background: radial-gradient(circle at 50% 0%, rgba(180,100,255,0.14), transparent 70%); }
+  .mp-card:hover::before { opacity: 1; }
+  .mp-card.air:hover { border-color: var(--accent1); box-shadow: 0 0 28px rgba(0,212,255,0.2); }
+  .mp-card.vac:hover { border-color: #b464ff; box-shadow: 0 0 28px rgba(180,100,255,0.2); }
+  .mp-icon { font-size: 3rem; line-height: 1; }
+  .mp-card-title {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .mp-card.air .mp-card-title { color: var(--accent1); }
+  .mp-card.vac .mp-card-title { color: #b464ff; }
+  .mp-card-eq {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.57rem;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.8;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    padding: 8px 10px;
+    width: 100%;
+  }
+  .mp-card-eq em {
+    font-style: normal;
+    display: block;
+    margin-top: 4px;
+    font-size: 0.64rem;
+  }
+  .mp-card.air .mp-card-eq em { color: var(--accent1); }
+  .mp-card.vac .mp-card-eq em { color: #b464ff; }
+  .mp-card-desc {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.7;
+  }
+  .mp-hint {
+    margin-top: 32px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    opacity: 0.5;
+    letter-spacing: 0.1em;
+  }
+
+  /* Vacuum mode: hide rho card and air-specific equation */
+  body.vacuum-mode #rho-card-wrap { display: none; }
+  body.vacuum-mode .equation { display: none; }
+  body.vacuum-mode .subtitle { display: none; }
+  body.vacuum-mode .cd-badge { display: none; }
+  body.vacuum-mode .ratio-badge { display: none; }
+
+  #medium-badge {
+    display: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  #medium-badge.air-badge {
+    background: rgba(0,212,255,0.12);
+    border: 1px solid rgba(0,212,255,0.4);
+    color: var(--accent1);
+  }
+  #medium-badge.vac-badge {
+    background: rgba(180,100,255,0.12);
+    border: 1px solid rgba(180,100,255,0.4);
+    color: #b464ff;
+  }
+  #change-medium-btn {
+    display: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--muted);
+    cursor: pointer;
+    margin-left: 10px;
+    transition: all 0.15s;
+    vertical-align: middle;
+  }
+  #change-medium-btn:hover { border-color: var(--accent1); color: var(--accent1); }
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+
+<!-- ── Medium Picker Overlay ── -->
+<div id="medium-overlay">
+  <p class="mp-title">Step 1 of 2 — Choose Your Medium</p>
+  <h2 class="mp-heading">What fills the space?</h2>
+  <p class="mp-sub">Your choice determines the physics. Objects fall differently depending on what surrounds them.</p>
+  <div class="mp-choices">
+    <div class="mp-card air" id="pick-air">
+      <div class="mp-icon">🌬️</div>
+      <div class="mp-card-title">Air</div>
+      <div class="mp-card-eq">
+        dv/dt = g − k·v²
+        <em>drag force acts</em>
+      </div>
+      <div class="mp-card-desc">Shape &amp; area matter.<br>Heavier objects may fall<br>faster. Terminal velocity<br>is reachable.</div>
+    </div>
+    <div class="mp-card vac" id="pick-vac">
+      <div class="mp-icon">🌑</div>
+      <div class="mp-card-title">Vacuum</div>
+      <div class="mp-card-eq">
+        dv/dt = g
+        <em>no drag, pure freefall</em>
+      </div>
+      <div class="mp-card-desc">Shape &amp; area irrelevant.<br>All objects fall identically.<br>Like Galileo's thought<br>experiment.</div>
+    </div>
+  </div>
+  <p class="mp-hint">↑ tap a card to begin</p>
+</div>
+
+<h1>Atmospheric Drag Simulator</h1>
+<div style="display:flex;align-items:center;justify-content:center;margin-bottom:4px;">
+  <span id="medium-badge"></span>
+  <button id="change-medium-btn">⟳ Change</button>
+</div>
+<p class="subtitle">dv/dt = g − (C_d · ρ · A / 2m) · v²</p>
+
+<div class="equation">
+  <span>dv/dt</span> = g − <span>(C_d·ρ·A)/(2m)</span> · v² &nbsp;|&nbsp;
+  drag ∝ <span>C_d · A/m</span>
+</div>
+
+<div id="rho-card-wrap">
+<div class="rho-card">
+  <div class="rho-header">
+    <span class="rho-title">ρ &nbsp;Air Density (kg/m³)</span>
+    <div class="rho-right">
+      <span class="rho-val" id="rho-val">1.225</span>
+      <span class="rho-env" id="rho-env">🌍 Sea Level</span>
+    </div>
+  </div>
+  <input type="range" id="rho" min="0.05" max="2.5" step="0.005" value="1.225">
+  <div class="rho-presets">
+    <span class="rho-preset" data-rho="0.05">Mars (0.05)</span>
+    <span class="rho-preset" data-rho="0.41">30 km alt (0.41)</span>
+    <span class="rho-preset" data-rho="0.91">Mt Everest (0.91)</span>
+    <span class="rho-preset" data-rho="1.225">Sea Level (1.225)</span>
+    <span class="rho-preset" data-rho="1.60">−500 m (1.60)</span>
+    <span class="rho-preset" data-rho="2.5">Dense (2.5)</span>
+  </div>
+</div>
+</div>
+
+<div class="main">
+  <div class="canvas-wrap">
+    <canvas id="canvas" width="280" height="380"></canvas>
+    <p class="ground-label">▲ GROUND LEVEL</p>
+  </div>
+
+  <div class="controls">
+    <!-- Object 1 -->
+    <div class="obj-card obj1">
+      <div class="obj-title">● Object 1</div>
+
+      <div class="shape-picker" id="shapes1">
+        <div class="shape-btn active" data-shape="ball" data-obj="1">
+          <svg width="22" height="22" viewBox="0 0 22 22">
+            <circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="8" cy="8" r="2.5" fill="currentColor" opacity="0.3"/>
+          </svg>
+          BALL
+        </div>
+        <div class="shape-btn" data-shape="rect" data-obj="1">
+          <svg width="22" height="22" viewBox="0 0 22 22">
+            <rect x="3" y="5" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="3" y1="9" x2="19" y2="9" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+            <line x1="10" y1="5" x2="10" y2="17" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+          </svg>
+          RECT
+        </div>
+        <div class="shape-btn" data-shape="sheet" data-obj="1">
+          <svg width="22" height="22" viewBox="0 0 22 22">
+            <rect x="2" y="8" width="18" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="2" y1="11" x2="20" y2="11" stroke="currentColor" stroke-width="0.7" opacity="0.4"/>
+          </svg>
+          SHEET
+        </div>
+      </div>
+
+      <div class="cd-badge">C_d = <span id="cd1-val">0.47</span></div>
+
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Mass (kg)</span>
+          <span class="slider-val" id="m1-val">5.0</span>
+        </div>
+        <input type="range" id="m1" min="0.5" max="20" step="0.5" value="5">
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Area (m²)</span>
+          <span class="slider-val" id="a1-val">0.10</span>
+        </div>
+        <input type="range" id="a1" min="0.01" max="1" step="0.01" value="0.10">
+      </div>
+
+      <div class="ratio-badge">
+        <span class="ratio-label">C_d · A/m</span>
+        <span class="ratio-val" id="r1-val">0.0094</span>
+      </div>
+    </div>
+
+    <!-- Object 2 -->
+    <div class="obj-card obj2">
+      <div class="obj-title">● Object 2</div>
+
+      <div class="shape-picker" id="shapes2">
+        <div class="shape-btn" data-shape="ball" data-obj="2">
+          <svg width="22" height="22" viewBox="0 0 22 22">
+            <circle cx="11" cy="11" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="8" cy="8" r="2.5" fill="currentColor" opacity="0.3"/>
+          </svg>
+          BALL
+        </div>
+        <div class="shape-btn" data-shape="rect" data-obj="2">
+          <svg width="22" height="22" viewBox="0 0 22 22">
+            <rect x="3" y="5" width="16" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="3" y1="9" x2="19" y2="9" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+            <line x1="10" y1="5" x2="10" y2="17" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+          </svg>
+          RECT
+        </div>
+        <div class="shape-btn active" data-shape="sheet" data-obj="2">
+          <svg width="22" height="22" viewBox="0 0 22 22">
+            <rect x="2" y="8" width="18" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <line x1="2" y1="11" x2="20" y2="11" stroke="currentColor" stroke-width="0.7" opacity="0.4"/>
+          </svg>
+          SHEET
+        </div>
+      </div>
+
+      <div class="cd-badge">C_d = <span id="cd2-val">1.28</span></div>
+
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Mass (kg)</span>
+          <span class="slider-val" id="m2-val">2.0</span>
+        </div>
+        <input type="range" id="m2" min="0.5" max="20" step="0.5" value="2">
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Area (m²)</span>
+          <span class="slider-val" id="a2-val">0.50</span>
+        </div>
+        <input type="range" id="a2" min="0.01" max="1" step="0.01" value="0.50">
+      </div>
+
+      <div class="ratio-badge">
+        <span class="ratio-label">C_d · A/m</span>
+        <span class="ratio-val" id="r2-val">0.3200</span>
+      </div>
+    </div>
+
+    <!-- Live stats -->
+    <div class="stats-card">
+      <div class="stats-title">Live Data</div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-name">Velocity 1</div>
+          <div class="stat-val c1" id="v1-stat">0.0 m/s</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">Velocity 2</div>
+          <div class="stat-val c2" id="v2-stat">0.0 m/s</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">Terminal 1</div>
+          <div class="stat-val c1" id="vt1-stat">— m/s</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">Terminal 2</div>
+          <div class="stat-val c2" id="vt2-stat">— m/s</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">Time 1</div>
+          <div class="stat-val c1" id="t1-stat">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">Time 2</div>
+          <div class="stat-val c2" id="t2-stat">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="winner" id="winner">Adjust shape &amp; sliders, then DROP ↓</div>
+
+    <div class="btn-row">
+      <button class="btn btn-drop" id="dropBtn">Drop</button>
+      <button class="btn btn-reset" id="resetBtn">Reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const GROUND_Y = H - 30;
+const START_Y  = 30;
+const COLORS   = ['#00d4ff', '#ff6b35'];
+const G = 9.81;
+
+// ── Medium state — declared FIRST so all functions can reference it ──
+let currentMedium = null; // 'air' | 'vacuum'
+
+function getRho() { return +document.getElementById('rho').value; }
+
+const SHAPES = {
+  ball:  { cd: 0.47,  label: 'BALL'  },
+  rect:  { cd: 1.05,  label: 'RECT'  },
+  sheet: { cd: 1.28,  label: 'SHEET' },
+};
+
+let selectedShape = ['ball', 'sheet'];
+let objs, dropping = false, animId, lastTime, startTime, times = [null, null];
+
+// ── helpers ──────────────────────────────────────────────────
+function slVal(id)  { return +document.getElementById(id).value; }
+function getA(i)    { return i === 0 ? slVal('a1') : slVal('a2'); }
+function getM(i)    { return i === 0 ? slVal('m1') : slVal('m2'); }
+function getCd(i)   { return SHAPES[selectedShape[i]].cd; }
+// Area 0.01–1 → visual size 10–38 px
+function getSize(i) { return 10 + getA(i) * 28; }
+function termV(i)   { return currentMedium==='vacuum' ? Infinity : Math.sqrt((2*getM(i)*G)/(getCd(i)*getRho()*getA(i))); }
+
+// ── Rho environment labels ────────────────────────────────────
+const RHO_ENVS = [
+  { max: 0.10,  label: '🔴 Mars-like' },
+  { max: 0.55,  label: '🌌 Stratosphere' },
+  { max: 1.00,  label: '⛰ High Altitude' },
+  { max: 1.28,  label: '🌍 Sea Level' },
+  { max: 1.80,  label: '🌊 Dense Air' },
+  { max: Infinity, label: '⚡ Super Dense' },
+];
+function getRhoEnv(r) {
+  return RHO_ENVS.find(e => r <= e.max)?.label || '⚡ Super Dense';
+}
+
+// ── draw shapes ───────────────────────────────────────────────
+function drawBall(cx, cy, sz, col, lbl) {
+  const r = sz;
+  // glow
+  const g0 = ctx.createRadialGradient(cx,cy,0,cx,cy,r*2);
+  g0.addColorStop(0, col+'33'); g0.addColorStop(1,'transparent');
+  ctx.fillStyle = g0;
+  ctx.beginPath(); ctx.arc(cx,cy,r*2,0,Math.PI*2); ctx.fill();
+  // body
+  const g1 = ctx.createRadialGradient(cx-r*.3,cy-r*.3,r*.1,cx,cy,r);
+  g1.addColorStop(0,'#fff4'); g1.addColorStop(.4,col); g1.addColorStop(1,col+'88');
+  ctx.fillStyle = g1;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  // ring
+  ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.globalAlpha=.7;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+  ctx.globalAlpha=1;
+  // label
+  ctx.fillStyle='#000'; ctx.font=`bold ${Math.max(8,r*.65)}px Syne,sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(lbl,cx,cy);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+}
+
+function drawRect(cx, cy, sz, col, lbl) {
+  const hw = sz, hh = sz * .7;
+  const g0 = ctx.createRadialGradient(cx,cy,0,cx,cy,sz*2);
+  g0.addColorStop(0,col+'28'); g0.addColorStop(1,'transparent');
+  ctx.fillStyle=g0; ctx.beginPath(); ctx.arc(cx,cy,sz*2,0,Math.PI*2); ctx.fill();
+
+  const g1 = ctx.createLinearGradient(cx-hw,cy-hh,cx+hw,cy+hh);
+  g1.addColorStop(0,'#fff3'); g1.addColorStop(.35,col); g1.addColorStop(1,col+'88');
+  ctx.fillStyle=g1;
+  ctx.beginPath(); ctx.roundRect(cx-hw,cy-hh,hw*2,hh*2,4); ctx.fill();
+
+  ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.globalAlpha=.8;
+  ctx.beginPath(); ctx.roundRect(cx-hw,cy-hh,hw*2,hh*2,4); ctx.stroke();
+  ctx.globalAlpha=1;
+
+  ctx.strokeStyle='#fff'; ctx.lineWidth=.5; ctx.globalAlpha=.12;
+  ctx.beginPath(); ctx.moveTo(cx,cy-hh); ctx.lineTo(cx,cy+hh); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-hw,cy); ctx.lineTo(cx+hw,cy); ctx.stroke();
+  ctx.globalAlpha=1;
+
+  ctx.fillStyle='#000'; ctx.font=`bold ${Math.max(7,sz*.55)}px Syne,sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(lbl,cx,cy);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+}
+
+function drawSheet(cx, cy, sz, col, lbl) {
+  const hw = sz * 1.5, hh = Math.max(4, sz * .22);
+  const g0 = ctx.createRadialGradient(cx,cy,0,cx,cy,sz*2.2);
+  g0.addColorStop(0,col+'28'); g0.addColorStop(1,'transparent');
+  ctx.fillStyle=g0; ctx.beginPath(); ctx.arc(cx,cy,sz*2.2,0,Math.PI*2); ctx.fill();
+
+  const g1 = ctx.createLinearGradient(cx-hw,cy-hh,cx+hw,cy+hh);
+  g1.addColorStop(0,'#fff3'); g1.addColorStop(.4,col); g1.addColorStop(1,col+'88');
+  ctx.fillStyle=g1;
+  ctx.beginPath(); ctx.roundRect(cx-hw,cy-hh,hw*2,hh*2,2); ctx.fill();
+
+  ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.globalAlpha=.8;
+  ctx.beginPath(); ctx.roundRect(cx-hw,cy-hh,hw*2,hh*2,2); ctx.stroke();
+  ctx.globalAlpha=1;
+
+  ctx.strokeStyle='#fff'; ctx.lineWidth=.5; ctx.globalAlpha=.18;
+  ctx.beginPath(); ctx.moveTo(cx-hw,cy); ctx.lineTo(cx+hw,cy); ctx.stroke();
+  ctx.globalAlpha=1;
+
+  ctx.fillStyle='#000'; ctx.font=`bold ${Math.max(6,sz*.4)}px Syne,sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(lbl,cx,cy);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+}
+
+function getHalfWidth(i) {
+  const sz = getSize(i);
+  const sh = selectedShape[i];
+  if (sh === 'sheet') return sz * 1.5;
+  if (sh === 'rect')  return sz;
+  return sz; // ball radius
+}
+
+function getXPos(i) {
+  // Keep each object in its half of the canvas, pushed outward by its own half-width
+  const margin = 8;
+  const hw = getHalfWidth(i);
+  const mid = W / 2;
+  if (i === 0) return Math.max(hw + margin, Math.min(mid - hw - margin, W * 0.30));
+  else         return Math.min(W - hw - margin, Math.max(mid + hw + margin, W * 0.70));
+}
+
+function drawObj(i, o) {
+  const cx  = getXPos(i);
+  const cy  = o.y;
+  const sz  = getSize(i);          // ← always live from slider
+  const col = COLORS[i];
+  const lbl = String(i+1);
+  const sh  = selectedShape[i];
+
+  if (sh === 'ball')  drawBall(cx,cy,sz,col,lbl);
+  if (sh === 'rect')  drawRect(cx,cy,sz,col,lbl);
+  if (sh === 'sheet') drawSheet(cx,cy,sz,col,lbl);
+
+  // velocity arrow
+  if (dropping && !o.landed && o.v > .5) {
+    const bot = sh==='sheet' ? cy+Math.max(4,sz*.22) : sh==='rect' ? cy+sz*.7 : cy+sz;
+    const al  = Math.min(28, o.v*1.4);
+    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.globalAlpha=.7;
+    ctx.beginPath(); ctx.moveTo(cx,bot); ctx.lineTo(cx,bot+al); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx-4,bot+al-4); ctx.lineTo(cx,bot+al+2); ctx.lineTo(cx+4,bot+al-4);
+    ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+  // splash
+  if (o.landed) {
+    ctx.strokeStyle=col; ctx.lineWidth=1; ctx.globalAlpha=.45;
+    ctx.beginPath(); ctx.arc(cx,GROUND_Y,sz*1.15,0,Math.PI*2); ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+}
+
+// ── drawFrame ─────────────────────────────────────────────────
+function drawFrame() {
+  ctx.clearRect(0,0,W,H);
+
+  const isVac = currentMedium === 'vacuum';
+
+  // background sky tint for vacuum
+  if (isVac) {
+    const skyGrad = ctx.createLinearGradient(0,0,0,GROUND_Y);
+    skyGrad.addColorStop(0,'#08001a'); skyGrad.addColorStop(1,'#0a0520');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0,0,W,GROUND_Y);
+  }
+
+  // starfield — denser & brighter in vacuum
+  const starCount = isVac ? 90 : 40;
+  const starAlpha = isVac ? .18 : .03;
+  ctx.fillStyle = `rgba(255,255,255,${starAlpha})`;
+  for(let i=0;i<starCount;i++){
+    const sx=(i*73+i*3)%W, sy=(i*47+i*11)%(GROUND_Y);
+    const sr= isVac && i%5===0 ? 1.5 : 1;
+    ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill();
+  }
+
+  // vacuum label overlay on canvas
+  if (isVac) {
+    ctx.font='bold 10px Space Mono,monospace';
+    ctx.fillStyle='rgba(180,100,255,0.35)';
+    ctx.textAlign='right';
+    ctx.fillText('VACUUM', W-8, 18);
+    ctx.textAlign='left';
+  }
+
+  // ground
+  const grd=ctx.createLinearGradient(0,GROUND_Y,0,H);
+  grd.addColorStop(0,'rgba(30,45,69,.9)'); grd.addColorStop(1,'rgba(10,14,26,.9)');
+  ctx.fillStyle=grd; ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
+  ctx.strokeStyle= isVac ? 'rgba(180,100,255,0.4)' : 'rgba(100,116,139,.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,GROUND_Y); ctx.lineTo(W,GROUND_Y); ctx.stroke();
+
+  // height markers
+  ctx.font='9px Space Mono,monospace'; ctx.fillStyle='rgba(100,116,139,.4)';
+  const dH=GROUND_Y-START_Y;
+  for(let p=0;p<=1;p+=.25){
+    const py=START_Y+dH*p;
+    ctx.fillText((100-p*100).toFixed(0)+'m',4,py+3);
+    ctx.strokeStyle='rgba(100,116,139,.08)';
+    ctx.beginPath(); ctx.moveTo(28,py); ctx.lineTo(W,py); ctx.stroke();
+  }
+
+  // trails
+  for(let i=0;i<2;i++){
+    const o=objs[i]; if(o.trail.length<2) continue;
+    const cx=getXPos(i);
+    ctx.strokeStyle=COLORS[i]; ctx.lineWidth=1;
+    ctx.setLineDash([2,4]); ctx.globalAlpha=.28;
+    ctx.beginPath(); ctx.moveTo(o.trail[0].x,o.trail[0].y);
+    for(const p of o.trail) ctx.lineTo(p.x,p.y);
+    ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+  }
+
+  // shape labels at top
+  for(let i=0;i<2;i++){
+    ctx.font='8px Space Mono,monospace';
+    ctx.fillStyle=COLORS[i]+'aa'; ctx.textAlign='center';
+    ctx.fillText(SHAPES[selectedShape[i]].label, getXPos(i), 18);
+    ctx.textAlign='left';
+  }
+
+  // objects
+  for(let i=0;i<2;i++) drawObj(i,objs[i]);
+}
+
+// ── physics ───────────────────────────────────────────────────
+function physicsStep(dt) {
+  for(let i=0;i<2;i++){
+    const o=objs[i]; if(o.landed) continue;
+    const k = currentMedium === 'vacuum' ? 0 : (getCd(i)*getRho()*getA(i))/(2*o.m);
+    o.v += (G - k*o.v*o.v)*dt;
+    if(o.v<0) o.v=0;
+    const scale=(GROUND_Y-START_Y)/100;
+    o.y += o.v*dt*scale;
+    const cx=getXPos(i);
+    o.trail.push({x:cx,y:o.y});
+    if(o.trail.length>60) o.trail.shift();
+    if(o.y>=GROUND_Y){
+      o.y=GROUND_Y; o.landed=true;
+      times[i]=(performance.now()-startTime)/1000;
+      document.getElementById(`t${i+1}-stat`).textContent=times[i].toFixed(2)+'s';
+    }
+  }
+  document.getElementById('v1-stat').textContent=objs[0].v.toFixed(1)+' m/s';
+  document.getElementById('v2-stat').textContent=objs[1].v.toFixed(1)+' m/s';
+  if(objs[0].landed&&objs[1].landed){
+    const w=document.getElementById('winner');
+    const s1=SHAPES[selectedShape[0]].label, s2=SHAPES[selectedShape[1]].label;
+    if(currentMedium==='vacuum'){
+      w.textContent=`⚖ VACUUM TIE — all objects fall equally! Galileo was right.`;
+      w.style.color='#b464ff';
+    } else if(Math.abs(times[0]-times[1])<.05){
+      w.textContent=`⚖ TIE — ${s1} = ${s2}!`; w.style.color='#a3e635';
+    } else if(times[0]<times[1]){
+      w.textContent=`● ${s1} (Obj1) wins! ${times[0].toFixed(2)}s vs ${times[1].toFixed(2)}s`;
+      w.style.color=COLORS[0];
+    } else {
+      w.textContent=`● ${s2} (Obj2) wins! ${times[1].toFixed(2)}s vs ${times[0].toFixed(2)}s`;
+      w.style.color=COLORS[1];
+    }
+    dropping=false;
+  }
+}
+
+function loop(ts){
+  if(!lastTime) lastTime=ts;
+  const dt=Math.min((ts-lastTime)/1000,.05);
+  lastTime=ts;
+  physicsStep(dt); drawFrame();
+  if(dropping) animId=requestAnimationFrame(loop);
+}
+
+// ── init / reset ──────────────────────────────────────────────
+function initObjs(){
+  objs=[
+    {m:getM(0),A:getA(0),y:START_Y,v:0,landed:false,trail:[]},
+    {m:getM(1),A:getA(1),y:START_Y,v:0,landed:false,trail:[]},
+  ];
+}
+
+function resetSim(){
+  if(animId) cancelAnimationFrame(animId);
+  animId=null; dropping=false; lastTime=null; startTime=null; times=[null,null];
+  initObjs();
+  document.getElementById('v1-stat').textContent='0.0 m/s';
+  document.getElementById('v2-stat').textContent='0.0 m/s';
+  document.getElementById('t1-stat').textContent='—';
+  document.getElementById('t2-stat').textContent='—';
+  document.getElementById('winner').textContent='Adjust shape & sliders, then DROP ↓';
+  document.getElementById('winner').style.color='';
+  if(currentMedium) drawFrame();
+}
+
+// ── labels ────────────────────────────────────────────────────
+function updateLabels(){
+  for(let i=0;i<2;i++){
+    const n=i+1;
+    document.getElementById(`m${n}-val`).textContent=getM(i).toFixed(1);
+    document.getElementById(`a${n}-val`).textContent=getA(i).toFixed(2);
+    document.getElementById(`cd${n}-val`).textContent=getCd(i).toFixed(2);
+    document.getElementById(`r${n}-val`).textContent=(getCd(i)*getA(i)/getM(i)).toFixed(4);
+    const vt = termV(i);
+    document.getElementById(`vt${n}-stat`).textContent = isFinite(vt) ? vt.toFixed(1)+' m/s' : '∞ (no drag)';
+  }
+  // slider fill %
+  ['m1','a1','m2','a2'].forEach(id=>{
+    const el=document.getElementById(id);
+    const pct=((el.value-el.min)/(el.max-el.min))*100;
+    el.style.setProperty('--pct',pct+'%');
+  });
+}
+
+// ── events ────────────────────────────────────────────────────
+document.querySelectorAll('.shape-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const oi=+btn.dataset.obj-1;
+    selectedShape[oi]=btn.dataset.shape;
+    document.getElementById(`shapes${oi+1}`)
+      .querySelectorAll('.shape-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    updateLabels(); if(!dropping && currentMedium) drawFrame();
+  });
+});
+
+document.getElementById('dropBtn').addEventListener('click',()=>{
+  if(dropping || !currentMedium) return;
+  initObjs();
+  document.getElementById('winner').textContent='Dropping…';
+  document.getElementById('winner').style.color='';
+  dropping=true; lastTime=null; startTime=performance.now();
+  animId=requestAnimationFrame(loop);
+});
+
+document.getElementById('resetBtn').addEventListener('click',resetSim);
+
+['m1','a1','m2','a2'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>{
+    updateLabels();
+    if(!dropping && currentMedium){ initObjs(); drawFrame(); }
+  });
+});
+
+// ── Medium Picker ─────────────────────────────────────────────
+
+function setMedium(med) {
+  currentMedium = med;
+  document.getElementById('medium-overlay').style.display = 'none';
+  document.body.classList.toggle('vacuum-mode', med === 'vacuum');
+
+  const badge = document.getElementById('medium-badge');
+  const changeBtn = document.getElementById('change-medium-btn');
+  badge.style.display = 'inline-block';
+  changeBtn.style.display = 'inline-block';
+
+  if (med === 'air') {
+    badge.textContent = '🌬️ Air Medium';
+    badge.className = 'air-badge';
+  } else {
+    badge.textContent = '🌑 Vacuum';
+    badge.className = 'vac-badge';
+  }
+
+  // In vacuum: terminal velocity shows ∞, rho irrelevant
+  updateLabels();
+  resetSim();
+}
+
+document.getElementById('pick-air').addEventListener('click', () => setMedium('air'));
+document.getElementById('pick-vac').addEventListener('click', () => setMedium('vacuum'));
+document.getElementById('change-medium-btn').addEventListener('click', () => {
+  if (dropping) return;
+  currentMedium = null;
+  document.getElementById('medium-overlay').style.display = 'flex';
+  document.getElementById('medium-badge').style.display = 'none';
+  document.getElementById('change-medium-btn').style.display = 'none';
+  document.body.classList.remove('vacuum-mode');
+  // Clear stale results so they don't flash when a new medium is picked
+  document.getElementById('winner').textContent = 'Adjust shape & sliders, then DROP ↓';
+  document.getElementById('winner').style.color = '';
+  document.getElementById('v1-stat').textContent = '0.0 m/s';
+  document.getElementById('v2-stat').textContent = '0.0 m/s';
+  document.getElementById('t1-stat').textContent = '—';
+  document.getElementById('t2-stat').textContent = '—';
+});
+
+// ── rho slider ────────────────────────────────────────────────
+function updateRhoUI() {
+  const r = getRho();
+  document.getElementById('rho-val').textContent = r.toFixed(3);
+  document.getElementById('rho-env').textContent = getRhoEnv(r);
+  const el = document.getElementById('rho');
+  const pct = ((r - +el.min) / (+el.max - +el.min)) * 100;
+  el.style.setProperty('--pct', pct + '%');
+  updateLabels();
+  if (!dropping && currentMedium) { initObjs(); drawFrame(); }
+}
+document.getElementById('rho').addEventListener('input', updateRhoUI);
+document.querySelectorAll('.rho-preset').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('rho').value = btn.dataset.rho;
+    updateRhoUI();
+  });
+});
+
+// ── start ─────────────────────────────────────────────────────
+initObjs();
+updateLabels();
+updateRhoUI(); // sets slider display; drawFrame is guarded inside until medium chosen
+
+
+</script>
+</body>
+</html>
