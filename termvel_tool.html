@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Terminal Velocity 3D — Free Fall &amp; Parachute</title>
+<style>
+  :root{
+    --accent:#5fd8ff; --accent2:#ff6b6b; --good:#7fe8ac; --gold:#ffd166;
+    --text:#eef3fb; --muted:#9db0cf;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; padding:22px; background:radial-gradient(ellipse at 50% -10%, #1a2340 0%, #070a14 65%);
+    color:var(--text); font-family:'Segoe UI',Roboto,Arial,sans-serif;
+    display:flex; flex-direction:column; align-items:center; min-height:100vh;
+  }
+  h1{font-size:1.4rem; font-weight:700; margin:0 0 4px 0; letter-spacing:.4px;
+     background:linear-gradient(90deg,#fff,#9db0cf); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  p.sub{color:var(--muted); margin:0 0 18px 0; font-size:.9rem; max-width:640px; text-align:center;}
+  .layout{display:flex; gap:18px; flex-wrap:wrap; justify-content:center; max-width:1020px;}
+  .card{
+    background:linear-gradient(160deg, rgba(30,40,70,.55), rgba(14,18,34,.55));
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  canvas{display:block; border-radius:12px;}
+  #sceneCanvas{box-shadow:0 0 0 1px rgba(255,255,255,.06) inset;}
+  .side{width:360px; display:flex; flex-direction:column; gap:14px;}
+  .readouts{display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; font-size:.92rem;}
+  .readouts div span.label{color:var(--muted); display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:.8px;}
+  .readouts div span.value{font-size:1.25rem; font-weight:700; text-shadow:0 0 12px rgba(95,216,255,.25);}
+  .phase-tag{display:inline-block; padding:4px 12px; border-radius:20px; font-size:.78rem; font-weight:700; margin-top:3px; letter-spacing:.3px;}
+  .phase-fall{background:linear-gradient(90deg,#3a2038,#4a1f2c); color:#ff9d9d; box-shadow:0 0 14px rgba(255,107,107,.25);}
+  .phase-chute{background:linear-gradient(90deg,#123526,#0e2a1e); color:#7fe8ac; box-shadow:0 0 14px rgba(127,232,172,.25);}
+  .phase-land{background:linear-gradient(90deg,#1c2340,#151a30); color:#a9c3ff; box-shadow:0 0 14px rgba(169,195,255,.25);}
+  .controls{display:flex; gap:12px; margin-top:14px; justify-content:center; flex-wrap:wrap;}
+  button{
+    background:linear-gradient(160deg, rgba(50,64,110,.9), rgba(24,30,52,.9));
+    color:var(--text); border:1px solid rgba(255,255,255,.12); padding:10px 20px;
+    border-radius:10px; cursor:pointer; font-size:.9rem; font-weight:600; letter-spacing:.2px;
+    transition:.15s; box-shadow:0 4px 14px rgba(0,0,0,.35);
+  }
+  button:hover:not(:disabled){transform:translateY(-1px); border-color:var(--accent); box-shadow:0 6px 18px rgba(95,216,255,.25);}
+  button:disabled{opacity:.35; cursor:not-allowed;}
+  .legend{display:flex; gap:14px; font-size:.76rem; color:var(--muted); margin-top:8px; flex-wrap:wrap;}
+  .legend span{display:flex; align-items:center; gap:5px;}
+  .dot{width:10px; height:10px; border-radius:3px; display:inline-block;}
+  .case-row{display:flex; align-items:center; gap:10px; padding:7px 9px; border-radius:9px;
+    margin-bottom:6px; font-size:.82rem; color:var(--muted); border:1px solid transparent; transition:.25s;}
+  .case-row:last-child{margin-bottom:0;}
+  .case-tag{font-weight:700; font-size:.78rem; color:var(--text); background:rgba(255,255,255,.06);
+    padding:2px 8px; border-radius:6px; min-width:52px; text-align:center;}
+  .case-desc b{color:var(--text);}
+  .case-row.active{border-color:rgba(95,216,255,.5); background:rgba(95,216,255,.08); color:var(--text);
+    box-shadow:0 0 14px rgba(95,216,255,.15);}
+  .case-row.active .case-tag{background:var(--accent); color:#07131c;}
+  .slider-row{margin-bottom:12px;}
+  .slider-label{display:flex; justify-content:space-between; font-size:.82rem; color:var(--muted); margin-bottom:4px;}
+  .slider-val{color:var(--accent); font-weight:700;}
+  input[type=range]{width:100%; accent-color:var(--accent); cursor:pointer;}
+  input[type=range]:disabled{opacity:.4; cursor:not-allowed;}
+  .formula-readout{font-size:.86rem; color:var(--text); background:rgba(255,255,255,.05);
+    border-radius:8px; padding:8px 10px; margin-top:2px; text-align:center;}
+  .formula-readout b{color:var(--good);}
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+
+<h1>Terminal Velocity 3D — Free Fall then Parachute</h1>
+<p class="sub">Gravity pulls down at a constant force; air drag grows with speed² and pushes back up. When the two forces balance, velocity stops changing — that moment is terminal velocity.</p>
+
+<div class="layout">
+  <div class="card">
+    <canvas id="sceneCanvas" width="480" height="520"></canvas>
+    <div class="controls">
+      <button id="startBtn">▶ Start Fall</button>
+      <button id="chuteBtn" disabled>🪂 Deploy Parachute</button>
+      <button id="resetBtn">⟲ Reset</button>
+      <button id="camBtn">🎥 POV View</button>
+    </div>
+  </div>
+  <div class="side">
+    <div class="card">
+      <div class="label" style="margin-bottom:6px;">Free-fall parameters — v = √(mg / k)</div>
+      <div class="slider-row">
+        <span class="slider-label">Weight (m)<span class="slider-val" id="massVal">80 kg</span></span>
+        <input type="range" id="massSlider" min="40" max="150" step="5" value="80">
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Drag coeff. (k)<span class="slider-val" id="kVal">0.259</span></span>
+        <input type="range" id="kSlider" min="0.10" max="0.60" step="0.005" value="0.259">
+      </div>
+      <div class="formula-readout" id="formulaReadout">v = √(80 × 9.8 / 0.259) = <b>55.0 m/s</b></div>
+    </div>
+    <div class="card readouts">
+      <div><span class="label">Time</span><span class="value" id="rt">0.0 s</span></div>
+      <div><span class="label">Altitude</span><span class="value" id="rh">1200 m</span></div>
+      <div><span class="label">Velocity</span><span class="value" id="rv">0.0 m/s</span></div>
+      <div><span class="label">Acceleration</span><span class="value" id="ra">9.8 m/s²</span></div>
+      <div><span class="label">Net Force</span><span class="value" id="rnf">+784 N</span></div>
+      <div style="grid-column:1/3;"><span class="label">Phase</span>
+        <span class="phase-tag phase-fall" id="rphase">Ready</span>
+      </div>
+    </div>
+    <div class="card">
+      <canvas id="graphCanvas" width="330" height="220"></canvas>
+      <div class="legend">
+        <span><span class="dot" style="background:#5fd8ff"></span>velocity v(t)</span>
+        <span><span class="dot" style="background:#ff6b6b99"></span>free-fall terminal (<span id="legVT1">≈55</span> m/s)</span>
+        <span><span class="dot" style="background:#7fe8ac99"></span>parachute terminal (<span id="legVT2">≈6</span> m/s)</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="legend" style="margin-top:0;">
+        <span><span class="dot" style="background:#ff6b6b"></span>gravity (constant)</span>
+        <span><span class="dot" style="background:#5fd8ff"></span>drag (grows with v²)</span>
+        <span><span class="dot" style="background:#ffd166"></span>net force — shrinks to ~0 at terminal velocity</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label" style="margin-bottom:8px;">Weight vs Drag &rarr; effect on v</div>
+      <div class="case-row" id="caseGT">
+        <span class="case-tag">W &gt; D</span>
+        <span class="case-desc">net force down &rarr; <b>v increases</b></span>
+      </div>
+      <div class="case-row" id="caseLT">
+        <span class="case-tag">W &lt; D</span>
+        <span class="case-desc">net force up &rarr; <b>v decreases</b></span>
+      </div>
+      <div class="case-row" id="caseEQ">
+        <span class="case-tag">W = D</span>
+        <span class="case-desc">net force zero &rarr; <b>v constant</b> (terminal velocity)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===================== PHYSICS =====================
+const g = 9.8;
+let mass = 80;
+let k1 = 0.259;             // free-fall drag coefficient (k in v = √(mg/k))
+const K2_MULT = (55*55)/(6*6); // keeps the parachute's drag ratio to free-fall fixed as k1/mass change
+let k2 = k1*K2_MULT;
+function vTerm1(){ return Math.sqrt(mass*g/k1); }
+function vTerm2(){ return Math.sqrt(mass*g/k2); }
+const ALT_START = 1200;
+const DEPLOY_ALT = 420;
+const SUBSTEPS = 8;
+const DT = 1/60;
+
+let t=0, v=0, h=ALT_START, a=g;
+let deployed=false, landed=false, running=false, deployTime=null;
+let history = [];
+let shakeTime=0, shakeMag=0;
+let landTime=null, landAnimT=0;
+let jolt=0; // 0..1 decaying "opening shock" snap, drives harness/body kick on deploy
+
+function resetPhysics(){
+  t=0; v=0; h=ALT_START; a=g;
+  deployed=false; landed=false; running=false; deployTime=null;
+  history=[{t:0,v:0}];
+  shakeTime=0; shakeMag=0;
+  landTime=null; landAnimT=0; jolt=0;
+}
+
+const CANOPY_RAMP = 0.9; // seconds for drag to fully transition as canopy fills with air
+
+function step(dt){
+  if(landed) return;
+  let k = k1;
+  if(deployed){
+    const r = Math.min(1, (t-deployTime)/CANOPY_RAMP);
+    const eased = r*r*(3-2*r); // smoothstep: gentle start/end, so the slow-down reads clearly
+    k = k1 + (k2-k1)*eased;
+  }
+  const drag = k*v*v;
+  a = g - drag/mass;
+  v += a*dt;
+  if(v<0) v=0;
+  h -= v*dt;
+  t += dt;
+  if(!deployed && h<=DEPLOY_ALT){
+    deployed = true;
+    deployTime = t;
+    document.getElementById('chuteBtn').disabled=true;
+    shakeTime=0.35; shakeMag=0.55;
+    jolt=1;
+    onDeploy();
+  }
+  if(h<=0){
+    h=0; landed=true; running=false; v=0; a=0;
+    shakeTime=0.4; shakeMag=0.9;
+    landTime=t; landAnimT=0;
+    onLand();
+  }
+}
+
+function updateReadouts(){
+  document.getElementById('rt').textContent = t.toFixed(1)+' s';
+  document.getElementById('rh').textContent = Math.round(h)+' m';
+  document.getElementById('rv').textContent = v.toFixed(1)+' m/s';
+  document.getElementById('ra').textContent = a.toFixed(2)+' m/s²';
+  const tag = document.getElementById('rphase');
+  if(landed){ tag.textContent='Landed safely'; tag.className='phase-tag phase-land'; }
+  else if(deployed){ tag.textContent='Parachute deployed'; tag.className='phase-tag phase-chute'; }
+  else if(running){ tag.textContent='Free fall'; tag.className='phase-tag phase-fall'; }
+  else { tag.textContent='Ready'; tag.className='phase-tag phase-fall'; }
+
+  // highlight which weight-vs-drag case currently applies
+  const weightN = mass*g;
+  const dragN = weightN - a*mass; // since a = g - drag/mass  ->  drag = weight - a*mass
+  const gtEl = document.getElementById('caseGT');
+  const ltEl = document.getElementById('caseLT');
+  const eqEl = document.getElementById('caseEQ');
+  gtEl.classList.remove('active'); ltEl.classList.remove('active'); eqEl.classList.remove('active');
+  if(!running || landed){ /* Ready or Landed: no active weight-vs-drag case */ }
+  else if(Math.abs(weightN-dragN) < weightN*0.02) eqEl.classList.add('active');
+  else if(weightN > dragN) gtEl.classList.add('active');
+  else ltEl.classList.add('active');
+}
+
+// ===================== THREE.JS SCENE =====================
+const canvas = document.getElementById('sceneCanvas');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+renderer.setSize(480,520,false);
+renderer.shadowMap.enabled = true;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, 480/520, 0.1, 3000);
+
+const FOG_NEAR = 40, FOG_FAR = 620;
+scene.fog = new THREE.Fog(0x4a76b0, FOG_NEAR, FOG_FAR);
+
+// gradient sky (zenith -> horizon haze) instead of a flat color, redrawn each frame as altitude changes
+const skyCanvas = document.createElement('canvas');
+skyCanvas.width = 2; skyCanvas.height = 512;
+const skyCtx = skyCanvas.getContext('2d');
+const skyTexture = new THREE.CanvasTexture(skyCanvas);
+scene.background = skyTexture;
+function updateSky(altF){
+  const zenith  = lerpColor([28,58,140], [92,150,215], altF);   // deep blue up high -> softer blue lower down
+  const midSky  = lerpColor([70,120,205], [175,205,235], altF);
+  const horizon = lerpColor([150,180,220], [235,245,255], altF); // pale hazy band right above the ground
+  const g = skyCtx.createLinearGradient(0,0,0,512);
+  g.addColorStop(0,   `rgb(${zenith[0]},${zenith[1]},${zenith[2]})`);
+  g.addColorStop(0.55,`rgb(${midSky[0]},${midSky[1]},${midSky[2]})`);
+  g.addColorStop(1,   `rgb(${horizon[0]},${horizon[1]},${horizon[2]})`);
+  skyCtx.fillStyle = g;
+  skyCtx.fillRect(0,0,2,512);
+  skyTexture.needsUpdate = true;
+  return horizon;
+}
+updateSky(0);
+
+const hemi = new THREE.HemisphereLight(0xbcd7ff, 0x2f4020, 0.9);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff2d6, 1.1);
+sun.position.set(120,260,80);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-200; sun.shadow.camera.right=200;
+sun.shadow.camera.top=200; sun.shadow.camera.bottom=-200;
+sun.shadow.camera.far=900;
+scene.add(sun);
+
+// ground
+const groundGeo = new THREE.PlaneGeometry(6000,6000,1,1);
+const groundMat = new THREE.MeshLambertMaterial({color:0x4e7c3a});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.position.y = 0;
+ground.receiveShadow = true;
+scene.add(ground);
+// ground grid texture-ish rings for visual interest
+const ringMat = new THREE.MeshLambertMaterial({color:0x3f6b30});
+for(let i=0;i<10;i++){
+  const ringGeo = new THREE.RingGeometry(40+i*70, 46+i*70, 48);
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI/2;
+  ring.position.y = 0.05;
+  scene.add(ring);
+}
+
+// clouds
+const cloudMat = new THREE.MeshLambertMaterial({color:0xffffff, transparent:true, opacity:0.85});
+const clouds = [];
+for(let i=0;i<22;i++){
+  const cloud = new THREE.Group();
+  const puffs = 3+Math.floor(Math.random()*3);
+  for(let p=0;p<puffs;p++){
+    const r = 8+Math.random()*10;
+    const geo = new THREE.SphereGeometry(r,8,6);
+    const m = new THREE.Mesh(geo, cloudMat);
+    m.position.set((Math.random()-0.5)*22,(Math.random()-0.5)*6,(Math.random()-0.5)*14);
+    cloud.add(m);
+  }
+  cloud.position.set((Math.random()-0.5)*500, 120+Math.random()*1000, (Math.random()-0.5)*500-60);
+  scene.add(cloud);
+  clouds.push(cloud);
+}
+
+// ---- skydiver rig ----
+const diver = new THREE.Group();
+const skin = new THREE.MeshPhongMaterial({color:0xd8a878, shininess:15});
+const suit = new THREE.MeshPhongMaterial({color:0xff8c3c, shininess:35});
+const suitDark = new THREE.MeshPhongMaterial({color:0xcc6a20, shininess:35});
+const pack = new THREE.MeshPhongMaterial({color:0x4a5170, shininess:20});
+const strapMat = new THREE.MeshPhongMaterial({color:0x24283a, shininess:10});
+const visorMat = new THREE.MeshPhongMaterial({color:0x1a2a3a, shininess:120, specular:0x88ccff});
+const gloveMat = new THREE.MeshPhongMaterial({color:0x1e2130, shininess:25});
+const bootMat = new THREE.MeshPhongMaterial({color:0x1e2130, shininess:15});
+
+// ---- head assembly (high segment count + helmet/goggles detail + facial structure) ----
+const headGroup = new THREE.Group();
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.85,48,48), skin);
+head.scale.set(1,1.06,0.92);
+head.castShadow = true;
+headGroup.add(head);
+const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.62,32,24), skin);
+jaw.scale.set(0.92,0.6,0.82);
+jaw.position.set(0,-0.52,0.1);
+jaw.castShadow = true;
+headGroup.add(jaw);
+const nose = new THREE.Mesh(new THREE.ConeGeometry(0.09,0.24,12), skin);
+nose.rotation.x = Math.PI/2.05;
+nose.position.set(0,-0.08,0.78);
+nose.castShadow = true;
+headGroup.add(nose);
+function buildEar(side){
+  const e = new THREE.Mesh(new THREE.SphereGeometry(0.14,16,14), skin);
+  e.scale.set(0.5,1,0.7);
+  e.position.set(side*0.82,-0.05,0.02);
+  e.castShadow = true;
+  return e;
+}
+headGroup.add(buildEar(-1), buildEar(1));
+const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.9,40,28,0,Math.PI*2,0,Math.PI*0.55), suitDark);
+helmet.position.y = 0.05; helmet.castShadow = true;
+headGroup.add(helmet);
+const visor = new THREE.Mesh(new THREE.SphereGeometry(0.7,32,20,0,Math.PI*2,Math.PI*0.15,Math.PI*0.35), visorMat);
+visor.position.set(0,0.05,0.15);
+headGroup.add(visor);
+const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.38,0.4,24), skin);
+neck.position.y = -0.75; neck.castShadow = true;
+headGroup.add(neck);
+headGroup.position.y = 3.5;
+diver.add(headGroup);
+
+// ---- torso: realistic hourglass profile via lathe geometry, high radial segment count ----
+const torsoProfile = [
+  new THREE.Vector2(0.60,-1.25), // hip bottom
+  new THREE.Vector2(0.68,-0.90), // hip flare
+  new THREE.Vector2(0.60,-0.50), // waist taper begins
+  new THREE.Vector2(0.52,-0.15), // waist narrowest
+  new THREE.Vector2(0.62, 0.25), // lower chest widening
+  new THREE.Vector2(0.75, 0.55), // chest / pec width
+  new THREE.Vector2(0.68, 0.85), // upper chest
+  new THREE.Vector2(0.52, 1.05), // shoulder taper
+  new THREE.Vector2(0.36, 1.25)  // neck base
+];
+const torso = new THREE.Mesh(new THREE.LatheGeometry(torsoProfile, 32), suit);
+torso.position.y = 1.65; torso.castShadow = true;
+diver.add(torso);
+// pec muscle definition bulges under the suit fabric
+function buildPec(side){
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.32,20,16), suit);
+  m.scale.set(0.85,0.65,0.55);
+  m.position.set(side*0.28, 2.2, 0.55);
+  m.castShadow = true;
+  return m;
+}
+diver.add(buildPec(-1), buildPec(1));
+// deltoid caps for smooth shoulder-to-arm blending
+function buildDeltoid(side){
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.36,20,16), suit);
+  m.position.set(side*1.05, 2.55, 0);
+  m.castShadow = true;
+  return m;
+}
+diver.add(buildDeltoid(-1), buildDeltoid(1));
+const collar = new THREE.Mesh(new THREE.TorusGeometry(0.55,0.08,12,28), suitDark);
+collar.position.y = 2.85; collar.rotation.x = Math.PI/2; collar.castShadow = true;
+diver.add(collar);
+function strap(){
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2.4,12), strapMat);
+  m.castShadow = true;
+  return m;
+}
+const strapL = strap(); strapL.position.set(-0.35,1.7,0.62); strapL.rotation.z = 0.18; strapL.rotation.x = -0.05;
+const strapR = strap(); strapR.position.set(0.35,1.7,0.62); strapR.rotation.z = -0.18; strapR.rotation.x = -0.05;
+diver.add(strapL, strapR);
+const beltBuckle = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.22,0.1,2,2,2), new THREE.MeshPhongMaterial({color:0xccb060, shininess:80}));
+beltBuckle.position.set(0,1.15,0.85); beltBuckle.castShadow = true;
+diver.add(beltBuckle);
+
+const backpack = new THREE.Mesh(new THREE.BoxGeometry(1.3,1.7,0.65,3,3,2), pack);
+backpack.position.set(0,1.85,-0.85); backpack.castShadow = true;
+diver.add(backpack);
+const packEdge = new THREE.Mesh(new THREE.TorusGeometry(0.02,0.02,4,4), strapMat); // placeholder tiny detail
+packEdge.visible = false;
+diver.add(packEdge);
+
+// ---- articulated limb builder: shoulder/hip joint -> segment -> elbow/knee joint -> segment -> hand/foot ----
+function buildLimb(len1,len2,r1,r2,jointR,endBuilder,endMat,segMat){
+  const group = new THREE.Group();
+  const joint0 = new THREE.Mesh(new THREE.SphereGeometry(jointR,24,20), segMat);
+  joint0.castShadow = true;
+  group.add(joint0);
+
+  const seg1 = new THREE.Mesh(new THREE.CylinderGeometry(r1,r1*0.82,len1,24), segMat);
+  seg1.position.y = -len1/2; seg1.castShadow = true;
+  group.add(seg1);
+
+  const joint1 = new THREE.Mesh(new THREE.SphereGeometry(jointR*0.85,20,18), segMat);
+  joint1.position.y = -len1; joint1.castShadow = true;
+  group.add(joint1);
+
+  const seg2 = new THREE.Mesh(new THREE.CylinderGeometry(r1*0.8,r2,len2,24), segMat);
+  seg2.position.y = -len1 - len2/2; seg2.castShadow = true;
+  group.add(seg2);
+
+  const end = endBuilder(endMat);
+  end.position.y = -len1 - len2 - jointR*0.4;
+  group.add(end);
+
+  return group;
+}
+
+// hand: palm block + five individually modeled fingers + thumb (far higher detail than a single sphere)
+function buildHand(mat){
+  const hand = new THREE.Group();
+  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.32,0.4,0.16,2,2,2), mat);
+  palm.position.y = -0.06;
+  palm.castShadow = true;
+  hand.add(palm);
+  for(let i=0;i<4;i++){
+    const finger = new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.038,0.34,10), mat);
+    finger.position.set(-0.12+i*0.08,-0.42,0.01);
+    finger.rotation.x = 0.12;
+    finger.castShadow = true;
+    hand.add(finger);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.04,10,8), mat);
+    tip.position.set(-0.12+i*0.08,-0.59,0.05);
+    tip.castShadow = true;
+    hand.add(tip);
+  }
+  const thumb = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.045,0.26,10), mat);
+  thumb.position.set(-0.19,-0.14,0.08);
+  thumb.rotation.z = 0.95; thumb.rotation.x = 0.2;
+  thumb.castShadow = true;
+  hand.add(thumb);
+  return hand;
+}
+
+// foot: sole plate + boot upper + rounded toe box + ankle joint
+function buildFoot(mat){
+  const foot = new THREE.Group();
+  const sole = new THREE.Mesh(new THREE.BoxGeometry(0.4,0.09,0.78,2,1,3), bootMat);
+  sole.position.set(0,-0.14,0.06);
+  sole.castShadow = true;
+  foot.add(sole);
+  const upper = new THREE.Mesh(new THREE.BoxGeometry(0.38,0.3,0.5,3,2,3), mat);
+  upper.position.set(0,0.04,-0.05);
+  upper.castShadow = true;
+  foot.add(upper);
+  const toe = new THREE.Mesh(new THREE.SphereGeometry(0.21,16,12), mat);
+  toe.scale.set(1,0.62,1.15);
+  toe.position.set(0,-0.05,0.34);
+  toe.castShadow = true;
+  foot.add(toe);
+  const ankle = new THREE.Mesh(new THREE.SphereGeometry(0.17,14,12), bootMat);
+  ankle.position.set(0,0.18,-0.1);
+  ankle.castShadow = true;
+  foot.add(ankle);
+  return foot;
+}
+
+const armL = buildLimb(1.25,1.05,0.3,0.22,0.32, buildHand, gloveMat, suit);
+armL.position.set(-1.15,2.35,0); armL.rotation.z = Math.PI/2.3 + 0.5;
+const armR = buildLimb(1.25,1.05,0.3,0.22,0.32, buildHand, gloveMat, suit);
+armR.position.set(1.15,2.35,0); armR.rotation.z = -(Math.PI/2.3 + 0.5);
+
+const legL = buildLimb(1.35,1.15,0.38,0.26,0.4, buildFoot, bootMat, suit);
+legL.position.set(-0.42,0.35,0); legL.rotation.z = 0.5;
+const legR = buildLimb(1.35,1.15,0.38,0.26,0.4, buildFoot, bootMat, suit);
+legR.position.set(0.42,0.35,0); legR.rotation.z = -0.5;
+
+diver.add(armL, armR, legL, legR);
+
+// parachute canopy + rigging (hidden until deploy)
+const chute = new THREE.Group();
+const canopyMat = new THREE.MeshPhongMaterial({color:0xe74c3c, side:THREE.DoubleSide, shininess:40});
+const canopyGeo = new THREE.SphereGeometry(6, 20, 12, 0, Math.PI*2, 0, Math.PI/2.1);
+const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+canopy.scale.set(1,0.55,1);
+canopy.position.y = 9.5;
+canopy.castShadow = true;
+chute.add(canopy);
+// gold stripe accents
+const stripeMat = new THREE.MeshPhongMaterial({color:0xffd166});
+for(let i=0;i<4;i++){
+  const stripeGeo = new THREE.SphereGeometry(6.05,20,12,(i/4)*Math.PI*2, 0.18, 0, Math.PI/2.1);
+  const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+  stripe.scale.set(1,0.55,1);
+  stripe.position.y = 9.5;
+  chute.add(stripe);
+}
+// rigging lines — bent in two segments so they route AROUND the head
+// (waypoint sits outside the head's ~0.9 radius) before dropping to the
+// shoulder/pack risers, instead of cutting straight through the skull
+const rigMat = new THREE.LineBasicMaterial({color:0x1a1a1a});
+const anchorAngles = [0, Math.PI/2, Math.PI, Math.PI*1.5, Math.PI*0.25, Math.PI*0.75];
+const riserL    = new THREE.Vector3(-0.5, 1.9, -0.3);
+const riserR    = new THREE.Vector3( 0.5, 1.9, -0.3);
+const waypointL = new THREE.Vector3(-1.3, 3.5,  0.1); // clears head (radius ~0.9)
+const waypointR = new THREE.Vector3( 1.3, 3.5,  0.1);
+anchorAngles.forEach((ang,i)=>{
+  const ax = Math.cos(ang)*5.6, az = Math.sin(ang)*5.6;
+  const side = (i%2===0);
+  const waypoint = side ? waypointL : waypointR;
+  const riser = side ? riserL : riserR;
+  const geo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(ax,9.7,az),
+    waypoint,
+    riser
+  ]);
+  chute.add(new THREE.Line(geo, rigMat));
+});
+chute.visible = false;
+diver.add(chute);
+
+const FOOT_OFFSET = 2.15; // vertical gap between diver group origin (hips) and where feet actually touch ground
+diver.position.y = h + FOOT_OFFSET;
+scene.add(diver);
+
+// force arrows
+const gravArrow = new THREE.ArrowHelper(new THREE.Vector3(0,-1,0), new THREE.Vector3(0,0,0), 4, 0xff6b6b, 1.2, 0.7);
+const dragArrow = new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,0), 0.01, 0x5fd8ff, 1.2, 0.7);
+const netArrow  = new THREE.ArrowHelper(new THREE.Vector3(0,-1,0), new THREE.Vector3(0,0,0), 0.01, 0xffd166, 1.0, 0.55);
+diver.add(gravArrow, dragArrow, netArrow);
+gravArrow.position.set(-2.6,1.8,0);
+dragArrow.position.set(2.6,1.8,0);
+netArrow.position.set(0,1.8,0.9); // out front — reads as the "resultant" vector
+
+// dust particles on landing
+let dustParticles = [];
+function onLand(){
+  for(let i=0;i<30;i++){
+    const geo = new THREE.SphereGeometry(0.25+Math.random()*0.35,6,6);
+    const mat = new THREE.MeshBasicMaterial({color:0xc7b48f, transparent:true, opacity:0.9});
+    const p = new THREE.Mesh(geo,mat);
+    p.position.copy(diver.position);
+    p.position.y = 0.3;
+    const ang = Math.random()*Math.PI*2;
+    const spd = 3+Math.random()*8;
+    p.userData.vel = new THREE.Vector3(Math.cos(ang)*spd, 4+Math.random()*4, Math.sin(ang)*spd);
+    p.userData.life = 1;
+    scene.add(p);
+    dustParticles.push(p);
+  }
+}
+function onDeploy(){ /* hook for future effects (sound, flash) */ }
+
+// speed streaks: thin fast-moving lines that stream past the diver during
+// high-speed free fall, giving a visceral read on velocity beyond the numbers
+let streaks = [];
+const streakMat = new THREE.LineBasicMaterial({color:0xdfefff, transparent:true, opacity:0.55});
+function spawnStreak(){
+  const ang = Math.random()*Math.PI*2;
+  const rad = 1.6 + Math.random()*3.2;
+  const cx = diver.position.x + Math.cos(ang)*rad;
+  const cz = diver.position.z + Math.sin(ang)*rad;
+  const y0 = diver.position.y - 3.0 + Math.random()*0.8; // start a little lower still, below the legs/feet
+  const len = 4 + Math.random()*4.5; // long enough to sweep past torso and head
+  // curl parameters: each streak spirals gently as it runs, like wind wisps
+  const curl = 0.18 + Math.random()*0.3;
+  const freq = 1.8 + Math.random()*2.2;
+  const phase = Math.random()*Math.PI*2;
+  const segs = 16;
+  const pts = [];
+  for(let s=0;s<=segs;s++){
+    const f = s/segs;
+    const yy = y0 + f*len;
+    const twist = phase + f*freq*Math.PI*2;
+    pts.push(new THREE.Vector3(cx+Math.sin(twist)*curl, yy, cz+Math.cos(twist)*curl));
+  }
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const line = new THREE.Line(geo, streakMat.clone());
+  line.userData.life = 1;
+  scene.add(line);
+  streaks.push(line);
+}
+function updateStreaks(dt){
+  if(!deployed && !landed && running && v>10){
+    // spawn rate scales with speed so it visibly thickens as you accelerate
+    const rate = Math.min(14, (v-10)/3);
+    if(Math.random() < rate*dt*4) spawnStreak();
+  }
+  for(let i=streaks.length-1;i>=0;i--){
+    const s = streaks[i];
+    s.position.y += v*dt*1.4; // streaks appear to rush upward past the falling diver
+    s.userData.life -= dt*1.1;
+    s.material.opacity = Math.max(0,s.userData.life)*0.55;
+    if(s.userData.life<=0){ scene.remove(s); streaks.splice(i,1); }
+  }
+}
+
+function updateDust(dt){
+  for(let i=dustParticles.length-1;i>=0;i--){
+    const p = dustParticles[i];
+    p.userData.vel.y -= 9*dt;
+    p.position.addScaledVector(p.userData.vel, dt);
+    p.userData.life -= dt*0.7;
+    p.material.opacity = Math.max(0,p.userData.life);
+    if(p.userData.life<=0){ scene.remove(p); dustParticles.splice(i,1); }
+  }
+}
+
+// ===================== VISUAL UPDATE =====================
+function lerp(a,b,f){return a+(b-a)*f;}
+function lerpColor(c1,c2,f){ return [lerp(c1[0],c2[0],f), lerp(c1[1],c2[1],f), lerp(c1[2],c2[2],f)]; }
+
+let camAngle = 0;
+let cameraMode = 'cine'; // 'cine' = slow orbiting outside view, 'pov' = through the diver's own eyes
+const CINE_FOV = 55;
+const HIGH_COLOR = [70,130,220];
+const LOW_COLOR  = [210,235,255];
+
+function updateVisual(dt){
+  diver.position.y = h + FOOT_OFFSET;
+
+  // decay the opening-shock jolt (drives a quick harness snap + camera punch)
+  if(jolt>0) jolt = Math.max(0, jolt - dt/0.45);
+
+  // limb pose blend: spread-eagle in free fall, relaxed hang under canopy
+  if(deployed){
+    chute.visible = true;
+
+    // --- canopy inflation: unfurls from a collapsed streamer into a full dome,
+    // overshoots slightly past full size then settles, like real fabric snapping taut
+    const openT = deployTime!==null ? Math.min(1.4, t - deployTime) : 1.4;
+    let inflate;
+    if(openT < 0.5){
+      inflate = 0.08 + 0.92*(openT/0.5)*(openT/0.5); // slow start, accelerating unfurl
+    } else if(openT < 0.75){
+      const f = (openT-0.5)/0.25;
+      inflate = lerp(1.0, 1.14, Math.sin(f*Math.PI)); // overshoot bulge as it snaps taut
+    } else if(openT < 1.1){
+      const f = (openT-0.75)/0.35;
+      inflate = lerp(1.14, 1.0, f);
+    } else inflate = 1.0;
+    chute.scale.set(inflate, Math.min(1, 0.3+inflate*0.8), inflate);
+
+    const sway = Math.sin(t*1.4)*0.12 + Math.sin(t*3.7)*0.03;
+    chute.rotation.z = sway;
+    chute.rotation.x = Math.sin(t*1.1+1.3)*0.05;
+    armL.rotation.z = lerp(armL.rotation.z, 0.35, 0.08);
+    armR.rotation.z = lerp(armR.rotation.z, -0.35, 0.08);
+    legL.rotation.z = lerp(legL.rotation.z, 0.18, 0.08);
+    legR.rotation.z = lerp(legR.rotation.z, -0.18, 0.08);
+    // pendulum-style body sway follows the canopy sway with a slight lag
+    diver.rotation.z = lerp(diver.rotation.z, sway*0.3, 0.1);
+    // harness snap: body jerks upward/back the instant the canopy catches air, then settles
+    diver.rotation.x = lerp(diver.rotation.x, 0, 0.12) - jolt*jolt*0.5;
+    diver.position.y += jolt*1.2; // brief upward kick as canopy arrests the fall
+  } else {
+    chute.visible = false;
+    chute.scale.set(0.08,0.08,0.08);
+    // turbulence buffeting: jitter grows with speed (faster fall = rougher air)
+    const turb = Math.min(1, v/50);
+    const buf1 = (Math.sin(t*17.3)*0.5+Math.sin(t*9.1+2)*0.5) * turb * 0.05;
+    const buf2 = (Math.sin(t*14.7+1)*0.5+Math.sin(t*11.3+3)*0.5) * turb * 0.05;
+    const wob = Math.sin(t*6)*0.06;
+    armL.rotation.z = Math.PI/2.3 + 0.5 + wob + buf1;
+    armR.rotation.z = -(Math.PI/2.3 + 0.5 + wob) - buf2;
+    legL.rotation.z = 0.5 - wob + buf2;
+    legR.rotation.z = -0.5 - wob - buf1;
+    diver.rotation.z = buf1*0.6;
+    diver.rotation.x = Math.sin(t*3)*0.03 + buf2*0.4;
+  }
+
+  // landing: knees buckle and absorb impact, then spring back upright.
+  // physics time (t) freezes once landed, so this uses its own real-time clock.
+  if(landed){
+    landAnimT = Math.min(1.2, landAnimT + dt);
+    let crouch;
+    if(landAnimT < 0.15){
+      crouch = (landAnimT/0.15); // fast compress on impact
+    } else if(landAnimT < 0.5){
+      crouch = lerp(1, -0.25, (landAnimT-0.15)/0.35); // spring past neutral (rebound)
+    } else if(landAnimT < 0.8){
+      crouch = lerp(-0.25, 0, (landAnimT-0.5)/0.3); // settle back
+    } else crouch = 0;
+    diver.position.y = h + FOOT_OFFSET - Math.max(0, crouch)*0.9 + Math.max(0,-crouch)*0.35;
+    legL.rotation.x = crouch*0.9;
+    legR.rotation.x = crouch*0.9;
+    armL.rotation.x = crouch*0.5;
+    armR.rotation.x = crouch*0.5;
+    diver.rotation.x = crouch*0.15;
+  }
+
+  // atmospheric color grading tied to altitude
+  const altF = Math.max(0, Math.min(1, 1-(h/ALT_START)));
+  const col = lerpColor(HIGH_COLOR, LOW_COLOR, altF);
+  const cThree = new THREE.Color(col[0]/255,col[1]/255,col[2]/255);
+  scene.fog.color.copy(cThree);
+  updateSky(altF);
+  ground.material.color.setRGB(lerp(0.19,0.35,altF), lerp(0.30,0.30,altF)*0-0+lerp(0.48,0.5,altF), lerp(0.14,0.10,altF));
+
+  // force arrow lengths
+  const weight = mass*g;
+  gravArrow.setLength(4,1.1,0.6);
+  let kVis = k1;
+  if(deployed){
+    const rVis = Math.min(1, (t-deployTime)/CANOPY_RAMP);
+    const easedVis = rVis*rVis*(3-2*rVis);
+    kVis = k1 + (k2-k1)*easedVis;
+  }
+  const dragForce = kVis*v*v;
+  const dragLen = Math.max(0.01, Math.min(6, (dragForce/weight)*4));
+  dragArrow.setLength(dragLen,1.1,0.6);
+
+  // net force = weight - drag (this is what actually accelerates the diver: mass*a)
+  const netForce = weight - dragForce; // >0 falling faster, <0 slowing down, ->0 at terminal velocity
+  const netLen = Math.max(0.01, Math.min(6, (Math.abs(netForce)/weight)*4));
+  netArrow.setDirection(new THREE.Vector3(0, netForce >= 0 ? -1 : 1, 0));
+  netArrow.setLength(netLen, 0.9, 0.5);
+  // fade toward green as it shrinks to ~0, i.e. as the diver settles into terminal velocity
+  const settleAmt = 1 - Math.min(1, netLen/4);
+  const netColor = new THREE.Color(0xffd166).lerp(new THREE.Color(0x7fe8ac), settleAmt);
+  netArrow.setColor(netColor);
+
+  document.getElementById('rnf').textContent = (netForce>=0?'+':'') + Math.round(netForce) + ' N';
+
+  if(cameraMode==='pov'){
+    // POV: camera rides at the diver's own eye level, looking down through
+    // their visor at the ground rushing up — it inherits the same body
+    // sway/buffeting rotation as the rig, so turbulence reads as head motion
+    if(shakeTime>0) shakeTime -= dt;
+    diver.updateMatrixWorld(true); // pick up this frame's position/rotation, set earlier above
+
+    const eyeLocal = new THREE.Vector3(0, 3.55, 1.05); // visor height, just clear of the nose/head geometry
+    const eyeWorld = diver.localToWorld(eyeLocal.clone());
+
+    // mostly straight down (the direction of the fall), with a slight forward
+    // tilt so the horizon stays visible rather than staring at a blank void
+    const lookLocal = new THREE.Vector3(0, -1, 0.4).normalize();
+    const lookWorld = lookLocal.clone().transformDirection(diver.matrixWorld);
+    const target = eyeWorld.clone().addScaledVector(lookWorld, 40);
+
+    let px = eyeWorld.x, py = eyeWorld.y, pz = eyeWorld.z;
+    if(shakeTime>0){
+      const m = shakeMag*0.35; // gentler than the outside cam — this is inside the diver's head
+      px += (Math.random()-0.5)*m;
+      py += (Math.random()-0.5)*m;
+      pz += (Math.random()-0.5)*m;
+    }
+    camera.position.set(px,py,pz);
+    camera.lookAt(target);
+
+    // FOV widens with speed for a visceral rush-of-air feeling during free fall
+    const speedF = Math.min(1, v/vTerm1());
+    const targetFov = CINE_FOV + 13 + speedF*16;
+    if(Math.abs(camera.fov-targetFov) > 0.05){
+      camera.fov = lerp(camera.fov, targetFov, 0.08);
+      camera.updateProjectionMatrix();
+    }
+  } else {
+    // cinematic slow orbiting camera, following true world altitude
+    camAngle += dt*0.06;
+    let cx = diver.position.x + Math.sin(camAngle)*26;
+    let cz = diver.position.z + Math.cos(camAngle)*26 + 34;
+    let cy = diver.position.y + 9;
+
+    if(shakeTime>0){
+      shakeTime -= dt;
+      cx += (Math.random()-0.5)*shakeMag;
+      cy += (Math.random()-0.5)*shakeMag;
+      cz += (Math.random()-0.5)*shakeMag;
+    }
+    // camera punch: brief zoom-in on the opening shock for emphasis, eases back out
+    const zoomPunch = 1 - jolt*0.18;
+    cx = diver.position.x + (cx - diver.position.x)*zoomPunch;
+    cz = diver.position.z + (cz - diver.position.z)*zoomPunch;
+    camera.position.set(cx,cy,cz);
+    camera.lookAt(diver.position.x, diver.position.y+2, diver.position.z);
+    if(Math.abs(camera.fov-CINE_FOV) > 0.05){
+      camera.fov = lerp(camera.fov, CINE_FOV, 0.15);
+      camera.updateProjectionMatrix();
+    }
+  }
+
+  updateDust(dt);
+  updateStreaks(dt);
+}
+
+function render(){
+  renderer.render(scene, camera);
+}
+
+// ===================== 2D GRAPH =====================
+const graphCv = document.getElementById('graphCanvas');
+const gctx = graphCv.getContext('2d');
+function drawGraph(){
+  const W=graphCv.width, H=graphCv.height;
+  gctx.fillStyle='#0b0f1e';
+  gctx.fillRect(0,0,W,H);
+  const padL=34, padB=22, padT=10, padR=10;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const tMax = Math.max(30, t+2);
+  const vMax = Math.max(65, vTerm1()*1.15);
+  function X(tt){ return padL + (tt/tMax)*plotW; }
+  function Y(vv){ return padT + plotH - (vv/vMax)*plotH; }
+
+  gctx.strokeStyle='#2c3a63'; gctx.lineWidth=1;
+  gctx.beginPath(); gctx.moveTo(padL,padT); gctx.lineTo(padL,padT+plotH); gctx.lineTo(padL+plotW,padT+plotH); gctx.stroke();
+  gctx.fillStyle='#8ea0c4'; gctx.font='10px Segoe UI'; gctx.textAlign='right';
+  gctx.fillText('v (m/s)', padL-4, padT+8);
+  gctx.textAlign='center';
+  gctx.fillText('t (s)', padL+plotW/2, H-4);
+
+  gctx.setLineDash([4,4]);
+  gctx.strokeStyle='#ff6b6b99';
+  gctx.beginPath(); gctx.moveTo(padL,Y(vTerm1())); gctx.lineTo(padL+plotW,Y(vTerm1())); gctx.stroke();
+  gctx.strokeStyle='#7fe8ac99';
+  gctx.beginPath(); gctx.moveTo(padL,Y(vTerm2())); gctx.lineTo(padL+plotW,Y(vTerm2())); gctx.stroke();
+  gctx.setLineDash([]);
+
+  if(deployTime!==null){
+    gctx.strokeStyle='#ffd16699';
+    gctx.beginPath(); gctx.moveTo(X(deployTime),padT); gctx.lineTo(X(deployTime),padT+plotH); gctx.stroke();
+  }
+
+  if(history.length>1){
+    gctx.beginPath();
+    gctx.moveTo(X(history[0].t), Y(0));
+    history.forEach(p=> gctx.lineTo(X(p.t), Y(p.v)));
+    gctx.lineTo(X(history[history.length-1].t), Y(0));
+    gctx.closePath();
+    const fillGrad = gctx.createLinearGradient(0,padT,0,padT+plotH);
+    fillGrad.addColorStop(0,'rgba(95,216,255,0.28)');
+    fillGrad.addColorStop(1,'rgba(95,216,255,0.02)');
+    gctx.fillStyle=fillGrad;
+    gctx.fill();
+  }
+
+  gctx.strokeStyle='#5fd8ff'; gctx.lineWidth=2.2;
+  gctx.shadowColor='rgba(95,216,255,0.6)'; gctx.shadowBlur=6;
+  gctx.beginPath();
+  history.forEach((p,i)=>{
+    const x=X(p.t), y=Y(p.v);
+    if(i===0) gctx.moveTo(x,y); else gctx.lineTo(x,y);
+  });
+  gctx.stroke();
+  gctx.shadowBlur=0;
+}
+
+// ===================== MAIN LOOP =====================
+function physicsFrame(){
+  if(!running) return;
+  for(let i=0;i<SUBSTEPS;i++) step(DT/SUBSTEPS);
+  history.push({t, v});
+  if(history.length>4000) history.shift();
+}
+
+function mainLoop(){
+  physicsFrame();
+  updateReadouts();
+  updateVisual(DT);
+  render();
+  drawGraph();
+  requestAnimationFrame(mainLoop);
+}
+
+// ===================== CONTROLS =====================
+function fullReset(){
+  resetPhysics();
+  dustParticles.forEach(p=>scene.remove(p));
+  dustParticles = [];
+  streaks.forEach(s=>scene.remove(s));
+  streaks = [];
+  chute.visible = false;
+  diver.rotation.set(0,0,0);
+  legL.rotation.x = 0; legR.rotation.x = 0;
+  armL.rotation.x = 0; armR.rotation.x = 0;
+  camAngle = 0;
+  document.getElementById('chuteBtn').disabled=true;
+  document.getElementById('startBtn').disabled=false;
+  massSlider.disabled = false;
+  kSlider.disabled = false;
+  updateReadouts();
+  updateVisual(0);
+  render();
+  drawGraph();
+}
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  if(landed) return;
+  running = true;
+  document.getElementById('startBtn').disabled=true;
+  document.getElementById('chuteBtn').disabled=false;
+  massSlider.disabled = true;
+  kSlider.disabled = true;
+});
+document.getElementById('chuteBtn').addEventListener('click', ()=>{
+  if(!deployed && !landed){
+    deployed = true;
+    deployTime = t;
+    shakeTime=0.35; shakeMag=0.55;
+    jolt=1;
+    onDeploy();
+    document.getElementById('chuteBtn').disabled=true;
+  }
+});
+document.getElementById('resetBtn').addEventListener('click', fullReset);
+document.getElementById('camBtn').addEventListener('click', ()=>{
+  cameraMode = (cameraMode==='cine') ? 'pov' : 'cine';
+  document.getElementById('camBtn').textContent = (cameraMode==='pov') ? '🌍 Orbit View' : '🎥 POV View';
+});
+
+const massSlider = document.getElementById('massSlider');
+const kSlider = document.getElementById('kSlider');
+function updateSlidersDisplay(){
+  document.getElementById('massVal').textContent = mass+' kg';
+  document.getElementById('kVal').textContent = k1.toFixed(3);
+  document.getElementById('formulaReadout').innerHTML =
+    'v = √('+mass+' × 9.8 / '+k1.toFixed(3)+') = <b>'+vTerm1().toFixed(1)+' m/s</b>';
+  document.getElementById('legVT1').textContent = '≈'+Math.round(vTerm1());
+  document.getElementById('legVT2').textContent = '≈'+vTerm2().toFixed(1);
+}
+massSlider.addEventListener('input', ()=>{
+  mass = parseFloat(massSlider.value);
+  k2 = k1*K2_MULT;
+  updateSlidersDisplay();
+});
+kSlider.addEventListener('input', ()=>{
+  k1 = parseFloat(kSlider.value);
+  k2 = k1*K2_MULT;
+  updateSlidersDisplay();
+});
+updateSlidersDisplay();
+
+fullReset();
+mainLoop();
+</script>
+</body>
+</html>

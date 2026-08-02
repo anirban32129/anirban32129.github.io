@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Force Components</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#08080f;
+  font-family:'JetBrains Mono',monospace;
+  display:flex; flex-direction:column; align-items:center;
+  padding:24px 16px 50px; gap:16px; min-height:100vh;
+}
+
+/* ── Controls ── */
+.bar {
+  display:flex; align-items:center; gap:24px; flex-wrap:wrap; justify-content:center;
+}
+.bar label {
+  color:#4a4a7a; font-size:.68rem; letter-spacing:2px; text-transform:uppercase;
+  display:flex; align-items:center; gap:8px;
+}
+.bar label span { color:#a3e635; font-weight:700; min-width:38px; }
+input[type=range] {
+  -webkit-appearance:none; height:3px; width:130px;
+  background:#1e1e35; border-radius:2px; outline:none; cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:13px; height:13px;
+  border-radius:50%; background:#a3e635; box-shadow:0 0 8px #a3e635; cursor:pointer;
+}
+.btn {
+  background:rgba(163,230,53,.1); border:1px solid #a3e635; color:#a3e635;
+  font-family:'JetBrains Mono',monospace; font-size:.68rem;
+  letter-spacing:1px; text-transform:uppercase;
+  padding:7px 18px; border-radius:6px; cursor:pointer; transition:background .2s;
+}
+.btn:hover,.btn.on { background:rgba(163,230,53,.22); }
+
+/* ── Main layout: circle left, table right ── */
+.main {
+  display:flex; gap:16px; align-items:flex-start;
+  width:100%; max-width:940px; flex-wrap:wrap;
+}
+
+/* ── Circle canvas ── */
+canvas#cCircle {
+  border-radius:12px; background:#0d0d1a;
+  border:1px solid #1e1e35; display:block;
+  flex-shrink:0;
+  width:340px; height:340px;
+}
+@media(max-width:720px){ canvas#cCircle { width:100%; height:auto; } }
+
+/* ── Table ── */
+.tbl-wrap {
+  width:100%; max-width:940px;
+  background:#0d0d1a; border:1px solid #1e1e35;
+  border-radius:12px; overflow:hidden;
+}
+table { width:100%; border-collapse:collapse; }
+
+thead tr { background:#0f0f22; }
+thead th {
+  padding:10px 16px; text-align:left;
+  font-size:.6rem; letter-spacing:2px; text-transform:uppercase;
+  color:#2e2e5a; border-bottom:1px solid #1a1a30;
+}
+
+tbody tr { border-bottom:1px solid #141428; transition:background .15s; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:rgba(255,255,255,.02); }
+
+/* left accent bar per row */
+tbody tr.row-f   td:first-child { border-left:3px solid #e2e8f0; }
+tbody tr.row-th  td:first-child { border-left:3px solid #a3e635; }
+tbody tr.row-cos td:first-child { border-left:3px solid #38bdf8; }
+tbody tr.row-sin td:first-child { border-left:3px solid #fb923c; }
+tbody tr.row-fx  td:first-child { border-left:3px solid #38bdf8; }
+tbody tr.row-fy  td:first-child { border-left:3px solid #fb923c; }
+
+td { padding:10px 16px; vertical-align:middle; }
+
+td.label {
+  font-size:.62rem; letter-spacing:1px; text-transform:uppercase;
+  color:#2e2e5a; white-space:nowrap; padding-left:14px;
+}
+td.formula { font-size:.72rem; color:#22224a; white-space:nowrap; }
+
+td.val { font-size:1.05rem; font-weight:700; white-space:nowrap; }
+td.val.cf   { color:#e2e8f0; }
+td.val.cth  { color:#a3e635; }
+td.val.ccos { color:#38bdf8; }
+td.val.csin { color:#fb923c; }
+td.val.cfx  { color:#38bdf8; }
+td.val.cfy  { color:#fb923c; }
+
+td.sign-cell { width:48px; }
+.sign {
+  display:inline-block; font-size:.65rem; font-weight:700;
+  padding:2px 9px; border-radius:20px;
+}
+.sign.pos { background:rgba(163,230,53,.12); color:#a3e635; border:1px solid rgba(163,230,53,.28); }
+.sign.neg { background:rgba(251,100,50,.12); color:#fb7235; border:1px solid rgba(251,100,50,.28); }
+.sign.na  { color:#1e1e3a; }
+
+/* divider row */
+tr.divider td {
+  padding:0; height:1px; background:#1a1a2e; font-size:0;
+}
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+
+<!-- Controls -->
+<div class="bar">
+  <label>F <span id="lF">100 N</span>
+    <input type="range" id="sF" min="40" max="150" value="100">
+  </label>
+  <label>θ <span id="lT">45°</span>
+    <input type="range" id="sT" min="0" max="360" value="45">
+  </label>
+  <button class="btn" id="btn">▶ Auto Rotate</button>
+</div>
+
+<!-- Circle + Graphs side by side -->
+<div class="main">
+  <canvas id="cCircle" width="300" height="300" style="flex-shrink:0;border-radius:12px;background:#0d0d1a;border:1px solid #1e1e35;display:block;"></canvas>
+  <div style="display:flex;flex-direction:column;gap:12px;flex:1;min-width:260px;">
+    <canvas id="cWaveFx" height="140" style="width:100%;border-radius:10px;background:#0d0d1a;border:1px solid #1e1e35;display:block;"></canvas>
+    <canvas id="cWaveFy" height="140" style="width:100%;border-radius:10px;background:#0d0d1a;border:1px solid #1e1e35;display:block;"></canvas>
+  </div>
+</div>
+
+<!-- Data Table -->
+<div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Quantity</th>
+        <th>Formula</th>
+        <th>Value</th>
+        <th>Sign</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="row-f">
+        <td class="label">Total Force F</td>
+        <td class="formula">F = √(Fx² + Fy²)</td>
+        <td class="val cf" id="dF">100.0 N</td>
+        <td class="sign-cell"><span class="sign na">—</span></td>
+      </tr>
+      <tr class="row-th">
+        <td class="label">Angle θ</td>
+        <td class="formula">θ = arctan(Fy / Fx)</td>
+        <td class="val cth" id="dT">45.0°</td>
+        <td class="sign-cell"><span class="sign na">—</span></td>
+      </tr>
+      <tr class="divider"><td colspan="4"></td></tr>
+      <tr class="row-cos">
+        <td class="label">cos θ</td>
+        <td class="formula">adj / hyp</td>
+        <td class="val ccos" id="dCos">0.707</td>
+        <td class="sign-cell"><span class="sign pos" id="sCos">+</span></td>
+      </tr>
+      <tr class="row-sin">
+        <td class="label">sin θ</td>
+        <td class="formula">opp / hyp</td>
+        <td class="val csin" id="dSin">0.707</td>
+        <td class="sign-cell"><span class="sign pos" id="sSin">+</span></td>
+      </tr>
+      <tr class="divider"><td colspan="4"></td></tr>
+      <tr class="row-fx">
+        <td class="label">Horizontal Fx</td>
+        <td class="formula">F · cos θ</td>
+        <td class="val cfx" id="dFx">+70.7 N</td>
+        <td class="sign-cell"><span class="sign pos" id="sFx">+</span></td>
+      </tr>
+      <tr class="row-fy">
+        <td class="label">Vertical Fy</td>
+        <td class="formula">F · sin θ</td>
+        <td class="val cfy" id="dFy">+70.7 N</td>
+        <td class="sign-cell"><span class="sign pos" id="sFy">+</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+let theta = 45*Math.PI/180, F = 100, auto = false, raf = null;
+
+const sF=document.getElementById('sF'), sT=document.getElementById('sT'), btn=document.getElementById('btn');
+
+sF.oninput = e => { F=+e.target.value; document.getElementById('lF').textContent=F+' N'; refresh(); };
+sT.oninput = e => { theta=+e.target.value*Math.PI/180; document.getElementById('lT').textContent=e.target.value+'°'; refresh(); };
+btn.onclick = () => {
+  auto=!auto; btn.textContent=auto?'⏹ Stop':'▶ Auto Rotate';
+  btn.classList.toggle('on',auto);
+  if(auto) spin(); else cancelAnimationFrame(raf);
+};
+function spin() {
+  if(!auto) return;
+  theta+=0.013; if(theta>Math.PI*2) theta-=Math.PI*2;
+  const d=Math.round(theta*180/Math.PI);
+  sT.value=d; document.getElementById('lT').textContent=d+'°';
+  refresh(); raf=requestAnimationFrame(spin);
+}
+
+function badge(id, val) {
+  const el=document.getElementById(id);
+  el.textContent=val>=0?'+':'−';
+  el.className='sign '+(val>=0?'pos':'neg');
+}
+
+function updateTable() {
+  const c=Math.cos(theta), s=Math.sin(theta);
+  const fxv=F*c, fyv=F*s;
+  const norm=((theta*180/Math.PI)%360+360)%360;
+  document.getElementById('dF').textContent   = F.toFixed(1)+' N';
+  document.getElementById('dT').textContent   = norm.toFixed(1)+'°';
+  document.getElementById('dCos').textContent = c.toFixed(3);
+  document.getElementById('dSin').textContent = s.toFixed(3);
+  document.getElementById('dFx').textContent  = (fxv>=0?'+':'')+fxv.toFixed(1)+' N';
+  document.getElementById('dFy').textContent  = (fyv>=0?'+':'')+fyv.toFixed(1)+' N';
+  badge('sCos', c); badge('sSin', s);
+  badge('sFx', fxv); badge('sFy', fyv);
+}
+
+// ── helpers ──
+function arrow(ctx,x1,y1,x2,y2,col,lw,tip=9) {
+  const dx=x2-x1,dy=y2-y1,l=Math.hypot(dx,dy); if(l<3) return;
+  ctx.save(); ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=lw;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.translate(x2,y2); ctx.rotate(Math.atan2(dy,dx));
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-tip,-tip*.36); ctx.lineTo(-tip,tip*.36); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function lbl(ctx,s,x,y,col,sz=10,align='center') {
+  ctx.save(); ctx.font=`bold ${sz}px "JetBrains Mono",monospace`;
+  ctx.fillStyle=col; ctx.textAlign=align; ctx.textBaseline='middle';
+  ctx.fillText(s,x,y); ctx.restore();
+}
+
+function drawCircle() {
+  const cv=document.getElementById('cCircle');
+  const ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+
+  // subtle grid
+  ctx.strokeStyle='rgba(28,28,50,.9)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  const cx=W/2, cy=H/2, R=W*.38;
+
+  // axes
+  ctx.strokeStyle='rgba(80,80,140,.55)'; ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(12,cy);ctx.lineTo(W-12,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,12);ctx.lineTo(cx,H-12);ctx.stroke();
+  lbl(ctx,'+x',W-14,cy-10,'rgba(80,80,140,.6)',9);
+  lbl(ctx,'+y',cx+10,18,'rgba(80,80,140,.6)',9);
+  lbl(ctx,'−x',14,cy-10,'rgba(80,80,140,.6)',9,'left');
+  lbl(ctx,'−y',cx+10,H-14,'rgba(80,80,140,.6)',9);
+
+  // circle
+  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+
+  // quadrant labels
+  const qpad=R*.55;
+  lbl(ctx,'Q I',   cx+qpad, cy-qpad,'rgba(163,230,53,.18)',9);
+  lbl(ctx,'Q II',  cx-qpad, cy-qpad,'rgba(163,230,53,.18)',9);
+  lbl(ctx,'Q III', cx-qpad, cy+qpad,'rgba(163,230,53,.18)',9);
+  lbl(ctx,'Q IV',  cx+qpad, cy+qpad,'rgba(163,230,53,.18)',9);
+
+  const cosV=Math.cos(theta), sinV=Math.sin(theta);
+  const px=cx+R*cosV, py=cy-R*sinV;
+
+  // trailing arc (show swept angle)
+  ctx.strokeStyle='rgba(163,230,53,.12)'; ctx.lineWidth=R*.9;
+  ctx.beginPath(); ctx.arc(cx,cy,R*.5,0,-theta,theta>0); ctx.stroke();
+
+  // dashed projection lines
+  ctx.setLineDash([4,5]);
+  ctx.strokeStyle='rgba(56,189,248,.28)'; ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,cy);ctx.stroke();
+  ctx.strokeStyle='rgba(251,146,60,.28)';
+  ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(cx,py);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // cos component (horizontal)
+  arrow(ctx, cx, cy, px, cy, '#38bdf8', 2.5);
+  // sin component (vertical)
+  arrow(ctx, cx, cy, cx, py, '#fb923c', 2.5);
+  // radius / force vector
+  arrow(ctx, cx, cy, px, py, '#f5f5ff', 3);
+
+  // theta arc
+  ctx.strokeStyle='#a3e635'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(cx,cy,R*.22,0,-theta,theta>0); ctx.stroke();
+  lbl(ctx,'θ', cx+R*.33*Math.cos(-theta/2), cy+R*.33*Math.sin(-theta/2), '#a3e635', 13);
+
+  // cos label on axis
+  lbl(ctx,`cosθ=${cosV.toFixed(2)}`, (cx+px)/2, cy+(sinV>=0?17:-17), '#38bdf8', 9);
+  // sin label on axis
+  lbl(ctx,`sinθ=${sinV.toFixed(2)}`, cx+(cosV>=0?-50:50), (cy+py)/2, '#fb923c', 9);
+
+  // point on circle
+  ctx.beginPath(); ctx.arc(px,py,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+  ctx.beginPath(); ctx.arc(px,py,10,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,255,255,.2)'; ctx.lineWidth=1.5; ctx.stroke();
+
+  // (cosθ, sinθ) coordinate label
+  const offX=cosV>=0?12:-12, anchor=cosV>=0?'left':'right';
+  lbl(ctx,`(${cosV.toFixed(2)}, ${sinV.toFixed(2)})`, px+offX, py-16, 'rgba(200,200,240,.55)', 8, anchor);
+
+  // origin dot
+  ctx.beginPath(); ctx.arc(cx,cy,4,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+}
+
+function drawSingleWave(canvasId, valueFunc, color, label) {
+  const cv = document.getElementById(canvasId);
+  if (!cv) return;
+  cv.width = cv.parentElement.clientWidth || 400;
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // grid
+  ctx.strokeStyle='rgba(28,28,50,.9)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  const pl=46, pr=16, pt=16, pb=20;
+  const gW=W-pl-pr, gH=H-pt-pb;
+  const midY=pt+gH/2, amp=gH/2-4;
+
+  // mid axis
+  ctx.strokeStyle='rgba(80,80,140,.45)'; ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pl,midY);ctx.lineTo(W-pr,midY);ctx.stroke();
+
+  // degree ticks
+  [0,90,180,270,360].forEach((d,i)=>{
+    const x=pl+i*gW/4;
+    ctx.strokeStyle='rgba(80,80,140,.18)'; ctx.lineWidth=1; ctx.setLineDash([3,5]);
+    ctx.beginPath();ctx.moveTo(x,pt);ctx.lineTo(x,pt+gH);ctx.stroke();
+    ctx.setLineDash([]);
+    lbl(ctx,d+'°',x,pt+gH+12,'rgba(70,70,120,.8)',7);
+  });
+
+  lbl(ctx,`+${F}`,pl-4,pt+5,'rgba(80,80,140,.7)',7,'right');
+  lbl(ctx,'0',pl-4,midY,'rgba(80,80,140,.7)',7,'right');
+  lbl(ctx,`-${F}`,pl-4,pt+gH-5,'rgba(80,80,140,.7)',7,'right');
+
+  // wave curve
+  ctx.beginPath();
+  for(let i=0;i<=gW;i++){
+    const t=(i/gW)*Math.PI*2;
+    const yy=midY-(valueFunc(t)/F)*amp;
+    i===0?ctx.moveTo(pl+i,yy):ctx.lineTo(pl+i,yy);
+  }
+  ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.stroke();
+
+  // theta marker
+  const norm=((theta%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+  const tx=pl+(norm/(Math.PI*2))*gW;
+  ctx.strokeStyle='rgba(163,230,53,.8)'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(tx,pt);ctx.lineTo(tx,pt+gH);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // live dot
+  const val=valueFunc(norm);
+  const dotY=midY-(val/F)*amp;
+  ctx.beginPath();ctx.arc(tx,dotY,5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+
+  // callout value — shift left if near right edge
+  const callX = tx > W-120 ? tx-44 : tx+10;
+  lbl(ctx,`${(val>=0?'+':'')}${val.toFixed(1)} N`,callX,dotY-10,color,9,'left');
+
+  // graph label top-left
+  lbl(ctx,label,pl+6,pt+10,color,9,'left');
+}
+
+function drawWave() {
+  drawSingleWave('cWaveFx', t => F*Math.cos(t), '#38bdf8', 'Fx = F·cosθ');
+  drawSingleWave('cWaveFy', t => F*Math.sin(t), '#fb923c', 'Fy = F·sinθ');
+}
+
+function refresh() { updateTable(); drawCircle(); drawWave(); }
+window.addEventListener('resize', refresh);
+refresh();
+</script>
+</body>
+</html>

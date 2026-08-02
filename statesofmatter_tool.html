@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>States of Matter — Force Simulation</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#07090f;overflow:hidden;font-family:'Courier New',monospace;color:#fff;touch-action:none;}
+#c{display:block;width:100vw;height:100vh;}
+
+/* ── TABS ── */
+#tabs{
+  position:fixed;bottom:0;left:0;right:0;
+  display:flex;z-index:30;pointer-events:all;
+}
+.tb{
+  flex:1;padding:11px 0;border:none;cursor:pointer;
+  font-family:'Courier New',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  transition:all .2s;border-top:2px solid transparent;
+}
+.tb.s {background:#0b1520;color:#4fc3f7;}  .tb.s.on{background:#0d47a1;color:#fff;border-top-color:#4fc3f7;}
+.tb.l {background:#0b1a0e;color:#69f0ae;}  .tb.l.on{background:#1b5e20;color:#fff;border-top-color:#69f0ae;}
+.tb.g {background:#1a0f06;color:#ffab40;}  .tb.g.on{background:#bf360c;color:#fff;border-top-color:#ffab40;}
+
+/* ── FORCE BUTTON ── */
+#force-btn{
+  position:fixed;bottom:48px;left:50%;transform:translateX(-50%);
+  z-index:30;pointer-events:all;
+  border:none;border-radius:40px;cursor:pointer;
+  font-family:'Courier New',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  padding:13px 36px;transition:all .15s;
+  white-space:nowrap;
+}
+#force-btn.s-btn{background:#0d47a1;color:#e3f2fd;box-shadow:0 0 20px #1565c055;}
+#force-btn.s-btn:active{background:#1565c0;box-shadow:0 0 35px #4fc3f7aa;}
+#force-btn.l-btn{background:#1b5e20;color:#e8f5e9;box-shadow:0 0 20px #2e7d3255;}
+#force-btn.l-btn:active{background:#2e7d32;box-shadow:0 0 35px #69f0aeaa;}
+#force-btn.g-btn{background:#bf360c;color:#fbe9e7;box-shadow:0 0 20px #d84f1555;}
+#force-btn.g-btn:active{background:#d84315;box-shadow:0 0 35px #ffab40aa;}
+
+/* ── TOP LABEL ── */
+#lbl{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%);
+  font-size:9px;letter-spacing:5px;text-transform:uppercase;opacity:.5;
+  pointer-events:none;white-space:nowrap;transition:all .3s;
+}
+
+/* ── STATE DESCRIPTION card ── */
+#desc{
+  position:fixed;top:44px;left:50%;transform:translateX(-50%);
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:#8090b0;opacity:.8;pointer-events:none;text-align:center;
+  transition:all .3s;
+}
+
+/* ── DISTANCE PANEL ── */
+#dpanel{
+  position:fixed;top:50px;right:14px;
+  background:#080b14dd;border:1px solid #ffffff14;border-radius:5px;
+  padding:11px 14px;min-width:160px;pointer-events:none;
+  backdrop-filter:blur(8px);
+}
+#dpanel .dh{font-size:7px;letter-spacing:4px;color:#ce93d8;margin-bottom:7px;text-transform:uppercase;}
+.dr{display:flex;justify-content:space-between;gap:12px;font-size:10px;margin:4px 0;align-items:center;}
+.dk{color:#5a6880;font-size:9px;}
+.dv{font-weight:bold;letter-spacing:1px;transition:color .2s;}
+.dv.ok{color:#69f0ae;} .dv.ch{color:#ff5252;} .dv.na{color:#555;}
+.dsep{border-top:1px solid #ffffff10;margin:5px 0;}
+.davg .dk{color:#b39ddb;} .davg .dv{color:#ce93d8;}
+
+/* ── FORCE READOUT (left) ── */
+#fpanel{
+  position:fixed;top:50px;left:14px;
+  background:#080b14dd;border:1px solid #ffffff14;border-radius:5px;
+  padding:11px 14px;min-width:140px;pointer-events:none;
+  backdrop-filter:blur(8px);
+}
+#fpanel .fh{font-size:7px;letter-spacing:4px;color:#ce93d8;margin-bottom:8px;text-transform:uppercase;}
+.frow{margin:5px 0;font-size:10px;}
+.fl{color:#5a6880;font-size:9px;letter-spacing:1px;}
+.fv{font-size:16px;font-weight:bold;letter-spacing:1px;}
+#fv-solid{color:#4fc3f7;} #fv-liquid{color:#69f0ae;} #fv-gas{color:#ffab40;}
+#fv-speed{color:#f48fb1;font-size:13px;}
+#fv-cm{color:#ea80fc;font-size:11px;}
+
+/* ── BIG AVG DISTANCE ── */
+#avg-big{
+  position:fixed;bottom:105px;left:50%;transform:translateX(-50%);
+  z-index:25;pointer-events:none;text-align:center;
+  background:#080b14cc;border:1px solid #ce93d822;border-radius:12px;
+  padding:10px 26px 8px;backdrop-filter:blur(10px);
+  transition:border-color .3s;
+}
+#avg-big .ab-lbl{font-size:7px;letter-spacing:4px;color:#8090b0;text-transform:uppercase;margin-bottom:2px;}
+#avg-big .ab-val{font-size:32px;font-weight:bold;letter-spacing:2px;color:#ce93d8;line-height:1;}
+#avg-big .ab-unit{font-size:9px;letter-spacing:3px;color:#5a6880;margin-top:3px;text-transform:uppercase;}
+
+/* ── TOUCH HINT ── */
+#touch-hint{
+  position:fixed;bottom:100px;right:14px;
+  font-size:7px;letter-spacing:2px;color:#2a3550;text-transform:uppercase;
+  pointer-events:none;line-height:2;
+}
+
+/* ── ANNOTATIONS ── */
+.an{position:fixed;font-size:8px;letter-spacing:2px;text-transform:uppercase;
+    opacity:0;transition:opacity .5s;pointer-events:none;padding:4px 9px;line-height:1.9;}
+.an.on{opacity:.6;} .anl{border-left:2px solid currentColor;} .anr{border-right:2px solid currentColor;text-align:right;}
+#a1{top:13%;left:3%;color:#4fc3f7;} #a2{top:25%;left:3%;color:#80d8ff;}
+#a3{top:38%;left:3%;color:#b3e5fc;} 
+#a4{top:13%;right:3%;color:#69f0ae;} #a5{top:25%;right:3%;color:#a5d6a7;}
+#a6{top:13%;right:3%;color:#ffcc80;} #a7{top:25%;right:3%;color:#ffab40;}
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+<canvas id="c"></canvas>
+
+<div id="lbl">⬡ SOLID</div>
+<div id="desc">MOLECULES LOCKED IN LATTICE</div>
+
+<!-- Distance panel -->
+<div id="dpanel">
+  <div class="dh">NEIGHBOUR DISTANCE</div>
+  <div id="drows"></div>
+</div>
+
+<!-- Force / motion panel -->
+<div id="fpanel">
+  <div class="fh">BODY RESPONSE</div>
+  <div class="frow"><div class="fl">FORCE</div><div class="fv" id="fv-solid">0.00 N</div></div>
+  <div class="frow"><div class="fl">VELOCITY</div><div class="fv" id="fv-speed">0.00 u/s</div></div>
+  <div class="frow"><div class="fl">CM MOTION</div><div class="fv" id="fv-cm">STILL</div></div>
+</div>
+
+<span class="an anl" id="a1">BONDS LOCKED</span>
+<span class="an anl" id="a2">EQUAL SPACING MAINTAINED</span>
+<span class="an anl" id="a3">WHOLE BODY TRANSLATES</span>
+<span class="an anr" id="a4">BONDS BREAK & REFORM</span>
+<span class="an anr" id="a5">PARTICLES SCATTER</span>
+<span class="an anr" id="a6">FREE FLIGHT BETWEEN HITS</span>
+<span class="an anr" id="a7">MOMENTUM TRANSFERRED</span>
+
+<!-- Big average distance display -->
+<div id="avg-big">
+  <div class="ab-lbl">avg distance d̄</div>
+  <div class="ab-val" id="ab-val">2.000</div>
+  <div class="ab-unit">all particles</div>
+</div>
+
+<div id="touch-hint">pinch zoom · drag rotate · 2-finger pan</div>
+
+<button id="force-btn" class="s-btn" onclick="applyForce()">▶ TAP TO APPLY FORCE</button>
+
+<div id="tabs">
+  <button class="tb s on"  onclick="go('solid')">⬡ SOLID</button>
+  <button class="tb l"     onclick="go('liquid')">◌ LIQUID</button>
+  <button class="tb g"     onclick="go('gas')">○ GAS</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════════
+// RENDERER
+// ══════════════════════════════════════════════════════
+const CV = document.getElementById('c');
+const R = new THREE.WebGLRenderer({canvas:CV, antialias:true});
+R.setPixelRatio(Math.min(devicePixelRatio, 2));
+R.shadowMap.enabled = true;
+R.toneMapping = THREE.ACESFilmicToneMapping;
+R.toneMappingExposure = 1.3;
+
+const S = new THREE.Scene();
+S.background = new THREE.Color(0x07090f);
+S.fog = new THREE.FogExp2(0x07090f, 0.032);
+
+const CAM = new THREE.PerspectiveCamera(50, 1, .1, 300);
+CAM.position.set(0, 9, 26);
+CAM.lookAt(0, 0, 0);
+
+function rsz(){ R.setSize(innerWidth,innerHeight); CAM.aspect=innerWidth/innerHeight; CAM.updateProjectionMatrix(); }
+rsz(); addEventListener('resize', rsz);
+
+S.add(new THREE.AmbientLight(0x182030, 3));
+const sun = new THREE.DirectionalLight(0xffffff, 3.5);
+sun.position.set(12,20,10); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); S.add(sun);
+const fl=new THREE.PointLight(0x3060ff,2.5,80); fl.position.set(-14,7,6); S.add(fl);
+const rl=new THREE.PointLight(0xff4020,1.5,50); rl.position.set(14,-7,-14); S.add(rl);
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let mode = 'solid';
+let parts=[], blines=[], lbonds=[], gtrails=[], cmtrail=[];
+let cmMesh=null, arrowObj=null;
+let tick=0, rotY=0;
+
+// Body (solid / rigid group) translation
+let bx=0, by=0, bvx=0, bvy=0;
+const SP = 2.0; // lattice spacing
+let refDist = []; // reference neighbour distances for distance panel
+
+// Force pulse state
+let forceActive = false;
+let forcePulseTimer = 0;
+const FORCE_PULSE_DURATION = 60; // frames
+let forceDir = { x: 1, y: 0 }; // direction of applied force (randomised each tap)
+
+// ══════════════════════════════════════════════════════
+// GEOMETRY HELPERS
+// ══════════════════════════════════════════════════════
+const SG = new THREE.SphereGeometry(.38, 16, 16);
+const CMG = new THREE.SphereGeometry(.65, 22, 22);
+
+function mkM(col, emi, m=.3, r=.35){
+  return new THREE.MeshPhysicalMaterial({color:col,emissive:emi,metalness:m,roughness:r,transparent:true,opacity:.92});
+}
+
+// ══════════════════════════════════════════════════════
+// CLEAR
+// ══════════════════════════════════════════════════════
+function clearAll(){
+  parts.forEach(p => S.remove(p.mesh));
+  blines.forEach(b => S.remove(b.line));
+  lbonds.forEach(b => S.remove(b));
+  gtrails.forEach(t => S.remove(t.mesh));
+  cmtrail.forEach(t => S.remove(t.mesh));
+  if(cmMesh) S.remove(cmMesh);
+  if(arrowObj) S.remove(arrowObj);
+  parts=[]; blines=[]; lbonds=[]; gtrails=[]; cmtrail=[];
+  cmMesh=null; arrowObj=null;
+  bx=by=bvx=bvy=0; refDist=[];
+  forceActive=false; forcePulseTimer=0;
+}
+
+function ann(show, hide){
+  show.forEach(id => document.getElementById(id).classList.add('on'));
+  hide.forEach(id => document.getElementById(id).classList.remove('on'));
+}
+
+// ══════════════════════════════════════════════════════
+// FORCE BUTTON — different behaviour per mode
+// ══════════════════════════════════════════════════════
+function applyForce(){
+  if(mode==='solid')  applyForceSolid();
+  if(mode==='liquid') applyForceLiquid();
+  if(mode==='gas')    applyForceGas();
+}
+
+function applyForceSolid(){
+  // Launch the whole rigid body in a random lateral direction
+  const angle = Math.random() * Math.PI * 2;
+  forceDir = { x: Math.cos(angle), y: Math.sin(angle) };
+  forceActive = true;
+  forcePulseTimer = FORCE_PULSE_DURATION;
+  // Kick body velocity
+  bvx += forceDir.x * 0.35;
+  bvy += forceDir.y * 0.18;
+  flashAll(parts, 0x80d8ff);
+  spawnForceArrow(0, 0, forceDir.x, forceDir.y, 0x4fc3f7);
+}
+
+function applyForceLiquid(){
+  // Give each molecule a random extra kick (they scatter)
+  for(const p of parts){
+    const angle = Math.random()*Math.PI*2;
+    const boost = .06 + Math.random()*.08;
+    p.vx += Math.cos(angle)*boost;
+    p.vy += (Math.random()-.5)*.03;
+    p.vz += Math.sin(angle)*boost;
+  }
+  flashAll(parts, 0x69f0ae);
+  forceActive=true; forcePulseTimer=FORCE_PULSE_DURATION;
+  spawnForceArrow(0, 0, 1, 0, 0x69f0ae);
+}
+
+function applyForceGas(){
+  // Give all gas particles a boost in same direction (like a piston push)
+  const angle = Math.random()*Math.PI*2;
+  const boost = .14;
+  for(const p of parts){
+    p.vx += Math.cos(angle)*boost;
+    p.vz += Math.sin(angle)*boost;
+  }
+  flashAll(parts, 0xffab40);
+  forceActive=true; forcePulseTimer=FORCE_PULSE_DURATION;
+  spawnForceArrow(0, 0, Math.cos(angle), Math.sin(angle), 0xffab40);
+}
+
+function flashAll(ps, col){
+  for(const p of ps){
+    p.mesh.material.emissive.setHex(col);
+    setTimeout(()=>{ try{ p.mesh.material.emissive.setHex(0x0c1e36); }catch(e){} }, 300);
+  }
+}
+
+function spawnForceArrow(ox, oy, fx, fy, col){
+  if(arrowObj){ S.remove(arrowObj); arrowObj=null; }
+  const dir = new THREE.Vector3(fx, fy, 0).normalize();
+  const org = new THREE.Vector3(ox-fx*2, oy-fy*2, 0);
+  arrowObj = new THREE.ArrowHelper(dir, org, 5, col, .8, .5);
+  S.add(arrowObj);
+  setTimeout(()=>{ if(arrowObj){ S.remove(arrowObj); arrowObj=null; } }, 1200);
+}
+
+// ══════════════════════════════════════════════════════
+// BUILD SOLID
+// ══════════════════════════════════════════════════════
+function buildSolid(){
+  clearAll();
+  const N=4, off=-(N-1)*SP/2;
+  for(let ix=0;ix<N;ix++) for(let iy=0;iy<N;iy++) for(let iz=0;iz<N;iz++){
+    const mesh = new THREE.Mesh(SG, mkM(0x4fc3f7, 0x0c1e36));
+    const ox=off+ix*SP, oy=off+iy*SP, oz=off+iz*SP;
+    mesh.position.set(ox,oy,oz); mesh.castShadow=true; S.add(mesh);
+    parts.push({mesh, ox, oy, oz, ph:Math.random()*Math.PI*2, amp:.09+Math.random()*.07});
+  }
+  makeBondLines(SP*1.05);
+  buildRefDist(SP*1.05);
+  buildDistPanel();
+
+  // Centre of mass
+  cmMesh = new THREE.Mesh(CMG, mkM(0xea80fc, 0x4a006b, .5, .2));
+  cmMesh.position.set(0,0,0); S.add(cmMesh);
+
+  ann(['a1','a2','a3'], ['a4','a5','a6','a7']);
+  document.getElementById('lbl').textContent = '⬡ SOLID — Rigid Lattice';
+  document.getElementById('desc').textContent = 'MOLECULES LOCKED · SPACING CONSTANT';
+  setFBtn('s-btn', '▶ TAP TO PUSH SOLID BODY');
+  showPanels(true, true);
+  CAM.position.set(0, 9, 28); CAM.lookAt(0,0,0);
+}
+
+// ══════════════════════════════════════════════════════
+// BUILD LIQUID
+// ══════════════════════════════════════════════════════
+function buildLiquid(){
+  clearAll();
+  const BOX=5.5;
+  for(let i=0;i<44;i++){
+    const mesh = new THREE.Mesh(SG, mkM(0x69f0ae, 0x0a2012, .1, .55));
+    mesh.position.set((Math.random()-.5)*BOX*2, (Math.random()-.5)*BOX*1.1, (Math.random()-.5)*BOX*2);
+    S.add(mesh);
+    const sp=.024+Math.random()*.04, th=Math.random()*Math.PI*2, ph=Math.random()*Math.PI;
+    parts.push({mesh, vx:sp*Math.sin(ph)*Math.cos(th), vy:sp*Math.sin(ph)*Math.sin(th)*.4, vz:sp*Math.cos(ph), box:BOX, wd:20+Math.random()*70});
+  }
+  ann(['a4','a5'], ['a1','a2','a3','a6','a7']);
+  document.getElementById('lbl').textContent = '◌ LIQUID — Fluid Bonds';
+  document.getElementById('desc').textContent = 'BONDS FORM & BREAK · MOLECULES SCATTER';
+  setFBtn('l-btn', '▶ TAP TO PUSH LIQUID');
+  buildDistPanel(); // empty — show N/A for liquid (bonds not fixed)
+  showPanels(true, true);
+  CAM.position.set(0, 9, 28); CAM.lookAt(0,0,0);
+}
+
+// ══════════════════════════════════════════════════════
+// BUILD GAS
+// ══════════════════════════════════════════════════════
+function buildGas(){
+  clearAll();
+  const BOX=7;
+  for(let i=0;i<30;i++){
+    const mesh = new THREE.Mesh(SG, mkM(0xffab40, 0x2e1200, 0, .8));
+    mesh.position.set((Math.random()-.5)*BOX*2,(Math.random()-.5)*BOX*2,(Math.random()-.5)*BOX*2);
+    S.add(mesh);
+    const sp=.09+Math.random()*.12, th=Math.random()*Math.PI*2, ph=Math.random()*Math.PI;
+    parts.push({mesh, vx:sp*Math.sin(ph)*Math.cos(th), vy:sp*Math.sin(ph)*Math.sin(th), vz:sp*Math.cos(ph), box:BOX, tt:0});
+  }
+  ann(['a6','a7'], ['a1','a2','a3','a4','a5']);
+  document.getElementById('lbl').textContent = '○ GAS — Free Particles';
+  document.getElementById('desc').textContent = 'NO BONDS · ELASTIC COLLISIONS';
+  setFBtn('g-btn', '▶ TAP TO PUSH GAS (PISTON)');
+  buildDistPanel(); // empty for gas
+  showPanels(true, true);
+  CAM.position.set(0, 9, 30); CAM.lookAt(0,0,0);
+}
+
+// ══════════════════════════════════════════════════════
+// BOND LINES
+// ══════════════════════════════════════════════════════
+function makeBondLines(thresh){
+  for(let i=0;i<parts.length;i++) for(let j=i+1;j<parts.length;j++){
+    const pi=parts[i], pj=parts[j];
+    const dx=pi.ox-pj.ox, dy=pi.oy-pj.oy, dz=pi.oz-pj.oz;
+    if(Math.sqrt(dx*dx+dy*dy+dz*dz)<thresh){
+      const geo = new THREE.BufferGeometry().setFromPoints([pi.mesh.position.clone(), pj.mesh.position.clone()]);
+      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({color:0x4fc3f7,transparent:true,opacity:.18}));
+      S.add(line); blines.push({line, i, j});
+    }
+  }
+}
+function updBonds(){
+  for(const b of blines){
+    const pi=parts[b.i], pj=parts[b.j];
+    const pos=b.line.geometry.attributes.position;
+    pos.setXYZ(0,pi.mesh.position.x,pi.mesh.position.y,pi.mesh.position.z);
+    pos.setXYZ(1,pj.mesh.position.x,pj.mesh.position.y,pj.mesh.position.z);
+    pos.needsUpdate=true;
+  }
+}
+function updLiqBonds(){
+  lbonds.forEach(b=>S.remove(b)); lbonds=[];
+  const T=3.4;
+  for(let i=0;i<parts.length;i++) for(let j=i+1;j<parts.length;j++){
+    const d=parts[i].mesh.position.distanceTo(parts[j].mesh.position);
+    if(d<T){
+      const a=Math.max(0,1-d/T)*.26;
+      const g=new THREE.BufferGeometry().setFromPoints([parts[i].mesh.position.clone(),parts[j].mesh.position.clone()]);
+      lbonds.push(new THREE.Line(g, new THREE.LineBasicMaterial({color:0x69f0ae,transparent:true,opacity:a})));
+      S.add(lbonds[lbonds.length-1]);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// DISTANCE PANEL
+// ══════════════════════════════════════════════════════
+function buildRefDist(thresh){
+  refDist=[];
+  const seen=new Set();
+  for(let i=0;i<parts.length;i++){
+    for(let j=i+1;j<parts.length;j++){
+      if(refDist.length>=6) break;
+      const pi=parts[i],pj=parts[j];
+      const dx=pi.ox-pj.ox,dy=pi.oy-pj.oy,dz=pi.oz-pj.oz;
+      const d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if(d<thresh && !seen.has(`${i}-${j}`)){
+        seen.add(`${i}-${j}`);
+        refDist.push({i,j,label:`P${i+1}–P${j+1}`,d0:parseFloat(d.toFixed(4))});
+      }
+    }
+    if(refDist.length>=6) break;
+  }
+}
+
+function buildDistPanel(){
+  const rows=document.getElementById('drows');
+  rows.innerHTML='';
+
+  if(mode==='solid' && refDist.length>0){
+    for(const rd of refDist){
+      const row=document.createElement('div');
+      row.className='dr';
+      row.innerHTML=`<span class="dk">${rd.label}</span><span class="dv ok" id="dv${rd.i}_${rd.j}">${rd.d0.toFixed(3)}</span>`;
+      rows.appendChild(row);
+    }
+    // separator + avg
+    const sep=document.createElement('div'); sep.className='dsep'; rows.appendChild(sep);
+    const avgRow=document.createElement('div'); avgRow.className='dr davg';
+    avgRow.innerHTML=`<span class="dk">AVG d̄</span><span class="dv ok" id="dv_avg">${SP.toFixed(3)}</span>`;
+    rows.appendChild(avgRow);
+    // Reference
+    const refRow=document.createElement('div'); refRow.className='dr';
+    refRow.innerHTML=`<span class="dk">REF (r₀)</span><span class="dv ok">${SP.toFixed(3)}</span>`;
+    rows.appendChild(refRow);
+  } else {
+    // Liquid / Gas — dynamic distances
+    const info=document.createElement('div'); info.className='dr';
+    info.innerHTML=`<span class="dk" style="color:#ce93d8">${mode==='liquid'?'DYNAMIC — BONDS':'NO FIXED BONDS'}</span>`;
+    rows.appendChild(info);
+    // Show 4 live closest pairs
+    for(let k=0;k<4;k++){
+      const row=document.createElement('div'); row.className='dr';
+      row.innerHTML=`<span class="dk">PAIR ${k+1}</span><span class="dv na" id="ldv${k}">—</span>`;
+      rows.appendChild(row);
+    }
+    const sep=document.createElement('div'); sep.className='dsep'; rows.appendChild(sep);
+    const avgRow=document.createElement('div'); avgRow.className='dr davg';
+    avgRow.innerHTML=`<span class="dk">AVG d̄</span><span class="dv na" id="dv_avg">—</span>`;
+    rows.appendChild(avgRow);
+  }
+}
+
+function updDistPanel(){
+  if(mode==='solid'){
+    let sum=0, count=0;
+    for(const rd of refDist){
+      const pi=parts[rd.i],pj=parts[rd.j];
+      if(!pi||!pj) continue;
+      const dx=pi.mesh.position.x-pj.mesh.position.x;
+      const dy=pi.mesh.position.y-pj.mesh.position.y;
+      const dz=pi.mesh.position.z-pj.mesh.position.z;
+      const d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      const el=document.getElementById(`dv${rd.i}_${rd.j}`);
+      if(el){
+        const diff=Math.abs(d-rd.d0);
+        el.className='dv '+(diff<.22?'ok':'ch');
+        el.textContent=d.toFixed(3);
+      }
+      sum+=d; count++;
+    }
+    const avgEl=document.getElementById('dv_avg');
+    if(avgEl&&count>0) avgEl.textContent=(sum/count).toFixed(3);
+
+  } else {
+    // For liquid/gas: find 4 closest pairs and show live distances
+    const dists=[];
+    for(let i=0;i<Math.min(parts.length,20);i++){
+      for(let j=i+1;j<Math.min(parts.length,20);j++){
+        const d=parts[i].mesh.position.distanceTo(parts[j].mesh.position);
+        dists.push({i,j,d});
+      }
+    }
+    dists.sort((a,b)=>a.d-b.d);
+    let sum=0, count=0;
+    for(let k=0;k<4;k++){
+      const el=document.getElementById(`ldv${k}`);
+      if(el && dists[k]){
+        el.textContent=dists[k].d.toFixed(3);
+        el.className='dv '+(mode==='liquid'?'ok':'na');
+        sum+=dists[k].d; count++;
+      }
+    }
+    const avgEl=document.getElementById('dv_avg');
+    if(avgEl&&count>0){ avgEl.textContent=(sum/count).toFixed(3); avgEl.className='dv '+(mode==='liquid'?'ok':'na'); }
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// TRAILS
+// ══════════════════════════════════════════════════════
+function addT(pos,col,life,arr){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(.09,6,6), new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.35}));
+  m.position.copy(pos); S.add(m); arr.push({mesh:m,life,ml:life});
+}
+function tickT(arr){
+  for(let i=arr.length-1;i>=0;i--){
+    arr[i].life--;
+    arr[i].mesh.material.opacity=arr[i].life/arr[i].ml*.35;
+    if(arr[i].life<=0){S.remove(arr[i].mesh);arr.splice(i,1);}
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════
+function setFBtn(cls, txt){
+  const btn=document.getElementById('force-btn');
+  btn.className=cls; btn.textContent=txt;
+}
+function showPanels(dist, force){
+  document.getElementById('dpanel').style.display = dist?'block':'none';
+  document.getElementById('fpanel').style.display = force?'block':'none';
+}
+
+// ══════════════════════════════════════════════════════
+// STATE SWITCH
+// ══════════════════════════════════════════════════════
+function go(m){
+  gtrails.forEach(t=>S.remove(t.mesh)); gtrails=[];
+  lbonds.forEach(b=>S.remove(b)); lbonds=[];
+  if(arrowObj){S.remove(arrowObj);arrowObj=null;}
+  mode=m;
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  document.querySelector(`.tb.${m[0]}`).classList.add('on');
+  if(m==='solid')  buildSolid();
+  if(m==='liquid') buildLiquid();
+  if(m==='gas')    buildGas();
+}
+
+// ══════════════════════════════════════════════════════
+// ANIMATION LOOP
+// ══════════════════════════════════════════════════════
+function loop(){
+  requestAnimationFrame(loop);
+  tick++;
+
+  // Gentle auto-orbit
+  rotY += .0025;
+  CAM.position.x = Math.sin(rotY)*26;
+  CAM.position.z = Math.cos(rotY)*26;
+  CAM.position.y = 9 + Math.sin(rotY*.3)*2;
+  CAM.lookAt(0,0,0);
+
+  // ─── SOLID ───
+  if(mode==='solid'){
+    const FRIC=.975;
+    // Decay force pulse
+    if(forceActive && forcePulseTimer>0){
+      forcePulseTimer--;
+      if(forcePulseTimer<=0) forceActive=false;
+    }
+    bvx*=FRIC; bvy*=FRIC;
+    bx+=bvx; by+=bvy;
+    // Soft bounce off edges
+    if(Math.abs(bx)>10){bvx*=-.65;bx=Math.sign(bx)*10;}
+    if(Math.abs(by)>5){bvy*=-.65;by=Math.sign(by)*5;}
+
+    // All particles move with SAME body offset — spacing preserved exactly
+    let cx=0,cy=0,cz=0;
+    for(const p of parts){
+      p.ph+=.038;
+      p.mesh.position.set(
+        p.ox + bx + Math.sin(p.ph*1.1)*p.amp,
+        p.oy + by + Math.cos(p.ph*.9)*p.amp,
+        p.oz + Math.sin(p.ph*1.3+1)*p.amp
+      );
+      cx+=p.mesh.position.x; cy+=p.mesh.position.y; cz+=p.mesh.position.z;
+    }
+    updBonds();
+
+    const n=parts.length;
+    if(n>0){cx/=n;cy/=n;cz/=n;}
+    if(cmMesh){
+      cmMesh.position.set(cx,cy,cz);
+      cmMesh.material.emissive.setHSL(.83,.9,.08+.07*Math.sin(tick*.07));
+      if(tick%4===0) addT(cmMesh.position.clone(),0xea80fc,90,cmtrail);
+    }
+    tickT(cmtrail);
+
+    // HUD
+    const spd=Math.sqrt(bvx*bvx+bvy*bvy);
+    document.getElementById('fv-solid').textContent=forceActive?'▶ ACTIVE':'0.00 N';
+    document.getElementById('fv-speed').textContent=`${(spd*20).toFixed(2)} u/s`;
+    document.getElementById('fv-cm').textContent=spd>.01?'MOVING ▶':'STILL ●';
+
+    if(tick%4===0) updDistPanel();
+  }
+
+  // ─── LIQUID ───
+  else if(mode==='liquid'){
+    for(const p of parts){
+      p.wd--;
+      if(p.wd<=0){
+        const sp=.022+Math.random()*.04,th=Math.random()*Math.PI*2,ph=Math.random()*Math.PI;
+        p.vx=sp*Math.sin(ph)*Math.cos(th); p.vy=sp*Math.sin(ph)*Math.sin(th)*.4; p.vz=sp*Math.cos(ph);
+        p.wd=25+Math.random()*75;
+      }
+      // Speed cap (grows after force applied)
+      const spd=Math.sqrt(p.vx*p.vx+p.vz*p.vz);
+      if(spd>0.22){p.vx*=.94;p.vz*=.94;}
+      p.mesh.position.x+=p.vx; p.mesh.position.y+=p.vy; p.mesh.position.z+=p.vz;
+      const pos=p.mesh.position;
+      if(Math.abs(pos.x)>p.box){p.vx*=-1;pos.x=Math.sign(pos.x)*p.box;}
+      if(Math.abs(pos.y)>p.box*.6){p.vy*=-1;pos.y=Math.sign(pos.y)*p.box*.6;}
+      if(Math.abs(pos.z)>p.box){p.vz*=-1;pos.z=Math.sign(pos.z)*p.box;}
+    }
+    if(tick%3===0) updLiqBonds();
+
+    // avg speed HUD
+    let avgSpd=0;
+    parts.forEach(p=>avgSpd+=Math.sqrt(p.vx*p.vx+p.vy*p.vy+p.vz*p.vz));
+    avgSpd/=parts.length;
+    document.getElementById('fv-solid').textContent=forceActive?'▶ ACTIVE':'0.00 N';
+    document.getElementById('fv-speed').textContent=`AVG ${(avgSpd*20).toFixed(2)} u/s`;
+    document.getElementById('fv-cm').textContent='DRIFTING ~';
+    if(tick%4===0) updDistPanel();
+    if(forcePulseTimer>0) forcePulseTimer--;
+  }
+
+  // ─── GAS ───
+  else if(mode==='gas'){
+    // Elastic collisions
+    for(let i=0;i<parts.length;i++){
+      for(let j=i+1;j<parts.length;j++){
+        const pi=parts[i],pj=parts[j];
+        const dx=pj.mesh.position.x-pi.mesh.position.x;
+        const dy=pj.mesh.position.y-pi.mesh.position.y;
+        const dz=pj.mesh.position.z-pi.mesh.position.z;
+        const d2=dx*dx+dy*dy+dz*dz;
+        if(d2<.82&&d2>.0001){
+          const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,nz=dz/d;
+          const rv=(pi.vx-pj.vx)*nx+(pi.vy-pj.vy)*ny+(pi.vz-pj.vz)*nz;
+          if(rv>0){
+            pi.vx-=rv*nx;pi.vy-=rv*ny;pi.vz-=rv*nz;
+            pj.vx+=rv*nx;pj.vy+=rv*ny;pj.vz+=rv*nz;
+            pi.mesh.material.emissive.setHex(0xff5020); pj.mesh.material.emissive.setHex(0xff5020);
+            setTimeout(()=>{try{pi.mesh.material.emissive.setHex(0x2e1200);}catch(e){} try{pj.mesh.material.emissive.setHex(0x2e1200);}catch(e){}},80);
+          }
+        }
+      }
+    }
+    for(const p of parts){
+      p.mesh.position.x+=p.vx; p.mesh.position.y+=p.vy; p.mesh.position.z+=p.vz;
+      const pos=p.mesh.position;
+      if(Math.abs(pos.x)>p.box){p.vx*=-.98;pos.x=Math.sign(pos.x)*p.box;}
+      if(Math.abs(pos.y)>p.box){p.vy*=-.98;pos.y=Math.sign(pos.y)*p.box;}
+      if(Math.abs(pos.z)>p.box){p.vz*=-.98;pos.z=Math.sign(pos.z)*p.box;}
+      p.tt=(p.tt||0)+1;
+      if(p.tt%7===0) addT(p.mesh.position.clone(),0xffab40,28,gtrails);
+    }
+    tickT(gtrails);
+
+    let avgSpd=0;
+    parts.forEach(p=>avgSpd+=Math.sqrt(p.vx*p.vx+p.vy*p.vy+p.vz*p.vz));
+    avgSpd/=parts.length;
+    document.getElementById('fv-solid').textContent=forceActive?'▶ ACTIVE':'0.00 N';
+    document.getElementById('fv-speed').textContent=`AVG ${(avgSpd*20).toFixed(2)} u/s`;
+    document.getElementById('fv-cm').textContent='SCATTERED ✕';
+    if(tick%4===0) updDistPanel();
+    if(forcePulseTimer>0) forcePulseTimer--;
+  }
+
+  R.render(S, CAM);
+}
+
+buildSolid();
+loop();
+
+// ══════════════════════════════════════════════════════
+// TOUCH / MOUSE CAMERA CONTROLS
+// ══════════════════════════════════════════════════════
+(function(){
+  let isDragging=false;
+  let lastX=0, lastY=0;
+  let camTheta=0, camPhi=0.33, camRadius=26;
+  let target={x:0,y:0,z:0};
+
+  // Sync initial angles
+  camTheta = Math.atan2(CAM.position.x, CAM.position.z);
+  camPhi   = Math.asin(CAM.position.y / CAM.position.length());
+  camRadius= CAM.position.length();
+
+  function applyCam(){
+    CAM.position.x = camRadius * Math.cos(camPhi) * Math.sin(camTheta);
+    CAM.position.y = camRadius * Math.sin(camPhi);
+    CAM.position.z = camRadius * Math.cos(camPhi) * Math.cos(camTheta);
+    CAM.position.x += target.x;
+    CAM.position.y += target.y;
+    CAM.position.z += target.z;
+    CAM.lookAt(target.x, target.y, target.z);
+  }
+
+  // Override auto-orbit in loop by stopping it when user has touched
+  let userControl = false;
+  const origLoop = loop;
+
+  // Patch: disable auto-orbit when user is controlling
+  const _origRotUpdate = () => {
+    if(userControl) return; // skip auto-orbit
+    rotY += .0025;
+    CAM.position.x = Math.sin(rotY)*26;
+    CAM.position.z = Math.cos(rotY)*26;
+    CAM.position.y = 9 + Math.sin(rotY*.3)*2;
+    CAM.lookAt(0,0,0);
+  };
+
+  // We inject by monkey-patching: replace the loop body for camera
+  // Strategy: listen for touch/mouse, set a flag, intercept camera update
+  let _camOverride = false;
+
+  function enableOverride(){
+    if(!_camOverride){
+      _camOverride = true;
+      // Sync current camera to spherical
+      const p = CAM.position;
+      camRadius = Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+      camTheta  = Math.atan2(p.x, p.z);
+      camPhi    = Math.asin(Math.max(-1,Math.min(1,p.y/camRadius)));
+      // Override rotY logic in animation loop by hooking requestAnimationFrame
+      const origRAF = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = function(cb){
+        return origRAF(function(t){
+          // Before each frame, if we control, apply our camera
+          if(_camOverride) applyCam();
+          cb(t);
+        });
+      };
+    }
+  }
+
+  // ── MOUSE ──
+  CV.addEventListener('mousedown', e=>{
+    if(e.button!==0) return;
+    isDragging=true; lastX=e.clientX; lastY=e.clientY;
+    enableOverride();
+  });
+  window.addEventListener('mousemove', e=>{
+    if(!isDragging) return;
+    const dx=e.clientX-lastX, dy=e.clientY-lastY;
+    lastX=e.clientX; lastY=e.clientY;
+    camTheta -= dx*.006;
+    camPhi   = Math.max(-1.2, Math.min(1.2, camPhi - dy*.006));
+    applyCam();
+  });
+  window.addEventListener('mouseup', ()=>{ isDragging=false; });
+  CV.addEventListener('wheel', e=>{
+    enableOverride();
+    camRadius = Math.max(6, Math.min(80, camRadius + e.deltaY*0.04));
+    applyCam();
+    e.preventDefault();
+  },{passive:false});
+
+  // ── TOUCH ──
+  let t0=null, t1=null;
+  let lastDist=0, lastMidX=0, lastMidY=0;
+
+  CV.addEventListener('touchstart', e=>{
+    enableOverride();
+    e.preventDefault();
+    if(e.touches.length===1){
+      t0=e.touches[0]; t1=null;
+      lastX=t0.clientX; lastY=t0.clientY;
+    } else if(e.touches.length===2){
+      t0=e.touches[0]; t1=e.touches[1];
+      lastDist=Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY);
+      lastMidX=(t0.clientX+t1.clientX)/2;
+      lastMidY=(t0.clientY+t1.clientY)/2;
+    }
+  },{passive:false});
+
+  CV.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    if(e.touches.length===1){
+      const dx=e.touches[0].clientX-lastX;
+      const dy=e.touches[0].clientY-lastY;
+      lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+      camTheta -= dx*.007;
+      camPhi   = Math.max(-1.2, Math.min(1.2, camPhi - dy*.007));
+      applyCam();
+    } else if(e.touches.length===2){
+      const ta=e.touches[0], tb=e.touches[1];
+      const dist=Math.hypot(tb.clientX-ta.clientX, tb.clientY-ta.clientY);
+      const midX=(ta.clientX+tb.clientX)/2;
+      const midY=(ta.clientY+tb.clientY)/2;
+
+      // Pinch zoom
+      const zoomDelta = lastDist - dist;
+      camRadius = Math.max(6, Math.min(80, camRadius + zoomDelta*0.07));
+
+      // 2-finger pan
+      const panDX=(midX-lastMidX)*0.015;
+      const panDY=(midY-lastMidY)*0.015;
+      // Pan in camera-local XY
+      const right = new THREE.Vector3();
+      const up2   = new THREE.Vector3(0,1,0);
+      right.crossVectors(new THREE.Vector3(
+        Math.cos(camPhi)*Math.sin(camTheta),
+        Math.sin(camPhi),
+        Math.cos(camPhi)*Math.cos(camTheta)
+      ).normalize(), up2).normalize();
+      target.x -= right.x*panDX - 0;
+      target.z -= right.z*panDX;
+      target.y += panDY;
+
+      lastDist=dist; lastMidX=midX; lastMidY=midY;
+      applyCam();
+    }
+  },{passive:false});
+
+  CV.addEventListener('touchend', e=>{
+    if(e.touches.length<2){ t1=null; }
+    if(e.touches.length===0){ t0=null; }
+    if(e.touches.length===1){
+      lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+    }
+  });
+})();
+
+// ══════════════════════════════════════════════════════
+// BIG AVG DISTANCE — update every frame
+// ══════════════════════════════════════════════════════
+(function(){
+  const el = document.getElementById('ab-val');
+  const box = document.getElementById('avg-big');
+  const modeColors = {solid:'#4fc3f7', liquid:'#69f0ae', gas:'#ffab40'};
+
+  function computeAllPairsAvg(){
+    const n = parts.length;
+    if(n<2) return null;
+    let sum=0, count=0;
+    const lim = Math.min(n, 18); // cap for perf
+    for(let i=0;i<lim;i++) for(let j=i+1;j<lim;j++){
+      sum += parts[i].mesh.position.distanceTo(parts[j].mesh.position);
+      count++;
+    }
+    return count>0 ? sum/count : null;
+  }
+
+  const _raf = requestAnimationFrame;
+  function tick(){
+    requestAnimationFrame(tick);
+    if(!parts.length){ el.textContent='—'; return; }
+    const avg = computeAllPairsAvg();
+    if(avg!==null){
+      el.textContent = avg.toFixed(3);
+      el.style.color = modeColors[mode] || '#ce93d8';
+      box.style.borderColor = (modeColors[mode]||'#ce93d8')+'33';
+    }
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
