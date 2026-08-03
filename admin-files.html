@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — File Library</title>
+<style>
+  :root{
+    --bg:#05070a; --panel:#12181f; --grid:#1c2530; --text:#e8edf4; --dim:#7c8a9c;
+    --torch:#ffb92e; --pink:#ff3d81; --violet:#7c5cff; --green:#4ade80;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;}
+  header{padding:34px 20px 20px;text-align:center;}
+  h1{font-size:24px;margin:0 0 8px;}
+  h1 span{color:var(--torch);}
+  .sub{color:var(--dim);font-size:13px;max-width:640px;margin:0 auto;line-height:1.6;}
+  main{max-width:900px;margin:0 auto;padding:10px 20px 60px;}
+  section{margin-bottom:30px;}
+  h2{font-size:14px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);
+    border-bottom:1px solid var(--grid);padding-bottom:10px;margin-bottom:16px;}
+
+  .panel{background:var(--panel);border:1px solid var(--grid);border-radius:12px;padding:20px;}
+  label{display:block;font-size:12.5px;color:var(--dim);margin:14px 0 6px;}
+  label:first-child{margin-top:0;}
+  input[type="text"], input[type="file"], textarea, select{
+    width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--grid);
+    background:var(--bg);color:var(--text);font-size:14px;outline:none;font-family:inherit;}
+  input:focus, textarea:focus, select:focus{border-color:var(--violet);}
+  textarea{resize:vertical;min-height:70px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .row > div{flex:1;min-width:180px;}
+  #uploadBtn{margin-top:18px;width:100%;padding:13px 12px;border-radius:8px;border:none;
+    background:var(--violet);color:#fff;font-size:14px;font-weight:600;cursor:pointer;}
+  #uploadBtn:disabled{opacity:0.55;cursor:default;}
+  #uploadStatus{min-height:18px;font-size:13px;margin-top:12px;}
+  #uploadStatus.error{color:var(--pink);}
+  #uploadStatus.success{color:var(--green);}
+  #uploadStatus.info{color:var(--dim);}
+
+  .file-row{display:flex;align-items:center;gap:12px;background:var(--panel);
+    border:1px solid var(--grid);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+  .file-icon{font-size:24px;flex-shrink:0;width:32px;text-align:center;}
+  .file-meta{flex:1;min-width:0;}
+  .file-title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .file-sub{font-size:12px;color:var(--dim);margin-top:2px;}
+  .file-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+  .file-actions button, .file-actions a{
+    padding:7px 11px;border-radius:7px;border:1px solid var(--grid);background:transparent;
+    color:var(--text);font-size:12px;cursor:pointer;text-decoration:none;white-space:nowrap;}
+  .file-actions a:hover, .file-actions button:hover{border-color:var(--violet);}
+  .file-actions .danger:hover{border-color:var(--pink);color:var(--pink);}
+
+  #gate{max-width:420px;margin:60px auto;text-align:center;background:var(--panel);
+    border:1px solid var(--grid);border-radius:12px;padding:30px 26px;}
+  #gate p{color:var(--dim);font-size:13.5px;line-height:1.6;}
+  #gate button{padding:11px 20px;border-radius:8px;border:1px solid var(--grid);
+    background:var(--violet);color:#fff;font-weight:600;font-size:14px;cursor:pointer;border:none;}
+
+  #adminArea{display:none;}
+  #emptyList{color:var(--dim);font-size:13px;text-align:center;padding:20px 0;display:none;}
+
+  /* --- Ask a Question: admin panel additions --- */
+  h2 .count-badge{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:20px;
+    font-size:11px;font-weight:700;background:rgba(255,61,129,0.18);color:var(--pink);
+    text-transform:none;letter-spacing:0;vertical-align:middle;}
+  .q-filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .q-filters button{padding:8px 14px;border-radius:20px;border:1px solid var(--grid);
+    background:transparent;color:var(--dim);font-size:12.5px;cursor:pointer;font-weight:600;}
+  .q-filters button.active{border-color:var(--violet);color:var(--text);background:rgba(124,92,255,0.12);}
+  .q-card{background:var(--panel);border:1px solid var(--grid);border-radius:12px;
+    padding:16px 18px;margin-bottom:10px;}
+  .q-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;cursor:pointer;}
+  .q-user{font-size:13px;font-weight:700;}
+  .q-date{font-size:11.5px;color:var(--dim);margin-top:3px;}
+  .q-badge{flex-shrink:0;display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;
+    font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
+  .q-badge.waiting{background:rgba(255,185,46,0.15);color:var(--torch);}
+  .q-badge.answered{background:rgba(74,222,128,0.15);color:var(--green);}
+  .q-text{font-size:14px;line-height:1.6;margin-top:10px;white-space:pre-wrap;word-wrap:break-word;}
+  .q-detail{display:none;margin-top:14px;border-top:1px solid var(--grid);padding-top:14px;}
+  .q-detail.open{display:block;}
+  .q-detail label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px;}
+  .q-detail textarea{width:100%;min-height:80px;padding:10px 11px;border-radius:8px;
+    border:1px solid var(--grid);background:var(--bg);color:var(--text);font-size:13.5px;
+    outline:none;resize:vertical;font-family:inherit;}
+  .q-detail textarea:focus{border-color:var(--violet);}
+  .q-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .q-actions button{padding:9px 14px;border-radius:8px;border:1px solid var(--grid);
+    background:transparent;color:var(--text);font-size:12.5px;cursor:pointer;font-weight:600;}
+  .q-actions button.primary{background:var(--violet);border-color:var(--violet);color:#fff;}
+  .q-actions button:disabled{opacity:0.55;cursor:default;}
+  .q-savestatus{min-height:16px;font-size:12px;margin-top:8px;}
+  .q-savestatus.error{color:var(--pink);}
+  .q-savestatus.success{color:var(--green);}
+  #qEmpty{color:var(--dim);font-size:13px;text-align:center;padding:20px 0;display:none;}
+
+  /* --- reused login modal styles --- */
+  #login-toggle-btn{position:fixed;top:18px;right:20px;z-index:900;padding:9px 18px;
+    border-radius:8px;border:1px solid var(--grid);background:var(--panel);color:var(--text);
+    font-size:13px;font-weight:600;cursor:pointer;max-width:200px;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;}
+  #login-toggle-btn:hover{border-color:var(--violet);}
+  #login-overlay{display:none;position:fixed;inset:0;z-index:1000;background:rgba(5,7,10,0.72);
+    align-items:center;justify-content:center;padding:20px;}
+  #login-modal{position:relative;width:100%;max-width:360px;background:var(--panel);
+    border:1px solid var(--grid);border-radius:14px;padding:28px 26px;}
+  #login-close-btn{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--dim);
+    font-size:20px;line-height:1;cursor:pointer;}
+  #login-close-btn:hover{color:var(--text);}
+  #modal-form-title{font-size:18px;margin:0 0 18px;}
+  .modal-field{display:block;width:100%;margin-bottom:12px;padding:11px 12px;border-radius:8px;
+    border:1px solid var(--grid);background:var(--bg);color:var(--text);font-size:14px;outline:none;}
+  .modal-field:focus{border-color:var(--violet);}
+  #modal-submit-btn{width:100%;padding:11px 12px;margin-top:4px;border-radius:8px;border:none;
+    background:var(--violet);color:#fff;font-size:14px;font-weight:600;cursor:pointer;}
+  #modal-submit-btn:disabled{opacity:0.6;cursor:default;}
+  #modal-message{min-height:16px;font-size:12.5px;margin:10px 0 0;color:var(--dim);}
+  #modal-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+    padding:10px 12px;margin-bottom:16px;border-radius:8px;border:1px solid var(--grid);
+    background:#fff;color:#1f1f1f;font-size:14px;font-weight:600;cursor:pointer;}
+  #modal-divider{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:var(--dim);font-size:11.5px;}
+  #modal-divider::before,#modal-divider::after{content:"";flex:1;height:1px;background:var(--grid);}
+  .modal-toggle-row{text-align:center;font-size:12.5px;color:var(--dim);margin-top:16px;}
+  #modal-toggle-link{color:var(--torch);cursor:pointer;text-decoration:underline;}
+  #modal-forgot-link{color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline;
+    display:block;text-align:right;margin-top:-4px;}
+  #modal-forgot-link:hover{color:var(--torch);}
+  #modal-forgot-view{display:none;}
+  #modal-forgot-back{color:var(--torch);cursor:pointer;text-decoration:underline;}
+  #modal-app-view{display:none;text-align:center;}
+  #modal-user-email{display:block;font-size:14px;margin-bottom:18px;word-break:break-all;}
+  #modal-logout-btn{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--grid);
+    background:transparent;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;}
+  #modal-logout-btn:hover{border-color:var(--pink);}
+</style>
+</head>
+<body>
+
+<button id="login-toggle-btn">Login</button>
+
+<div id="login-overlay">
+  <div id="login-modal">
+    <button id="login-close-btn" aria-label="Close">&times;</button>
+    <div id="modal-auth-view">
+      <h3 id="modal-form-title">Log In</h3>
+      <button type="button" id="modal-google-btn">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4c-7.5 0-14 4.2-17.7 10.7z"/>
+          <path fill="#4CAF50" d="M24 44c5.3 0 10.2-2 13.9-5.4l-6.4-5.4C29.4 34.9 26.8 36 24 36c-5.4 0-9.9-3.4-11.5-8.2l-6.6 5.1C9.9 39.7 16.4 44 24 44z"/>
+          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.7 2.1-2 3.9-3.8 5.2l6.4 5.4C41.4 36.4 44 30.6 44 24c0-1.3-.1-2.4-.4-3.5z"/>
+        </svg>
+        <span>Continue with Google</span>
+      </button>
+      <div id="modal-divider"><span>or</span></div>
+      <form id="modal-auth-form">
+        <input class="modal-field" type="email" id="modal-email" placeholder="Email" autocomplete="email" required>
+        <input class="modal-field" type="password" id="modal-password" placeholder="Password" autocomplete="current-password" required>
+        <button type="submit" id="modal-submit-btn">Log In</button>
+      </form>
+      <div id="modal-message"></div>
+      <div class="modal-toggle-row"><span id="modal-forgot-link">Forgot password?</span></div>
+      <div class="modal-toggle-row">
+        <span id="modal-toggle-text">Don't have an account?</span>
+        <span id="modal-toggle-link">Sign up</span>
+      </div>
+    </div>
+    <div id="modal-forgot-view">
+      <h3 id="modal-form-title">Reset Password</h3>
+      <form id="modal-forgot-form">
+        <input class="modal-field" type="email" id="modal-forgot-email" placeholder="Email" autocomplete="email" required>
+        <button type="submit" id="modal-forgot-submit-btn">Send Reset Link</button>
+      </form>
+      <div id="modal-forgot-message"></div>
+      <div class="modal-toggle-row"><span id="modal-forgot-back">Back to log in</span></div>
+    </div>
+    <div id="modal-app-view">
+      <span id="modal-user-email"></span>
+      <button id="modal-logout-btn">Log Out</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <h1>Admin — <span>File Library</span></h1>
+  <div class="sub">Upload and manage files in the public library. Administrator login required.</div>
+</header>
+
+<main>
+
+  <div id="gate">
+    <p id="gateMessage">Checking your login status…</p>
+  </div>
+
+  <div id="adminArea">
+    <section>
+      <h2>Upload a File</h2>
+      <div class="panel">
+        <label for="fileInput">Choose file (Android, tablet, or computer)</label>
+        <input type="file" id="fileInput">
+
+        <label for="titleInput">Title</label>
+        <input type="text" id="titleInput" placeholder="e.g. Rotational Motion — Formula Sheet">
+
+        <label for="descInput">Description (optional)</label>
+        <textarea id="descInput" placeholder="Short description of this file..."></textarea>
+
+        <div class="row">
+          <div>
+            <label for="categorySelect">Category</label>
+            <select id="categorySelect"></select>
+          </div>
+          <div id="customCategoryWrap" style="display:none;">
+            <label for="customCategoryInput">Custom category name</label>
+            <input type="text" id="customCategoryInput" placeholder="e.g. Mock Test Papers">
+          </div>
+        </div>
+
+        <button id="uploadBtn">Upload File</button>
+        <div id="uploadStatus"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Uploaded Files</h2>
+      <div id="fileList"></div>
+      <div id="emptyList">No files uploaded yet.</div>
+    </section>
+
+    <section>
+      <h2>User Questions<span id="qUnansweredCount" class="count-badge" style="display:none;"></span></h2>
+      <div class="q-filters">
+        <button data-qfilter="all" class="active">All</button>
+        <button data-qfilter="waiting">Waiting</button>
+        <button data-qfilter="answered">Answered</button>
+      </div>
+      <div id="qList"></div>
+      <div id="qEmpty">No questions yet.</div>
+    </section>
+  </div>
+
+</main>
+
+<script src="supabase-client.js"></script>
+<script src="file-library-common.js"></script>
+<script src="login-modal.js"></script>
+<script>
+(function () {
+  // ---- Configure the administrator account(s) here ----
+  // Must match the email(s) allowed in the Supabase Storage / table RLS policies exactly.
+  const ADMIN_EMAILS = ["abinashdebnath32129@gmail.com"];
+
+  const gate = document.getElementById("gate");
+  const gateMessage = document.getElementById("gateMessage");
+  const adminArea = document.getElementById("adminArea");
+
+  const fileInput = document.getElementById("fileInput");
+  const titleInput = document.getElementById("titleInput");
+  const descInput = document.getElementById("descInput");
+  const categorySelect = document.getElementById("categorySelect");
+  const customCategoryWrap = document.getElementById("customCategoryWrap");
+  const customCategoryInput = document.getElementById("customCategoryInput");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const uploadStatus = document.getElementById("uploadStatus");
+  const fileList = document.getElementById("fileList");
+  const emptyList = document.getElementById("emptyList");
+
+  LIBRARY_CATEGORIES.forEach((c) => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    categorySelect.appendChild(opt);
+  });
+  categorySelect.addEventListener("change", () => {
+    customCategoryWrap.style.display = categorySelect.value === "Other" ? "block" : "none";
+  });
+
+  function setStatus(text, type) {
+    uploadStatus.textContent = text;
+    uploadStatus.className = type || "";
+  }
+
+  async function isAdmin() {
+    const user = await getCurrentUser();
+    if (!user || !user.email) return false;
+    return ADMIN_EMAILS.some((e) => e.toLowerCase() === user.email.toLowerCase());
+  }
+
+  async function checkAccess() {
+    const user = await getCurrentUser();
+    if (!user) {
+      gateMessage.textContent = "Please log in with your administrator account using the Login button (top right).";
+      gate.style.display = "block";
+      adminArea.style.display = "none";
+      return;
+    }
+    const admin = await isAdmin();
+    if (!admin) {
+      gateMessage.textContent = `You're logged in as ${user.email}, but this account is not authorized to manage the file library.`;
+      gate.style.display = "block";
+      adminArea.style.display = "none";
+      return;
+    }
+    gate.style.display = "none";
+    adminArea.style.display = "block";
+    loadFiles();
+    loadQuestions();
+  }
+
+  async function loadFiles() {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase
+      .from(LIBRARY_TABLE)
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    fileList.innerHTML = "";
+    if (error) {
+      emptyList.style.display = "block";
+      emptyList.textContent = "Could not load files: " + error.message;
+      return;
+    }
+    if (!data || data.length === 0) {
+      emptyList.style.display = "block";
+      emptyList.textContent = "No files uploaded yet.";
+      return;
+    }
+    emptyList.style.display = "none";
+
+    for (const row of data) {
+      const kind = getFileKind(row.file_type, row.file_name);
+      const url = await getLibraryPublicUrl(row.storage_path);
+      const div = document.createElement("div");
+      div.className = "file-row";
+      div.innerHTML = `
+        <div class="file-icon">${getFileIcon(kind)}</div>
+        <div class="file-meta">
+          <div class="file-title">${escapeHtml(row.title)}</div>
+          <div class="file-sub">${escapeHtml(row.category || "Uncategorized")} · ${formatBytes(row.file_size)} · ${new Date(row.created_at).toLocaleDateString()}</div>
+        </div>
+        <div class="file-actions">
+          <a href="${url}" target="_blank" rel="noopener">Open</a>
+          <button data-action="copy" data-url="${url}">Copy Link</button>
+          <button data-action="delete" data-id="${row.id}" data-path="${row.storage_path}" class="danger">Delete</button>
+        </div>
+      `;
+      fileList.appendChild(div);
+    }
+
+    fileList.querySelectorAll('[data-action="copy"]').forEach((btn) => {
+      btn.addEventListener("click", () => {
+        navigator.clipboard.writeText(btn.dataset.url).then(() => {
+          btn.textContent = "Copied!";
+          setTimeout(() => (btn.textContent = "Copy Link"), 1500);
+        });
+      });
+    });
+
+    fileList.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+      btn.addEventListener("click", () => handleDelete(btn.dataset.id, btn.dataset.path));
+    });
+  }
+
+  async function handleDelete(id, path) {
+    if (!confirm("Delete this file? This cannot be undone.")) return;
+    const supabase = await getSupabase();
+
+    const { error: storageErr } = await supabase.storage.from(LIBRARY_BUCKET).remove([path]);
+    if (storageErr) {
+      alert("Could not delete file from storage: " + storageErr.message);
+      return;
+    }
+    const { error: dbErr } = await supabase.from(LIBRARY_TABLE).delete().eq("id", id);
+    if (dbErr) {
+      alert("File removed from storage, but the library entry could not be deleted: " + dbErr.message);
+      return;
+    }
+    loadFiles();
+  }
+
+  async function handleUpload() {
+    const file = fileInput.files[0];
+    const title = titleInput.value.trim();
+    const description = descInput.value.trim();
+    let category = categorySelect.value;
+    if (category === "Other") {
+      category = customCategoryInput.value.trim() || "Other";
+    }
+
+    if (!file) {
+      setStatus("Please choose a file first.", "error");
+      return;
+    }
+    if (!title) {
+      setStatus("Please enter a title.", "error");
+      return;
+    }
+
+    uploadBtn.disabled = true;
+    setStatus("Checking for duplicates…", "info");
+
+    const supabase = await getSupabase();
+
+    // Prevent accidental duplicate uploads: same title, or same filename+size already in library
+    const { data: existing } = await supabase
+      .from(LIBRARY_TABLE)
+      .select("id, title, file_name, file_size")
+      .or(`title.ilike.${title},and(file_name.eq.${file.name},file_size.eq.${file.size})`);
+
+    if (existing && existing.length > 0) {
+      const proceed = confirm(
+        `A file with the same title or the same name/size already exists ("${existing[0].title}"). Upload anyway?`
+      );
+      if (!proceed) {
+        setStatus("Upload cancelled.", "info");
+        uploadBtn.disabled = false;
+        return;
+      }
+    }
+
+    setStatus("Uploading…", "info");
+
+    const safeName = sanitizeFileName(file.name);
+    const storagePath = `${category.toLowerCase().replace(/\s+/g, "-")}/${Date.now()}_${safeName}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from(LIBRARY_BUCKET)
+      .upload(storagePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type || "application/octet-stream",
+      });
+
+    if (uploadErr) {
+      setStatus("Upload failed: " + uploadErr.message, "error");
+      uploadBtn.disabled = false;
+      return;
+    }
+
+    const { error: insertErr } = await supabase.from(LIBRARY_TABLE).insert([
+      {
+        storage_path: storagePath,
+        title,
+        description: description || null,
+        category,
+        file_name: file.name,
+        file_type: file.type || "application/octet-stream",
+        file_size: file.size,
+      },
+    ]);
+
+    if (insertErr) {
+      // Roll back the storage upload so we don't leave an orphaned file
+      await supabase.storage.from(LIBRARY_BUCKET).remove([storagePath]);
+      setStatus("Upload failed while saving details: " + insertErr.message, "error");
+      uploadBtn.disabled = false;
+      return;
+    }
+
+    setStatus("File uploaded successfully!", "success");
+    fileInput.value = "";
+    titleInput.value = "";
+    descInput.value = "";
+    customCategoryInput.value = "";
+    categorySelect.value = LIBRARY_CATEGORIES[0];
+    customCategoryWrap.style.display = "none";
+    uploadBtn.disabled = false;
+    loadFiles();
+  }
+
+  uploadBtn.addEventListener("click", handleUpload);
+
+  // ---------------------------------------------------------------------
+  // User Questions ("Ask a Question" admin panel)
+  // Reads/writes the existing "Questions" table exactly as already set up:
+  // id, created_at, user_id, user_name, question, admin_reply, status.
+  // This does not create the table, change RLS, or add a second admin
+  // login system — it reuses ADMIN_EMAILS / checkAccess() defined above.
+  // ---------------------------------------------------------------------
+  const QUESTIONS_TABLE = "Questions";
+  const qList = document.getElementById("qList");
+  const qEmpty = document.getElementById("qEmpty");
+  const qUnansweredCount = document.getElementById("qUnansweredCount");
+  const qFilterBtns = document.querySelectorAll("[data-qfilter]");
+
+  let allQuestions = [];
+  let currentQFilter = "all";
+
+  function formatDateTime(iso) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleString();
+  }
+
+  qFilterBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      qFilterBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentQFilter = btn.dataset.qfilter;
+      renderQuestions();
+    });
+  });
+
+  async function loadQuestions() {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase
+      .from(QUESTIONS_TABLE)
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      qList.innerHTML = "";
+      qEmpty.style.display = "block";
+      qEmpty.textContent = "Could not load questions: " + error.message;
+      return;
+    }
+
+    // Waiting questions first, newest first within each group.
+    allQuestions = (data || []).sort((a, b) => {
+      if (a.status !== b.status) return a.status === "waiting" ? -1 : 1;
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    const waitingCount = allQuestions.filter((r) => r.status !== "answered").length;
+    if (waitingCount > 0) {
+      qUnansweredCount.style.display = "inline-block";
+      qUnansweredCount.textContent = waitingCount + " waiting";
+    } else {
+      qUnansweredCount.style.display = "none";
+    }
+
+    renderQuestions();
+  }
+
+  function renderQuestions() {
+    const rows = allQuestions.filter((r) => {
+      if (currentQFilter === "all") return true;
+      if (currentQFilter === "waiting") return r.status !== "answered";
+      return r.status === "answered";
+    });
+
+    qList.innerHTML = "";
+    if (rows.length === 0) {
+      qEmpty.style.display = "block";
+      qEmpty.textContent = "No questions yet.";
+      return;
+    }
+    qEmpty.style.display = "none";
+
+    for (const row of rows) {
+      const isAnswered = row.status === "answered";
+      const badgeClass = isAnswered ? "answered" : "waiting";
+      const badgeText = isAnswered ? "Answered" : "Waiting for reply";
+
+      const card = document.createElement("div");
+      card.className = "q-card";
+      card.innerHTML = `
+        <div class="q-top" data-toggle>
+          <div>
+            <div class="q-user">${escapeHtml(row.user_name || "Unknown user")}</div>
+            <div class="q-date">${formatDateTime(row.created_at)}</div>
+          </div>
+          <span class="q-badge ${badgeClass}">${badgeText}</span>
+        </div>
+        <div class="q-text">${escapeHtml(row.question)}</div>
+        <div class="q-detail">
+          <label for="reply-${row.id}">Reply</label>
+          <textarea id="reply-${row.id}" placeholder="Type your reply…">${escapeHtml(row.admin_reply || "")}</textarea>
+          <div class="q-actions">
+            <button class="primary" data-action="reply" data-id="${row.id}">Send Reply</button>
+            <button data-action="mark-answered" data-id="${row.id}" ${isAnswered ? "disabled" : ""}>
+              ${isAnswered ? "Answered" : "Mark as Answered"}
+            </button>
+          </div>
+          <div class="q-savestatus" id="save-status-${row.id}"></div>
+        </div>
+      `;
+
+      card.querySelector("[data-toggle]").addEventListener("click", () => {
+        card.querySelector(".q-detail").classList.toggle("open");
+      });
+
+      qList.appendChild(card);
+    }
+
+    qList.querySelectorAll('[data-action="reply"]').forEach((btn) => {
+      btn.addEventListener("click", () => handleQuestionReply(btn.dataset.id));
+    });
+    qList.querySelectorAll('[data-action="mark-answered"]').forEach((btn) => {
+      btn.addEventListener("click", () => handleMarkAnswered(btn.dataset.id));
+    });
+  }
+
+  function setQSaveStatus(id, text, type) {
+    const el = document.getElementById(`save-status-${id}`);
+    if (!el) return;
+    el.textContent = text;
+    el.className = "q-savestatus " + (type || "");
+  }
+
+  async function handleQuestionReply(id) {
+    const textarea = document.getElementById(`reply-${id}`);
+    const replyText = textarea.value.trim();
+    if (!replyText) {
+      setQSaveStatus(id, "Please type a reply first.", "error");
+      return;
+    }
+    setQSaveStatus(id, "Sending…", "");
+    const supabase = await getSupabase();
+    const { error } = await supabase
+      .from(QUESTIONS_TABLE)
+      .update({ admin_reply: replyText, status: "answered" })
+      .eq("id", id);
+
+    if (error) {
+      setQSaveStatus(id, "Could not save reply: " + error.message, "error");
+      return;
+    }
+    setQSaveStatus(id, "Reply sent!", "success");
+    loadQuestions();
+  }
+
+  async function handleMarkAnswered(id) {
+    setQSaveStatus(id, "Updating…", "");
+    const supabase = await getSupabase();
+    const { error } = await supabase
+      .from(QUESTIONS_TABLE)
+      .update({ status: "answered" })
+      .eq("id", id);
+
+    if (error) {
+      setQSaveStatus(id, "Could not update status: " + error.message, "error");
+      return;
+    }
+    loadQuestions();
+  }
+
+  // Re-check access whenever login state changes (login/logout via the modal)
+  document.getElementById("modal-logout-btn").addEventListener("click", () => {
+    setTimeout(checkAccess, 200);
+  });
+  document.getElementById("modal-auth-form").addEventListener("submit", () => {
+    setTimeout(checkAccess, 600);
+  });
+  document.getElementById("modal-google-btn").addEventListener("click", () => {
+    setTimeout(checkAccess, 800);
+  });
+
+  checkAccess();
+})();
+</script>
+</body>
+</html>

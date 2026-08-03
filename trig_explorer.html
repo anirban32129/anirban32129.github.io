@@ -1,8 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<style id="ad-reserve-style">
+:root{--vh-adj:1vh}
+body{display:flex !important;flex-direction:column !important;height:100% !important}
+.viz-content-wrap{flex:1 1 auto;min-height:0;position:relative;overflow:hidden}
+.ad-reserve-bar{flex:0 0 50px;display:flex;align-items:center;justify-content:center;font:11px sans-serif;color:#8892a0;background:rgba(255,255,255,.02);border-top:1px solid rgba(120,130,150,.15);pointer-events:none}
+@media (max-width:700px){.ad-reserve-bar{display:none}}
+</style>
+<script>
+(function(){
+function setVhAdj(){
+  var bar = document.querySelector('.ad-reserve-bar');
+  var reserve = (bar && getComputedStyle(bar).display !== 'none') ? bar.offsetHeight : 0;
+  document.documentElement.style.setProperty('--vh-adj', ((window.innerHeight-reserve)/100)+'px');
+}
+window.addEventListener('resize', setVhAdj);
+window.addEventListener('orientationchange', setVhAdj);
+document.addEventListener('DOMContentLoaded', setVhAdj);
+setVhAdj();
+})();
+</script>
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2305070a'/%3E%3Cg transform='translate(50,50)'%3E%3Cellipse cx='0' cy='0' rx='33' ry='14' fill='none' stroke='%237c5cff' stroke-width='3' transform='rotate(-20)'/%3E%3Cellipse cx='0' cy='0' rx='33' ry='14' fill='none' stroke='%23ffb92e' stroke-width='2.5' stroke-opacity='0.6' transform='rotate(40)'/%3E%3Cpath d='M-31,6 Q-16,-17 0,6 T31,6' fill='none' stroke='%23e8edf4' stroke-width='2.5' stroke-linecap='round' opacity='0.85'/%3E%3Ccircle r='6' fill='%23ffb92e'/%3E%3Ccircle cx='27' cy='-5' r='3.5' fill='%23ff3d81'/%3E%3Ccircle cx='-24' cy='8' r='3' fill='%237c5cff'/%3E%3C/g%3E%3C/svg%3E">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8974374653448358"
+     crossorigin="anonymous"></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZR0SHJL6VJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZR0SHJL6VJ');
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-adsense-account" content="ca-pub-8974374653448358">
 <title>Phase Shift Explorer — sin, cos & Unit Circle</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&display=swap');
@@ -20,7 +54,7 @@
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
-html,body { width:100%; min-height:100vh; overflow-x:hidden; }
+html,body { width:100%; min-height:calc(var(--vh-adj) * 100); overflow-x:hidden; }
 
 body {
   background: var(--bg);
@@ -389,8 +423,10 @@ canvas.proj-canvas {
 }
 .fp-nbtn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
 </style>
+<link rel="stylesheet" href="ask-question.css">
 </head>
 <body>
+<div class="viz-content-wrap">
 <a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
 
 
@@ -3695,5 +3731,8 @@ function errColor(e) {
 }
 
 </script>
+</div>
+<div class="ad-reserve-bar">Ad space</div>
+<script src="ask-question.js"></script>
 </body>
 </html>

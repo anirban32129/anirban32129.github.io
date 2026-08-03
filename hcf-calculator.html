@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HCF Calculator — Interactive Math Lab</title>
+<meta name="description" content="Quick HCF (GCD) calculator with step-by-step Euclidean algorithm working.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05070a;
+    --panel:#12181f;
+    --grid:#1c2530;
+    --text:#e8edf4;
+    --dim:#7c8a9c;
+    --torch:#ffb92e;
+    --pink:#ff3d81;
+    --violet:#7c5cff;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'JetBrains Mono','Courier New',monospace;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  a.home{
+    position:fixed; top:10px; left:10px; z-index:999;
+    background:rgba(10,12,18,0.85); color:var(--torch);
+    font-size:11px; letter-spacing:0.5px; text-decoration:none;
+    padding:7px 12px; border:1px solid rgba(255,185,46,0.4); border-radius:8px;
+    backdrop-filter:blur(6px);
+  }
+  h1{
+    font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:3px;
+    font-weight:400; margin:56px 0 4px; text-align:center;
+  }
+  h1 span{color:var(--pink);}
+  .sub{
+    max-width:520px; text-align:center; color:var(--dim);
+    font-size:12.5px; line-height:1.6; margin:0 0 28px; padding:0 20px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--grid); border-radius:14px;
+    padding:28px 24px; width:min(92vw, 420px);
+    box-shadow:0 14px 34px rgba(0,0,0,0.45);
+  }
+  .row{ display:flex; gap:12px; margin-bottom:16px; }
+  .field{ flex:1; display:flex; flex-direction:column; gap:6px; }
+  label{ font-size:11px; color:var(--dim); letter-spacing:0.5px; text-transform:uppercase; }
+  input[type=number]{
+    background:#0a0e13; border:1px solid var(--grid); color:var(--text);
+    font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600;
+    padding:12px 10px; border-radius:8px; width:100%; outline:none;
+    transition:border-color .15s ease;
+  }
+  input[type=number]:focus{ border-color:var(--violet); }
+  button{
+    width:100%; padding:13px; margin-top:4px;
+    background:linear-gradient(135deg, var(--violet), var(--pink));
+    color:#fff; border:none; border-radius:9px;
+    font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700;
+    letter-spacing:0.5px; cursor:pointer; text-transform:uppercase;
+  }
+  button:hover{ filter:brightness(1.1); }
+  button:active{ transform:scale(0.98); }
+  .error{ color:var(--pink); font-size:12px; margin-top:10px; min-height:14px; text-align:center; }
+  .result{
+    margin-top:22px; padding-top:20px; border-top:1px solid var(--grid);
+    display:none;
+  }
+  .result.show{ display:block; }
+  .answer{
+    text-align:center; font-family:'Bebas Neue',sans-serif; font-size:44px;
+    letter-spacing:2px; color:var(--torch); margin-bottom:4px;
+  }
+  .answer-label{ text-align:center; font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; margin-bottom:18px; }
+  .steps{ display:flex; flex-direction:column; gap:6px; }
+  .step{
+    display:flex; justify-content:space-between; gap:10px;
+    font-size:13px; padding:8px 10px; background:rgba(255,255,255,0.03);
+    border-radius:6px; border-left:2px solid var(--violet);
+  }
+  .step .eq{ color:var(--text); }
+  .step .note{ color:var(--dim); font-size:11px; white-space:nowrap; }
+  .visual-link{
+    display:block; text-align:center; margin-top:24px; font-size:12px;
+    color:var(--violet); text-decoration:none; letter-spacing:0.3px;
+  }
+  .visual-link:hover{ color:var(--torch); }
+  .footer{
+    margin:36px 0 24px; font-size:10px; color:var(--dim); opacity:0.7;
+    text-align:center;
+  }
+</style>
+<link rel="stylesheet" href="ask-question.css">
+</head>
+<body>
+
+<a href="index.html" class="home">&larr; Home</a>
+
+<h1>HCF <span>Calculator</span></h1>
+<div class="sub">Enter any two whole numbers and get the Highest Common Factor instantly, with the full Euclidean algorithm working shown step by step.</div>
+
+<div class="card">
+  <div class="row">
+    <div class="field">
+      <label>Number A</label>
+      <input type="number" id="numA" min="1" step="1" placeholder="e.g. 48" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>Number B</label>
+      <input type="number" id="numB" min="1" step="1" placeholder="e.g. 18" inputmode="numeric">
+    </div>
+  </div>
+  <button id="calcBtn">Find HCF</button>
+  <div class="error" id="errMsg"></div>
+
+  <div class="result" id="resultBox">
+    <div class="answer" id="answerVal">—</div>
+    <div class="answer-label" id="answerLabel">Highest Common Factor</div>
+    <div class="steps" id="stepsList"></div>
+  </div>
+
+  <a href="mode_hcf.html" class="visual-link">See it built visually in the HCF mode &rarr;</a>
+</div>
+
+<div class="footer">Interactive Math Lab</div>
+
+<script>
+const numA = document.getElementById('numA');
+const numB = document.getElementById('numB');
+const calcBtn = document.getElementById('calcBtn');
+const errMsg = document.getElementById('errMsg');
+const resultBox = document.getElementById('resultBox');
+const answerVal = document.getElementById('answerVal');
+const answerLabel = document.getElementById('answerLabel');
+const stepsList = document.getElementById('stepsList');
+
+function computeHCF(){
+  errMsg.textContent = '';
+  resultBox.classList.remove('show');
+  stepsList.innerHTML = '';
+
+  let a = parseInt(numA.value, 10);
+  let b = parseInt(numB.value, 10);
+
+  if(!numA.value || !numB.value || isNaN(a) || isNaN(b)){
+    errMsg.textContent = 'Please enter both numbers.';
+    return;
+  }
+  a = Math.abs(a); b = Math.abs(b);
+  if(a === 0 && b === 0){
+    errMsg.textContent = 'HCF is undefined when both numbers are 0.';
+    return;
+  }
+  if(!Number.isInteger(a) || !Number.isInteger(b) || a === 0 || b === 0){
+    if(a===0||b===0){
+      errMsg.textContent = 'Enter non-zero whole numbers.';
+      return;
+    }
+  }
+
+  const originalA = a, originalB = b;
+  const steps = [];
+  let x = a, y = b;
+  if(x < y){ [x,y] = [y,x]; }
+
+  while(y !== 0){
+    const q = Math.floor(x / y);
+    const r = x % y;
+    steps.push({x, y, q, r});
+    x = y;
+    y = r;
+  }
+  const hcf = x;
+
+  answerVal.textContent = hcf;
+  answerLabel.textContent = `HCF of ${originalA} and ${originalB}`;
+
+  if(steps.length === 0){
+    stepsList.innerHTML = `<div class="step"><span class="eq">${originalA} divides ${originalB} exactly</span><span class="note">no remainder</span></div>`;
+  } else {
+    steps.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'step';
+      div.innerHTML = `<span class="eq">${s.x} = ${s.y} &times; ${s.q} + ${s.r}</span><span class="note">remainder ${s.r}</span>`;
+      stepsList.appendChild(div);
+    });
+    const last = document.createElement('div');
+    last.className = 'step';
+    last.style.borderLeftColor = 'var(--torch)';
+    last.innerHTML = `<span class="eq">Remainder becomes 0 &rarr; divisor is the HCF</span><span class="note">HCF = ${hcf}</span>`;
+    stepsList.appendChild(last);
+  }
+
+  resultBox.classList.add('show');
+}
+
+calcBtn.addEventListener('click', computeHCF);
+[numA, numB].forEach(inp => {
+  inp.addEventListener('keydown', e => { if(e.key === 'Enter') computeHCF(); });
+});
+</script>
+
+<script src="ask-question.js"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+/* ask-question.css
+   Reusable styles for the floating "Ask a Question" button + panel.
+   Include on any page alongside ask-question.js — see the header comment
+   in ask-question.js for the exact <link>/<script> tags to add.
+   Self-contained: uses its own hex colors (matching the site's dark theme)
+   rather than depending on each page's CSS variables, so it looks right
+   even on pages with a different palette.
+*/
+
+#aq-launcher{position:fixed;right:18px;bottom:18px;z-index:9998;width:56px;height:56px;
+  border-radius:50%;border:none;background:#7c5cff;color:#fff;font-size:24px;
+  cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.45);display:flex;align-items:center;
+  justify-content:center;transition:transform .15s ease;}
+#aq-launcher:hover{transform:scale(1.06);}
+
+#aq-panel{position:fixed;right:18px;bottom:86px;z-index:9999;width:340px;max-width:92vw;
+  max-height:72vh;background:#12181f;border:1px solid #1c2530;border-radius:14px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.55);display:none;flex-direction:column;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  color:#e8edf4;opacity:0;transform:translateY(8px);transition:opacity .16s ease,transform .16s ease;}
+#aq-panel.aq-open{display:flex;}
+#aq-panel.aq-visible{opacity:1;transform:translateY(0);}
+
+#aq-head{padding:14px 16px;border-bottom:1px solid #1c2530;display:flex;align-items:center;
+  justify-content:space-between;flex-shrink:0;}
+#aq-head h4{margin:0;font-size:14px;font-weight:700;}
+#aq-head h4 span{color:#ffb92e;}
+#aq-close{background:none;border:none;color:#7c8a9c;font-size:20px;line-height:1;cursor:pointer;padding:2px 4px;}
+#aq-close:hover{color:#e8edf4;}
+
+#aq-body{flex:1;overflow-y:auto;padding:14px 16px;min-height:120px;}
+#aq-foot{flex-shrink:0;border-top:1px solid #1c2530;padding:10px 12px;display:flex;gap:8px;align-items:flex-end;}
+#aq-input{flex:1;resize:none;max-height:90px;min-height:38px;padding:9px 10px;border-radius:8px;
+  border:1px solid #1c2530;background:#05070a;color:#e8edf4;font-size:13.5px;font-family:inherit;outline:none;}
+#aq-input:focus{border-color:#7c5cff;}
+#aq-send{flex-shrink:0;padding:9px 14px;border-radius:8px;border:none;background:#7c5cff;color:#fff;
+  font-size:13px;font-weight:600;cursor:pointer;}
+#aq-send:disabled{opacity:0.5;cursor:default;}
+
+.aq-msg{margin-bottom:14px;}
+.aq-q{background:#1c2530;border-radius:10px 10px 2px 10px;padding:9px 11px;font-size:13.5px;
+  line-height:1.5;max-width:88%;margin-left:auto;word-wrap:break-word;}
+.aq-r{background:#241a3d;border:1px solid #3a2d66;border-radius:10px 10px 10px 2px;padding:9px 11px;
+  font-size:13.5px;line-height:1.5;max-width:88%;margin-top:6px;word-wrap:break-word;}
+.aq-r-label{font-size:11px;color:#7c5cff;font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px;}
+.aq-meta{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10.5px;color:#7c8a9c;justify-content:flex-end;}
+.aq-badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.3px;}
+.aq-badge.waiting{background:rgba(255,185,46,0.15);color:#ffb92e;}
+.aq-badge.answered{background:rgba(74,222,128,0.15);color:#4ade80;}
+
+#aq-empty{color:#7c8a9c;font-size:13px;text-align:center;padding:30px 10px;}
+#aq-status{min-height:16px;font-size:12px;margin:0 16px 10px;color:#7c8a9c;}
+#aq-status.error{color:#ff3d81;}
+#aq-status.success{color:#4ade80;}
+
+#aq-loginwrap{padding:16px;text-align:center;}
+#aq-loginwrap p{font-size:13px;color:#7c8a9c;line-height:1.6;margin:0 0 14px;}
+#aq-loginwrap button{padding:10px 18px;border-radius:8px;border:1px solid #1c2530;
+  background:#7c5cff;color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;border:none;}
+
+#aq-loggedin-as{font-size:11px;color:#7c8a9c;padding:8px 16px 0;}
+
+@media (max-width:420px){
+  #aq-panel{right:10px;left:10px;width:auto;bottom:80px;max-height:76vh;}
+  #aq-launcher{right:14px;bottom:14px;}
+}
