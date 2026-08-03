@@ -1,42 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<style id="ad-reserve-style">
-:root{--vh-adj:1vh}
-body{display:flex !important;flex-direction:column !important;height:100% !important}
-.viz-content-wrap{flex:1 1 auto;min-height:0;position:relative;overflow:hidden}
-.ad-reserve-bar{flex:0 0 50px;display:flex;align-items:center;justify-content:center;font:11px sans-serif;color:#8892a0;background:rgba(255,255,255,.02);border-top:1px solid rgba(120,130,150,.15);pointer-events:none}
-@media (max-width:700px){.ad-reserve-bar{display:none}}
-</style>
-<script>
-(function(){
-function setVhAdj(){
-  var bar = document.querySelector('.ad-reserve-bar');
-  var reserve = (bar && getComputedStyle(bar).display !== 'none') ? bar.offsetHeight : 0;
-  document.documentElement.style.setProperty('--vh-adj', ((window.innerHeight-reserve)/100)+'px');
-}
-window.addEventListener('resize', setVhAdj);
-window.addEventListener('orientationchange', setVhAdj);
-document.addEventListener('DOMContentLoaded', setVhAdj);
-setVhAdj();
-})();
-</script>
-
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2305070a'/%3E%3Cg transform='translate(50,50)'%3E%3Cellipse cx='0' cy='0' rx='33' ry='14' fill='none' stroke='%237c5cff' stroke-width='3' transform='rotate(-20)'/%3E%3Cellipse cx='0' cy='0' rx='33' ry='14' fill='none' stroke='%23ffb92e' stroke-width='2.5' stroke-opacity='0.6' transform='rotate(40)'/%3E%3Cpath d='M-31,6 Q-16,-17 0,6 T31,6' fill='none' stroke='%23e8edf4' stroke-width='2.5' stroke-linecap='round' opacity='0.85'/%3E%3Ccircle r='6' fill='%23ffb92e'/%3E%3Ccircle cx='27' cy='-5' r='3.5' fill='%23ff3d81'/%3E%3Ccircle cx='-24' cy='8' r='3' fill='%237c5cff'/%3E%3C/g%3E%3C/svg%3E">
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8974374653448358"
-     crossorigin="anonymous"></script>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZR0SHJL6VJ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-ZR0SHJL6VJ');
-</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="google-adsense-account" content="ca-pub-8974374653448358">
 <title>Function Explorer</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -118,14 +84,14 @@ setVhAdj();
   body.light .layout{background:transparent;}
   body.light{background:#f0f4f8;}
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);height:calc(var(--vh-adj) * 100);overflow:hidden;touch-action:none;}
+  body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;touch-action:none;}
   header{padding:11px 20px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);background:var(--panel);height:52px;flex-shrink:0;transition:height .3s,opacity .3s,padding .3s;}
   header.hidden{height:0;opacity:0;padding:0;pointer-events:none;overflow:hidden;}
   .logo{width:30px;height:30px;background:linear-gradient(135deg,var(--accent),var(--a3));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;}
   header h1{font-size:1.05rem;font-weight:800;letter-spacing:-.4px;}
   header .sub{font-size:.6rem;color:var(--muted);font-family:'Space Mono',monospace;}
-  .layout{display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:calc(calc(var(--vh-adj) * 100) - 52px);overflow:hidden;transition:grid-template-columns .28s cubic-bezier(.4,0,.2,1);}
-  .layout.header-hidden{height:calc(var(--vh-adj) * 100);}
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:calc(100vh - 52px);overflow:hidden;transition:grid-template-columns .28s cubic-bezier(.4,0,.2,1);}
+  .layout.header-hidden{height:100vh;}
   .layout.sidebar-collapsed{grid-template-columns:0px 1fr;}
   .sidebar{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;position:relative;transition:width .28s cubic-bezier(.4,0,.2,1);}
   .sidebar-inner{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding-bottom:60px;}
@@ -280,7 +246,7 @@ setVhAdj();
   /* CUSTOMIZE */
   #customizeOverlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;}
   #customizeOverlay.show{display:flex;}
-  #customizeCard{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px 24px;width:min(440px,92vw);max-height:calc(var(--vh-adj) * 85);overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+  #customizeCard{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px 24px;width:min(440px,92vw);max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);}
   #customizeCard h2{font-size:1rem;font-weight:800;margin-bottom:4px;}
   #customizeCard .csub{font-size:.65rem;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px;}
   .cust-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
@@ -357,11 +323,11 @@ setVhAdj();
   }
   body.ghost-mode .layout{
     grid-template-columns:0px 1fr !important;
-    height:calc(var(--vh-adj) * 100) !important;
+    height:100vh !important;
   }
   body.ghost-mode header{height:0;padding:0;overflow:hidden;}
-  body.ghost-mode .right{height:calc(var(--vh-adj) * 100);}
-  body.ghost-mode .graph-wrap{flex:1;height:calc(var(--vh-adj) * 100);}
+  body.ghost-mode .right{height:100vh;}
+  body.ghost-mode .graph-wrap{flex:1;height:100vh;}
   body.ghost-mode #cv{cursor:crosshair;}
   /* ECG panels stay visible in ghost mode */
   body.ghost-mode #ecgPanel,
@@ -411,7 +377,6 @@ setVhAdj();
 </style>
 </head>
 <body>
-<div class="viz-content-wrap">
 <a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
 
 <header>
@@ -4638,7 +4603,5 @@ setTableVisible(true); // always show table on init — bulletproof
 resize();
 
 </script>
-</div>
-<div class="ad-reserve-bar">Ad space</div>
 </body>
 </html>

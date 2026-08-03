@@ -1,46 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<style id="ad-reserve-style">
-:root{--vh-adj:1vh}
-body{display:flex !important;flex-direction:column !important;height:100% !important}
-.viz-content-wrap{flex:1 1 auto;min-height:0;position:relative;overflow:hidden}
-.ad-reserve-bar{flex:0 0 50px;display:flex;align-items:center;justify-content:center;font:11px sans-serif;color:#8892a0;background:rgba(255,255,255,.02);border-top:1px solid rgba(120,130,150,.15);pointer-events:none}
-@media (max-width:700px){.ad-reserve-bar{display:none}}
-</style>
-<script>
-(function(){
-function setVhAdj(){
-  var bar = document.querySelector('.ad-reserve-bar');
-  var reserve = (bar && getComputedStyle(bar).display !== 'none') ? bar.offsetHeight : 0;
-  document.documentElement.style.setProperty('--vh-adj', ((window.innerHeight-reserve)/100)+'px');
-}
-window.addEventListener('resize', setVhAdj);
-window.addEventListener('orientationchange', setVhAdj);
-document.addEventListener('DOMContentLoaded', setVhAdj);
-setVhAdj();
-})();
-</script>
-
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8974374653448358"
-     crossorigin="anonymous"></script>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZR0SHJL6VJ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-ZR0SHJL6VJ');
-</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="google-adsense-account" content="ca-pub-8974374653448358">
 <title>Pentagon — Angle Sum (540°) — Interactive Math Lab</title>
 <meta name="description" content="Interactive math visualizer for arithmetic, geometry, algebra proofs, trigonometry, and number series/sequences — built for school students and JEE aspirants.">
 <meta name="keywords" content="interactive math lab, math visualizer, JEE prep, class 11 class 12 math, geometry visualization, algebra proof visual, number series formulas, arithmetic progression, geometric progression, LCM HCF visual, 3D geometry tool, math for students">
 <meta name="robots" content="index, follow">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2305070a'/%3E%3Cg transform='translate(50,50)'%3E%3Cellipse cx='0' cy='0' rx='33' ry='14' fill='none' stroke='%237c5cff' stroke-width='3' transform='rotate(-20)'/%3E%3Cellipse cx='0' cy='0' rx='33' ry='14' fill='none' stroke='%23ffb92e' stroke-width='2.5' stroke-opacity='0.6' transform='rotate(40)'/%3E%3Cpath d='M-31,6 Q-16,-17 0,6 T31,6' fill='none' stroke='%23e8edf4' stroke-width='2.5' stroke-linecap='round' opacity='0.85'/%3E%3Ccircle r='6' fill='%23ffb92e'/%3E%3Ccircle cx='27' cy='-5' r='3.5' fill='%23ff3d81'/%3E%3Ccircle cx='-24' cy='8' r='3' fill='%237c5cff'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2305070a'/%3E%3Cpath d='M16,62 A34,34 0 0,1 84,62' fill='none' stroke='%237c5cff' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M50,62 L77.19,49.32 A30,30 0 0,0 52.61,32.11 Z' fill='%23ff3d81'/%3E%3Ccircle cx='50' cy='62' r='4.5' fill='%23ffb92e'/%3E%3C/svg%3E">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Interactive Math Lab">
@@ -180,7 +147,7 @@ setVhAdj();
     border:1px solid var(--grid); background:radial-gradient(circle at 50% 30%, rgba(13,21,32,0.5), rgba(5,7,10,0.82) 75%);
     margin-bottom:14px; position:relative; touch-action:none;
   }
-  #popStage{height:min(calc(var(--vh-adj) * 72),620px);}
+  #popStage{height:min(72vh,620px);}
   .stage3d canvas{display:block; width:100%; height:100%;}
   .stage-hint{
     position:absolute; bottom:8px; right:12px; font-size:9px; color:var(--dim);
@@ -376,7 +343,7 @@ setVhAdj();
   .csel-trigger:focus-visible{ outline:2px solid #7c5cff; outline-offset:2px; }
   .csel-arrow{ flex:none; margin-left:6px; opacity:0.8; font-size:0.85em; }
   .csel-list{
-    position:fixed; z-index:500; display:none; overflow-y:auto; max-height:min(calc(var(--vh-adj) * 50),320px);
+    position:fixed; z-index:500; display:none; overflow-y:auto; max-height:min(50vh,320px);
     background:#12182a; border:1px solid rgba(124,92,255,0.4); border-radius:8px;
     box-shadow:0 14px 34px rgba(0,0,0,0.55); padding:4px 0;
   }
@@ -433,10 +400,9 @@ setVhAdj();
 </style>
 </head>
 <body>
-<div class="viz-content-wrap">
 <a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
 
-<canvas id="bhBackground" style="position:fixed; inset:0; width:100vw; height:calc(var(--vh-adj) * 100); z-index:-1; pointer-events:none; display:block;"></canvas>
+<canvas id="bhBackground" style="position:fixed; inset:0; width:100vw; height:100vh; z-index:-1; pointer-events:none; display:block;"></canvas>
 <script>
 (function(){
   const canvas = document.getElementById('bhBackground');
@@ -1506,160 +1472,160 @@ setVhAdj();
 
 <div class="stage3d" id="popStage"><button class="lock-btn" id="popLockBtn" data-target="popStage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Lock</span></button><div class="brightness-ctrl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><input type="range" id="brightnessSlider" min="0.4" max="2.4" step="0.05" value="1.3"></div><div class="clock-digital-overlay" id="clockDigitalOverlay"><div class="cdo-label">Digital</div><div class="cdo-time" id="clockDigitalReadout">10:10:00 AM</div><div class="cdo-mode-row"><button type="button" id="cdoLiveBtn" class="cdo-mode-btn active">Live</button><button type="button" id="cdoCustomBtn" class="cdo-mode-btn">Custom</button></div><div class="cdo-custom-inputs" id="cdoCustomInputs" style="display:none;"><div class="cdo-hms-row"><input type="number" id="cdoHourInput" min="1" max="12" value="10"><span>:</span><input type="number" id="cdoMinInput" min="0" max="59" value="10"><span>:</span><input type="number" id="cdoSecInput" min="0" max="59" value="0"><select id="cdoAmPmSelect"><option value="AM">AM</option><option value="PM">PM</option></select></div><div class="cdo-btn-row"><button type="button" id="cdoSetBtn">Set</button><button type="button" id="cdoRunBtn">Run &#9654;</button></div></div></div><span class="stage-hint">drag = orbit · right-click/two-finger drag = pan · scroll = zoom · tap a person for details</span></div>
 
-<div class="stage3d" id="relationsPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="relationsPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="relationsFrame" title="Relations &amp; Functions" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0a12; display:block;"></iframe>
 </div>
-<div class="stage3d" id="matrixPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="matrixPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="matrixLabFrame" title="Matrix / Vector Lab" style="width:100%; height:100%; border:0; border-radius:inherit; background:#060911; display:block;"></iframe>
 </div>
-<div class="stage3d" id="probabilityPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="probabilityPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="probabilityFrame" title="Probability Toolkit — 3D" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05070a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="vectorPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="vectorPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="vectorLabFrame" title="Vector Algebra — Operations Lab" style="width:100%; height:100%; border:0; border-radius:inherit; background:#070b14; display:block;"></iframe>
 </div>
-<div class="stage3d" id="earthGravityPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="earthGravityPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="earthGravityLabFrame" title="Earth Gravity — Interior Explorer" style="width:100%; height:100%; border:0; border-radius:inherit; background:#000005; display:block;"></iframe>
 </div>
-<div class="stage3d" id="domainRangePanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="domainRangePanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="domainRangeLabFrame" title="Domain &amp; Range Viewer" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0f1117; display:block;"></iframe>
 </div>
-<div class="stage3d" id="physicsPerspectivesPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="physicsPerspectivesPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="physicsPerspectivesLabFrame" title="Physics Perspectives — Coordinate Simulator" style="width:100%; height:100%; border:0; border-radius:inherit; background:#060a12; display:block;"></iframe>
 </div>
-<div class="stage3d" id="tetherPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="tetherPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="tetherLabFrame" title="Tether — Two Balls on a Thread (Centre of Mass)" style="width:100%; height:100%; border:0; border-radius:inherit; background:#070b14; display:block;"></iframe>
 </div>
-<div class="stage3d" id="planetsMotionPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="planetsMotionPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="planetsMotionLabFrame" title="Planets Motion — Kepler's Three Laws" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05070d; display:block;"></iframe>
 </div>
-<div class="stage3d" id="complexPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="complexPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="complexLabFrame" title="Complex Numbers — Argand Plane" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="isfPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="isfPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="isfLabFrame" title="Inverse Square Law — Force Explorer" style="width:100%; height:100%; border:0; border-radius:inherit; background:#030a14; display:block;"></iframe>
 </div>
-<div class="stage3d" id="rlmPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="rlmPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="rlmLabFrame" title="Rotation &amp; Linear Motion — Multi-Force/Pivot System" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0a12; display:block;"></iframe>
 </div>
-<div class="stage3d" id="equilibriumPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="equilibriumPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="equilibriumLabFrame" title="Equilibrium — 3D Simulator" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05070a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="statisticsPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="statisticsPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="statisticsLabFrame" title="Statistics — Dispersion Lab" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0a12; display:block;"></iframe>
 </div>
-<div class="stage3d" id="vcmPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="vcmPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="vcmLabFrame" title="Vertical Circular Motion — Live Lab" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0d1117; display:block;"></iframe>
 </div>
-<div class="stage3d" id="carcircularPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="carcircularPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="carcircularLabFrame" title="Banked Road with Friction — Car in Circular Motion" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0d1117; display:block;"></iframe>
 </div>
-<div class="stage3d" id="circmotionPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="circmotionPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="circmotionLabFrame" title="Circular Motion — Radial &amp; Tangential Acceleration" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0d1117; display:block;"></iframe>
 </div>
-<div class="stage3d" id="derivappPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="derivappPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="derivappLabFrame" title="Derivative Application — Circle Area Calculus" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0d1117; display:block;"></iframe>
 </div>
-<div class="stage3d" id="termvelPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="termvelPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="termvelLabFrame" title="Terminal Velocity 3D — Free Fall &amp; Parachute" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0d1117; display:block;"></iframe>
 </div>
-<div class="stage3d" id="conicPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="conicPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="conicLabFrame" title="Conic Sections — Point Tracer" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0d1117; display:block;"></iframe>
 </div>
-<div class="stage3d" id="calcexpPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="calcexpPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="calcexpLabFrame" title="Calculus Explorer — Derivatives &amp; Integration" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0d1117; display:block;"></iframe>
 </div>
-<div class="stage3d" id="ladderfricPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="ladderfricPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="ladderfricLabFrame" title="Ladder Friction — JEE Physics" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0d1117; display:block;"></iframe>
 </div>
-<div class="stage3d" id="masschargecomPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="masschargecomPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="masschargecomLabFrame" title="Centre of Mass — 3D Space Lab" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0d1117; display:block;"></iframe>
 </div>
-<div class="stage3d" id="cartesianPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="cartesianPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="cartesianLabFrame" title="Coordinate Systems — Constrained Particle" style="width:100%; height:100%; border:0; border-radius:inherit; background:#060a10; display:block;"></iframe>
 </div>
-<div class="stage3d" id="trigExplorerPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="trigExplorerPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="trigExplorerFrame" title="Trigonometry Explorer — Waves &amp; Unit Circle" style="width:100%; height:100%; border:0; border-radius:inherit; background:#020510; display:block;"></iframe>
 </div>
-<div class="stage3d" id="pendulumPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="pendulumPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="pendulumFrame" title="Pendulum Motion" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="springPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="springPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="springFrame" title="Spring System" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="funcexplorerPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="funcexplorerPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="funcexplorerFrame" title="Function Explorer" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="vectorkineticsPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="vectorkineticsPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="vectorkineticsFrame" title="Vector Kinetics" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="waveequationPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="waveequationPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="waveequationFrame" title="Wave Equation" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="planemotionPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="planemotionPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="planemotionFrame" title="Plane Motion" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="projection3dPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="projection3dPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="projection3dFrame" title="3D Projection" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="projectilePanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="projectilePanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="projectileLabFrame" title="Projectile Motion" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0e1a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="sqinfparadoxPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="sqinfparadoxPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="sqinfparadoxFrame" title="Square Halving Paradox" style="width:100%; height:100%; border:0; border-radius:inherit; background:#f5f0e8; display:block;"></iframe>
 </div>
-<div class="stage3d" id="vectorcomponentsPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="vectorcomponentsPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="vectorcomponentsFrame" title="Vector Components" style="width:100%; height:100%; border:0; border-radius:inherit; background:#08080f; display:block;"></iframe>
 </div>
-<div class="stage3d" id="motionlawsPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="motionlawsPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="motionlawsFrame" title="Newton's Laws of Motion" style="width:100%; height:100%; border:0; border-radius:inherit; background:#1a0f07; display:block;"></iframe>
 </div>
-<div class="stage3d" id="permcombPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="permcombPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="permcombFrame" title="Permutation &amp; Combination — Tree Calculator" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0a0a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="electrostaticsPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="electrostaticsPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="electrostaticsFrame" title="Electrostatic Force — 3D Explorer" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="centreofmassPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="centreofmassPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="centreofmassFrame" title="Centre of Mass — Explorer" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0a0a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="gravityPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="gravityPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="gravityFrame" title="Gravity — Inverse Square Law Explorer" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="derivsimPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="derivsimPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="derivsimFrame" title="Derivative Simulation — Tap &amp; Pipe" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0a0a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="candlelawPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="candlelawPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="candlelawFrame" title="Candle &amp; the Laws of Light" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0a0a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="momentumPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="momentumPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="momentumFrame" title="Momentum — Physics Universe 3D" style="width:100%; height:100%; border:0; border-radius:inherit; background:#05050e; display:block;"></iframe>
 </div>
-<div class="stage3d" id="parametricPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="parametricPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="parametricFrame" title="Parametric Equations — Water Flow Visualizer" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0a0a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="poolPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="poolPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="poolLabFrame" title="Pool Collision Lab" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0e1a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="inclinePanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="inclinePanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="inclineLabFrame" title="Inclined Plane — Multiview" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0e1a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="statesofmatterPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="statesofmatterPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="statesofmatterLabFrame" title="States of Matter — Force Simulation" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0e1a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="galileoPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="galileoPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="galileoFrame" title="Galileo — Atmospheric Falling Simulation" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0e1a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="energyconservationPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="energyconservationPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="energyconservationFrame" title="Energy Conservation Simulator" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0f0c29; display:block;"></iframe>
 </div>
-<div class="stage3d" id="conservativeforcePanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="conservativeforcePanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="conservativeforceFrame" title="Conservative Force Field — Zero Net Work" style="width:100%; height:100%; border:0; border-radius:inherit; background:#040d1a; display:block;"></iframe>
 </div>
-<div class="stage3d" id="straightlinemotionPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px); overflow:hidden;">
+<div class="stage3d" id="straightlinemotionPanel" style="display:none; height:min(72vh,620px); overflow:hidden;">
   <iframe id="straightlinemotionFrame" title="Straight Line Motion — Acceleration" style="width:100%; height:100%; border:0; border-radius:inherit; background:#0a0a0f; display:block;"></iframe>
 </div>
-<div class="stage3d" id="gonsPanel" style="display:none; height:min(calc(var(--vh-adj) * 72),620px);">
+<div class="stage3d" id="gonsPanel" style="display:none; height:min(72vh,620px);">
   <div id="gonsApp">
     <header>
       <div class="brand">
@@ -22440,7 +22406,5 @@ generate();
   lockMode();
 })();
 </script>
-</div>
-<div class="ad-reserve-bar">Ad space</div>
 </body>
 </html>
