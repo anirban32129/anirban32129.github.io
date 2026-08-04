@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZR0SHJL6VJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZR0SHJL6VJ');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google-adsense-account" content="ca-pub-8974374653448358">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<title>Interactive Math &amp; Physics Lab — Home</title>
+<style>
+  :root{
+    --bg:#05070a; --panel:#12181f; --grid:#1c2530; --text:#e8edf4; --dim:#7c8a9c;
+    --torch:#ffb92e; --pink:#ff3d81; --violet:#7c5cff;
+  }
+  *{box-sizing:border-box;}
+  html{background:var(--bg);}
+  html,body{margin:0;padding:0;color:var(--text);
+    font-family:'EB Garamond',Garamond,'Times New Roman',serif;}
+  body{position:relative;background:transparent;overflow-x:hidden;}
+  #bg3d{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 20%, #0a0f16 0%, var(--bg) 60%);}
+  header,main,footer,#login-toggle-btn,#login-overlay{position:relative;z-index:1;}
+  header{padding:40px 20px 24px;text-align:center;}
+  h1{font-size:28px;margin:0 0 8px;letter-spacing:0.5px;}
+  h1 span{color:var(--torch);}
+  .sub{color:var(--dim);font-size:13px;max-width:640px;margin:0 auto;line-height:1.6;}
+  main{max-width:1080px;margin:0 auto;padding:10px 20px 60px;}
+  section{margin-bottom:36px;}
+  h2{font-size:15px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);
+    border-bottom:1px solid var(--grid);padding-bottom:10px;margin-bottom:16px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+  .grid{perspective:900px;}
+  .card{display:flex;flex-direction:column;justify-content:space-between;gap:14px;
+    background:transparent;
+    border:1px solid rgba(28,37,48,0.35);border-radius:12px;padding:16px 18px;
+    text-decoration:none;color:var(--text);min-height:78px;transform-style:preserve-3d;
+    box-shadow:none;
+    transition:border-color .18s ease, box-shadow .18s ease, transform .05s linear;
+    will-change:transform;}
+  .card:hover{border-color:var(--violet);box-shadow:0 16px 34px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,92,255,0.25);}
+  .card-title{font-size:13.5px;font-weight:600;line-height:1.4;}
+  .card-go{font-size:11px;color:var(--torch);letter-spacing:0.5px;}
+  footer{text-align:center;color:var(--dim);font-size:11px;padding:30px 20px 50px;}
+  footer a{color:var(--torch);text-decoration:none;}
+  .footer-nav{max-width:700px;margin:0 auto 14px;display:flex;flex-wrap:wrap;justify-content:center;gap:14px;}
+  .footer-nav a{color:var(--dim);text-decoration:none;font-size:11px;letter-spacing:0.3px;}
+  .footer-nav a:hover{color:var(--torch);}
+  #toolSearch{width:100%;max-width:1080px;display:block;margin:22px auto 0;padding:14px 16px;
+    border-radius:10px;border:1px solid var(--grid);background:var(--panel);color:var(--text);
+    font-size:14px;outline:none;}
+  #toolSearch:focus{border-color:var(--violet);}
+  #noResults{display:none;text-align:center;color:var(--dim);padding:40px 0;}
+
+  /* --- Login modal --- */
+  #login-toggle-btn{position:fixed;top:18px;right:20px;z-index:900;padding:9px 18px;
+    border-radius:8px;border:1px solid var(--grid);
+    background:linear-gradient(180deg, #1c2530 0%, var(--panel) 100%);color:var(--text);
+    font-size:13px;font-weight:600;cursor:pointer;
+    transition:border-color .15s ease, transform .08s ease, box-shadow .08s ease;
+    max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    box-shadow:0 4px 0 0 #060a10, 0 6px 10px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+    transform:translateY(0);}
+  #login-toggle-btn:hover{border-color:var(--violet);transform:translateY(-1px);
+    box-shadow:0 5px 0 0 #060a10, 0 9px 14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);}
+  #login-toggle-btn:active{transform:translateY(3px);
+    box-shadow:0 1px 0 0 #060a10, 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);}
+  #login-overlay{display:none;position:fixed;inset:0;z-index:1000;background:rgba(5,7,10,0.72);
+    align-items:center;justify-content:center;padding:20px;}
+  #login-modal{position:relative;width:100%;max-width:360px;background:var(--panel);
+    border:1px solid var(--grid);border-radius:14px;padding:28px 26px;}
+  #login-close-btn{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--dim);
+    font-size:20px;line-height:1;cursor:pointer;}
+  #login-close-btn:hover{color:var(--text);}
+  #modal-form-title{font-size:18px;margin:0 0 18px;}
+  .modal-field{display:block;width:100%;margin-bottom:12px;padding:11px 12px;border-radius:8px;
+    border:1px solid var(--grid);background:var(--bg);color:var(--text);font-size:14px;outline:none;}
+  .modal-field:focus{border-color:var(--violet);}
+  #modal-submit-btn,#modal-forgot-submit-btn{width:100%;padding:11px 12px;margin-top:4px;border-radius:8px;border:none;
+    background:linear-gradient(180deg, #9075ff 0%, var(--violet) 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:0 4px 0 0 #4a35b0, 0 6px 10px rgba(124,92,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition:transform .08s ease, box-shadow .08s ease;transform:translateY(0);}
+  #modal-submit-btn:hover,#modal-forgot-submit-btn:hover{transform:translateY(-1px);
+    box-shadow:0 5px 0 0 #4a35b0, 0 9px 14px rgba(124,92,255,0.4), inset 0 1px 0 rgba(255,255,255,0.3);}
+  #modal-submit-btn:active,#modal-forgot-submit-btn:active{transform:translateY(3px);
+    box-shadow:0 1px 0 0 #4a35b0, 0 2px 4px rgba(124,92,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2);}
+  #modal-submit-btn:disabled{opacity:0.6;cursor:default;transform:none;
+    box-shadow:0 4px 0 0 #4a35b0, 0 6px 10px rgba(124,92,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25);}
+  #modal-message{min-height:16px;font-size:12.5px;margin:10px 0 0;color:var(--dim);}
+  #modal-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+    padding:10px 12px;margin-bottom:16px;border-radius:8px;border:1px solid #e2e2e2;
+    background:linear-gradient(180deg, #ffffff 0%, #f1f1f1 100%);color:#1f1f1f;font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:0 4px 0 0 #c2c2c2, 0 6px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.6);
+    transition:border-color .15s ease,transform .08s ease,box-shadow .08s ease;transform:translateY(0);}
+  #modal-google-btn:hover{border-color:var(--violet);transform:translateY(-1px);
+    box-shadow:0 5px 0 0 #c2c2c2, 0 9px 14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.7);}
+  #modal-google-btn:active{transform:translateY(3px);
+    box-shadow:0 1px 0 0 #c2c2c2, 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5);}
+  #modal-google-btn:disabled{opacity:0.6;cursor:default;transform:none;
+    box-shadow:0 4px 0 0 #c2c2c2, 0 6px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.6);}
+  #modal-divider{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:var(--dim);font-size:11.5px;}
+  #modal-divider::before,#modal-divider::after{content:"";flex:1;height:1px;background:var(--grid);}
+  .modal-toggle-row{text-align:center;font-size:12.5px;color:var(--dim);margin-top:16px;}
+  #modal-toggle-link{color:var(--torch);cursor:pointer;text-decoration:underline;}
+  #modal-forgot-link{color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline;
+    display:block;text-align:right;margin-top:-4px;}
+  #modal-forgot-link:hover{color:var(--torch);}
+  #modal-forgot-view{display:none;}
+  #modal-forgot-back{color:var(--torch);cursor:pointer;text-decoration:underline;}
+  #modal-app-view{display:none;text-align:center;}
+  #modal-user-email{display:block;font-size:14px;margin-bottom:18px;word-break:break-all;}
+  #modal-logout-btn{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--grid);
+    background:linear-gradient(180deg, #1c2530 0%, var(--panel) 100%);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:0 4px 0 0 #060a10, 0 6px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+    transition:border-color .15s ease,transform .08s ease,box-shadow .08s ease;transform:translateY(0);}
+  #modal-logout-btn:hover{border-color:var(--pink);transform:translateY(-1px);
+    box-shadow:0 5px 0 0 #060a10, 0 9px 14px rgba(255,61,129,0.25), inset 0 1px 0 rgba(255,255,255,0.08);}
+  #modal-logout-btn:active{transform:translateY(3px);
+    box-shadow:0 1px 0 0 #060a10, 0 2px 4px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);}
+</style>
+<link rel="stylesheet" href="ask-question.css">
+</head>
+<body>
+<canvas id="bg3d"></canvas>
+<button id="login-toggle-btn">Login</button>
+
+<div id="login-overlay">
+  <div id="login-modal">
+    <button id="login-close-btn" aria-label="Close">&times;</button>
+
+    <div id="modal-auth-view">
+      <h3 id="modal-form-title">Log In</h3>
+      <button type="button" id="modal-google-btn">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4c-7.5 0-14 4.2-17.7 10.7z"/>
+          <path fill="#4CAF50" d="M24 44c5.3 0 10.2-2 13.9-5.4l-6.4-5.4C29.4 34.9 26.8 36 24 36c-5.4 0-9.9-3.4-11.5-8.2l-6.6 5.1C9.9 39.7 16.4 44 24 44z"/>
+          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.7 2.1-2 3.9-3.8 5.2l6.4 5.4C41.4 36.4 44 30.6 44 24c0-1.3-.1-2.4-.4-3.5z"/>
+        </svg>
+        <span>Continue with Google</span>
+      </button>
+      <div id="modal-divider"><span>or</span></div>
+      <form id="modal-auth-form">
+        <input class="modal-field" type="email" id="modal-email" placeholder="Email" autocomplete="email" required>
+        <input class="modal-field" type="password" id="modal-password" placeholder="Password" autocomplete="current-password" required>
+        <button type="submit" id="modal-submit-btn">Log In</button>
+      </form>
+      <div id="modal-message"></div>
+      <div class="modal-toggle-row">
+        <span id="modal-forgot-link">Forgot password?</span>
+      </div>
+      <div class="modal-toggle-row">
+        <span id="modal-toggle-text">Don't have an account?</span>
+        <span id="modal-toggle-link">Sign up</span>
+      </div>
+    </div>
+
+    <div id="modal-forgot-view">
+      <h3 id="modal-form-title">Reset Password</h3>
+      <form id="modal-forgot-form">
+        <input class="modal-field" type="email" id="modal-forgot-email" placeholder="Email" autocomplete="email" required>
+        <button type="submit" id="modal-forgot-submit-btn">Send Reset Link</button>
+      </form>
+      <div id="modal-forgot-message"></div>
+      <div class="modal-toggle-row">
+        <span id="modal-forgot-back">Back to log in</span>
+      </div>
+    </div>
+
+    <div id="modal-app-view">
+      <span id="modal-user-email"></span>
+      <button id="modal-logout-btn">Log Out</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <h1>Interactive <span>Math &amp; Physics Lab</span></h1>
+  <div class="sub">Interactive tools for arithmetic, geometry, algebra, trigonometry, calculus, and physics.</div>
+  <input type="text" id="toolSearch" placeholder="Search tools... (e.g. pendulum, circle theorems, matrix)" autocomplete="off">
+</header>
+<main>
+<div id="noResults">No tools match that search.</div>
+<section><h2>Resources</h2><div class="grid">
+<a class="card" href="file-library.html" data-title="file library"><span class="card-title">File Library<br><small style="color:var(--dim);font-weight:400;">Notes, PDFs, Images &amp; Resources</small></span><span class="card-go">Open &rarr;</span></a>
+</div></section>
+<section><h2>Arithmetic &amp; Number</h2><div class="grid"><a class="card" href="mode_add.html" data-title="addition"><span class="card-title">Addition</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_subtract.html" data-title="subtraction"><span class="card-title">Subtraction</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_multiply.html" data-title="multiplication"><span class="card-title">Multiplication</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_divide.html" data-title="division"><span class="card-title">Division</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_factors.html" data-title="factors"><span class="card-title">Factors</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_lcm.html" data-title="lcm"><span class="card-title">LCM</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_multiples.html" data-title="multiples"><span class="card-title">Multiples</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_hcf.html" data-title="hcf"><span class="card-title">HCF</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_percentage.html" data-title="percentage"><span class="card-title">Percentage</span><span class="card-go">Open &rarr;</span></a>
+</div></section>
+<section><h2>Fractions &amp; Decimals</h2><div class="grid"><a class="card" href="mode_fraction.html" data-title="fraction — pizza"><span class="card-title">Fraction — Pizza</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_fracmul.html" data-title="fraction — multiplication"><span class="card-title">Fraction — Multiplication</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_fracdiv.html" data-title="fraction — division"><span class="card-title">Fraction — Division</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_natline.html" data-title="number line — natural"><span class="card-title">Number Line — Natural</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_wholeline.html" data-title="number line — whole"><span class="card-title">Number Line — Whole</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_intline.html" data-title="number line — integer"><span class="card-title">Number Line — Integer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_placevalue.html" data-title="decimal — place value"><span class="card-title">Decimal — Place Value</span><span class="card-go">Open &rarr;</span></a>
+</div></section>
+<section><h2>Measurement — Perimeter, Area &amp; Volume</h2><div class="grid"><a class="card" href="mode_perimeter.html" data-title="perimeter"><span class="card-title">Perimeter</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_area.html" data-title="area"><span class="card-title">Area</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_volume.html" data-title="volume"><span class="card-title">Volume</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_net.html" data-title="3d net"><span class="card-title">3D Net</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_shapearea.html" data-title="area — shape transformation"><span class="card-title">Area — Shape Transformation</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_volxform.html" data-title="volume transformation"><span class="card-title">Volume Transformation</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_unitconv.html" data-title="unit conversion"><span class="card-title">Unit Conversion</span><span class="card-go">Open &rarr;</span></a>
+</div></section>
+<section><h2>Angles &amp; Polygons</h2><div class="grid"><a class="card" href="mode_angle.html" data-title="angle"><span class="card-title">Angle</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_geometry.html" data-title="geometry — parallel lines"><span class="card-title">Geometry — Parallel Lines</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_sectiondivision.html" data-title="line — internal / external division"><span class="card-title">Line — Internal / External Division</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_trianglesum.html" data-title="triangle — angle sum (180°)"><span class="card-title">Triangle — Angle Sum (180°)</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_quadsum.html" data-title="quadrilateral — angle sum (360°)"><span class="card-title">Quadrilateral — Angle Sum (360°)</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_exttri.html" data-title="triangle — external angle"><span class="card-title">Triangle — External Angle</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_extquad.html" data-title="quadrilateral — external angle (360°)"><span class="card-title">Quadrilateral — External Angle (360°)</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_pentagonsum.html" data-title="pentagon — angle sum (540°)"><span class="card-title">Pentagon — Angle Sum (540°)</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_hexagonsum.html" data-title="hexagon — angle sum (720°)"><span class="card-title">Hexagon — Angle Sum (720°)</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_extpentagon.html" data-title="pentagon — external angle (360°)"><span class="card-title">Pentagon — External Angle (360°)</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_exthexagon.html" data-title="hexagon — external angle (360°)"><span class="card-title">Hexagon — External Angle (360°)</span><span class="card-go">Open &rarr;</span></a>
+</div></section>
+<section><h2>Triangles, Circles &amp; Trigonometry</h2><div class="grid"><a class="card" href="mode_trianglecongruence.html" data-title="triangle — congruence"><span class="card-title">Triangle — Congruence</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_trianglesimilarity.html" data-title="triangle — similarity"><span class="card-title">Triangle — Similarity</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_circletheorems.html" data-title="circle theorems"><span class="card-title">Circle Theorems</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_pythagoras.html" data-title="pythagoras — theorem (a²+b²=c²)"><span class="card-title">Pythagoras — Theorem (a²+b²=c²)</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_trig.html" data-title="trigonometry — sin/cos/tan/sec/cot/csc"><span class="card-title">Trigonometry — sin/cos/tan/sec/cot/csc</span><span class="card-go">Open &rarr;</span></a>
+</div></section>
+<section><h2>Algebra &amp; Clock</h2><div class="grid"><a class="card" href="mode_algebra.html" data-title="equation solving — balance scale"><span class="card-title">Equation Solving — Balance Scale</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_algebraproof.html" data-title="algebra — visual proofs ((a±b)²)"><span class="card-title">Algebra — Visual Proofs ((a±b)²)</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_clock.html" data-title="clock — 3d analog (hr/min/sec)"><span class="card-title">Clock — 3D Analog (hr/min/sec)</span><span class="card-go">Open &rarr;</span></a>
+</div></section>
+<section><h2>Shapes, Symmetry &amp; Patterns</h2><div class="grid"><a class="card" href="mode_geobox.html" data-title="digital geometry box"><span class="card-title">Digital Geometry Box</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_gons.html" data-title="2d shapes gallery (gons)"><span class="card-title">2D Shapes Gallery (Gons)</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_symline.html" data-title="symmetry — line / mirror reflection"><span class="card-title">Symmetry — Line / Mirror Reflection</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_symrot.html" data-title="symmetry — rotational"><span class="card-title">Symmetry — Rotational</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="mode_patterns.html" data-title="mathematical patterns — series &amp; sequences"><span class="card-title">Mathematical Patterns — Series &amp; Sequences</span><span class="card-go">Open &rarr;</span></a>
+</div></section>
+<section><h2>Math, Algebra & Probability</h2><div class="grid"><a class="card" href="complex_lab.html" data-title="complex numbers — visual intuition"><span class="card-title">Complex Numbers — Visual Intuition</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="conic_tool.html" data-title="conic sections — point tracer"><span class="card-title">Conic Sections — Point Tracer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="cartesian_tool.html" data-title="coordinate systems — constrained particle"><span class="card-title">Coordinate Systems — Constrained Particle</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="derivsim_tool.html" data-title="derivatives — tap & pipe"><span class="card-title">Derivatives — Tap & Pipe</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="statistics_tool.html" data-title="dispersion lab · statistics"><span class="card-title">Dispersion Lab · Statistics</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="domain_range_lab.html" data-title="domain & range viewer"><span class="card-title">Domain & Range Viewer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="vectorcomponents_tool.html" data-title="force components"><span class="card-title">Force Components</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="funcexplorer_tool.html" data-title="function explorer"><span class="card-title">Function Explorer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="matrix_lab.html" data-title="matrix / vector lab"><span class="card-title">Matrix / Vector Lab</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="permcomb_tool.html" data-title="p&c tree calculator"><span class="card-title">P&C Tree Calculator</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="parametric_tool.html" data-title="parametric functions — water flow visualizer"><span class="card-title">Parametric Functions — Water Flow Visualizer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="trig_explorer.html" data-title="phase shift explorer — sin, cos & unit circle"><span class="card-title">Phase Shift Explorer — sin, cos & Unit Circle</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="probability_toolkit.html" data-title="probability toolkit — 3d"><span class="card-title">Probability Toolkit — 3D</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="relations_tool.html" data-title="set theory explorer"><span class="card-title">Set Theory Explorer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="sqinfparadox_tool.html" data-title="the square halving paradox"><span class="card-title">The Square Halving Paradox</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="vector_lab.html" data-title="vector lab — geometric visualizer"><span class="card-title">Vector Lab — Geometric Visualizer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="calcexp_tool.html" data-title="∂∫ calculus explorer — derivatives & integration"><span class="card-title">∂∫ Calculus Explorer — Derivatives & Integration</span><span class="card-go">Open &rarr;</span></a></div></section>
+<section><h2>Physics — Mechanics, Motion & Forces</h2><div class="grid"><a class="card" href="electrostatics_tool.html" data-title="3d electrostatics explorer"><span class="card-title">3D Electrostatics Explorer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="equilibrium_tool.html" data-title="3d equilibrium simulator"><span class="card-title">3D Equilibrium Simulator</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="projection3d_tool.html" data-title="3d projection — spherical coordinates"><span class="card-title">3D Projection — Spherical Coordinates</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="derivapp_tool.html" data-title="a = πr² — circle area calculus"><span class="card-title">A = πr² — Circle Area Calculus</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="straightlinemotion_tool.html" data-title="acceleration — physics in motion"><span class="card-title">Acceleration — Physics in Motion</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="galileo_tool.html" data-title="atmospheric falling simulation"><span class="card-title">Atmospheric Falling Simulation</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="carcircular_tool.html" data-title="banked road with friction — jee"><span class="card-title">Banked Road with Friction — JEE</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="candlelaw_tool.html" data-title="candle & the laws of light"><span class="card-title">Candle & the Laws of Light</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="centreofmass_tool.html" data-title="centre of mass explorer"><span class="card-title">Centre of Mass Explorer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="masschargecom_tool.html" data-title="centre of mass — 3d space lab"><span class="card-title">Centre of Mass — 3D Space Lab</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="circmotion_tool.html" data-title="circular motion — radial & tangential acceleration"><span class="card-title">Circular Motion — Radial & Tangential Acceleration</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="conservativeforce_tool.html" data-title="conservative force field — zero net work"><span class="card-title">Conservative Force Field — Zero Net Work</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="earth_gravity_lab.html" data-title="earth interior explorer"><span class="card-title">Earth Interior Explorer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="spring_tool.html" data-title="harmonic — spring-mass observatory"><span class="card-title">HARMONIC — Spring-Mass Observatory</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="incline_tool.html" data-title="inclined plane — multiview"><span class="card-title">Inclined Plane — Multiview</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="planets_motion_lab.html" data-title="kepler's three laws"><span class="card-title">Kepler's Three Laws</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="ladderfric_tool.html" data-title="ladder friction — jee physics"><span class="card-title">Ladder Friction — JEE Physics</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="rlm_tool.html" data-title="multi-force and multi-pivot physics system (v14.2.2.0)"><span class="card-title">Multi-Force and Multi-Pivot Physics System (v14.2.2.0)</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="isf_tool.html" data-title="nature of forces — inverse square law explorer"><span class="card-title">Nature of Forces — Inverse Square Law Explorer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="gravity_tool.html" data-title="newton's inverse square law"><span class="card-title">Newton's Inverse Square Law</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="motionlaws_tool.html" data-title="newton's laws — 3d physics laboratory"><span class="card-title">Newton's Laws — 3D Physics Laboratory</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="pendulum_tool.html" data-title="pendulum observatory — blue's 2026 design language"><span class="card-title">PENDULUM OBSERVATORY — Blue's 2026 Design Language</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="planemotion_tool.html" data-title="particle motion — contrast"><span class="card-title">Particle Motion — Contrast</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="physics_perspectives_lab.html" data-title="physics coordinate simulator"><span class="card-title">Physics Coordinate Simulator</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="momentum_tool.html" data-title="physics universe 3d"><span class="card-title">Physics Universe 3D</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="pool_tool.html" data-title="pool collision lab"><span class="card-title">Pool Collision Lab</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="projectile_tool.html" data-title="projectile motion — interactive physics lab"><span class="card-title">Projectile Motion — Interactive Physics Lab</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="statesofmatter_tool.html" data-title="states of matter — force simulation"><span class="card-title">States of Matter — Force Simulation</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="termvel_tool.html" data-title="terminal velocity 3d — free fall & parachute"><span class="card-title">Terminal Velocity 3D — Free Fall & Parachute</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="tether_lab.html" data-title="two balls on a thread — centre of mass"><span class="card-title">Two Balls on a Thread — Centre of Mass</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="vectorkinetics_tool.html" data-title="vector kinematics lab"><span class="card-title">Vector Kinematics Lab</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="vcm_tool.html" data-title="vertical circular motion — live lab"><span class="card-title">Vertical Circular Motion — Live Lab</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="waveequation_tool.html" data-title="wave equation explorer"><span class="card-title">Wave Equation Explorer</span><span class="card-go">Open &rarr;</span></a>
+<a class="card" href="energyconservation_tool.html" data-title="⚡ energy conservation simulator"><span class="card-title">⚡ Energy Conservation Simulator</span><span class="card-go">Open &rarr;</span></a></div></section>
+<section><h2>Astronomy &amp; Space Objects</h2><div class="grid">
+<a class="card" href="mode_spaceobjects.html" data-title="space objects — cosmic glossary (stars, planets, moons, comets, asteroids, meteoroids, meteors, galaxies, nebulae, black holes, neutron stars, brown dwarfs, dwarf planets)"><span class="card-title">🌠 Space Objects — Cosmic Glossary</span><span class="card-go">Open &rarr;</span></a>
+</div></section>
+</main>
+<footer>
+<div class="footer-nav">
+  <a href="tools.html">All Tools</a>
+  <a href="learn.html">Learn</a>
+  <a href="faq.html">FAQ</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="privacy-policy.html">Privacy</a>
+  <a href="terms.html">Terms</a>
+  <a href="disclaimer.html">Disclaimer</a>
+</div>
+</footer>
+<script>
+const input = document.getElementById('toolSearch');
+const cards = Array.from(document.querySelectorAll('main .card'));
+const sections = Array.from(document.querySelectorAll('main section'));
+const noResults = document.getElementById('noResults');
+input.addEventListener('input', () => {
+  const q = input.value.trim().toLowerCase();
+  let visible = 0;
+  cards.forEach(c => {
+    const match = c.dataset.title.includes(q);
+    c.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  sections.forEach(s => {
+    const anyVisible = Array.from(s.querySelectorAll('.card')).some(c => c.style.display !== 'none');
+    s.style.display = anyVisible ? '' : 'none';
+  });
+  noResults.style.display = visible === 0 ? 'block' : 'none';
+});
+</script>
+
+<!-- 3D science background: quantum vacuum fluctuations over a rippling spacetime grid -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const canvas = document.getElementById('bg3d');
+  if(!canvas || typeof THREE === 'undefined') return;
+
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isSmall = window.innerWidth < 700;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 120);
+  camera.position.set(0, 3.5, 19);
+  camera.lookAt(0, -1, 0);
+  // fog matches the page background so distant grid/particles physically fade into it
+  scene.fog = new THREE.Fog(0x05070a, 10, 52);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isSmall ? 1.5 : 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const palette = [0xffb92e, 0xff3d81, 0x7c5cff]; // torch, pink, violet
+
+  // ---- Rippling spacetime fabric: several depth layers, not one flat sheet ----
+  const gridSize = isSmall ? 42 : 60;
+  const gridSeg = isSmall ? 30 : 40;
+  const layerCount = isSmall ? 5 : 8;
+  const layerSpacing = isSmall ? 3.2 : 3.6;
+  const layers = []; // {mesh, geo, pos, base, y, phase, opacity}
+
+  // depth-cue colors: layers nearer the camera's height read brighter/warmer, far ones fade cool into the bg
+  const colorNear = new THREE.Color(0x5c72a0);
+  const colorFar  = new THREE.Color(0x161d26);
+  const yBases = [];
+  for (let li = 0; li < layerCount; li++){
+    yBases.push(-1 + (li - (layerCount - 1) / 2) * layerSpacing);
+  }
+  const camDists = yBases.map(y => Math.abs(camera.position.y - y));
+  const minDist = Math.min(...camDists), maxDist = Math.max(...camDists);
+
+  for (let li = 0; li < layerCount; li++){
+    const gridGeo = new THREE.PlaneGeometry(gridSize, gridSize, gridSeg, gridSeg);
+    gridGeo.rotateX(-Math.PI / 2);
+    const yBase = yBases[li];
+    // t: 0 = layer nearest the camera, 1 = farthest — drives both color drift and opacity falloff
+    const t = maxDist > minDist ? (camDists[li] - minDist) / (maxDist - minDist) : 0;
+    const depthFade = 1 - Math.abs(li - (layerCount - 1) / 2) / layerCount; // fainter toward top/bottom extremes
+    const baseOpacity = 0.2 * (0.55 + 0.45 * depthFade) * (1 - t * 0.5);
+    const layerColor = colorNear.clone().lerp(colorFar, t);
+    const gridMat = new THREE.MeshBasicMaterial({
+      color: layerColor, wireframe: true, transparent: true, opacity: baseOpacity, fog: true
+    });
+    const grid = new THREE.Mesh(gridGeo, gridMat);
+    grid.position.y = yBase;
+    scene.add(grid);
+    const gridPos = gridGeo.attributes.position;
+    const gridBase = new Float32Array(gridPos.array.length);
+    gridBase.set(gridPos.array);
+    layers.push({
+      mesh: grid, geo: gridGeo, pos: gridPos, base: gridBase,
+      y: yBase, phase: li * 1.7, baseOpacity
+    });
+  }
+  // primary layer used for the pointer raycast / ripple-on-tap interaction
+  const grid = layers[Math.floor(layerCount / 2)].mesh;
+  const gridPos = layers[Math.floor(layerCount / 2)].pos;
+  const gridBase = layers[Math.floor(layerCount / 2)].base;
+
+  // wells: localized dips left behind briefly where a pair popped
+  const wells = []; // {x, z, born, strength}
+
+  // ---- Virtual particle–antiparticle pairs ----
+  const pairs = [];
+  const maxPairs = isSmall ? 7 : 13;
+  const partGeo = new THREE.SphereGeometry(0.14, 10, 10);
+  const flashGeo = new THREE.SphereGeometry(1, 10, 10);
+
+  function spawnPair(){
+    const cx = (Math.random() - 0.5) * gridSize * 0.7;
+    const cz = (Math.random() - 0.5) * gridSize * 0.55 - 3;
+    const cy = -9 + Math.random() * 13;
+    spawnPairAt(cx, cy, cz);
+  }
+
+  function spawnPairAt(cx, cy, cz){
+    const color = palette[Math.floor(Math.random() * palette.length)];
+    const dir = new THREE.Vector3(Math.random() - 0.5, (Math.random() - 0.5) * 0.4, Math.random() - 0.5).normalize();
+    const maxSep = 0.6 + Math.random() * 1.1;
+
+    const particle = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 }));
+    const antiparticle = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color: 0xf4f8ff, transparent: true, opacity: 0 }));
+    const flash = new THREE.Mesh(flashGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 }));
+    flash.scale.setScalar(0.01);
+    particle.position.set(cx, cy, cz);
+    antiparticle.position.set(cx, cy, cz);
+    flash.position.set(cx, cy, cz);
+    scene.add(particle, antiparticle, flash);
+
+    const life = 1.4 + Math.random() * 1.6;
+    pairs.push({
+      particle, antiparticle, flash, dir, maxSep, center: new THREE.Vector3(cx, cy, cz),
+      life, age: 0, phase: 'expand', color
+    });
+
+    wells.push({ x: cx, z: cz, y: cy, born: performance.now() / 1000, strength: 0.5 + Math.random() * 0.5 });
+    if (wells.length > 24) wells.shift();
+  }
+
+  // ---- Black holes: warp the spacetime grid, spin accretion disks, emit Hawking radiation, and drift through the scene ----
+  const blackHoles = [];
+
+  function createBlackHole(opts){
+    const bh = {
+      pos: opts.anchor.clone(),
+      anchor: opts.anchor.clone(),
+      radius: opts.radius,
+      orbitCenter: opts.orbitCenter || null, // if set, orbits this moving point (e.g. another black hole) instead of its own anchor
+      orbitRadius: opts.orbitRadius,
+      orbitSpeed: opts.orbitSpeed,
+      orbitPhase: opts.orbitPhase || 0,
+      bobAmp: opts.bobAmp || 0,
+      hawkingParticles: [],
+      hawkingTimer: 0,
+      hawkingMax: opts.hawkingMax,
+      hawkingColor: opts.hawkingColor
+    };
+
+    const bhGeo = new THREE.SphereGeometry(bh.radius, 40, 40);
+    const bhMat = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false });
+    bh.mesh = new THREE.Mesh(bhGeo, bhMat);
+    bh.mesh.position.copy(bh.pos);
+    scene.add(bh.mesh);
+
+    bh.diskGroup = new THREE.Group();
+    bh.diskGroup.position.copy(bh.pos);
+    bh.diskGroup.rotation.x = Math.PI / 2.5;
+    bh.diskRings = [];
+    for (let i = 0; i < opts.diskColors.length; i++){
+      const rInner = bh.radius * (1.18 + i * 0.38);
+      const rOuter = rInner + bh.radius * 0.34;
+      const ringGeo = new THREE.RingGeometry(rInner, rOuter, 72, 1);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: opts.diskColors[i], transparent: true, opacity: (0.6 - i * 0.1) * opts.diskOpacityMul,
+        side: THREE.DoubleSide, fog: false
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      bh.diskGroup.add(ring);
+      bh.diskRings.push({ mesh: ring, speed: (0.55 - i * 0.09) * opts.spinMul });
+    }
+    scene.add(bh.diskGroup);
+
+    bh.hawkingGeo = new THREE.SphereGeometry(bh.radius * 0.025 + 0.02, 6, 6);
+    blackHoles.push(bh);
+    return bh;
+  }
+
+  // primary — the big one, drifting slowly through the scene on its own lazy orbit
+  const bigBH = createBlackHole({
+    anchor: new THREE.Vector3(isSmall ? 9 : 15, 7.5, -7),
+    radius: isSmall ? 1.4 : 2,
+    orbitRadius: 2.6, orbitSpeed: 0.045, bobAmp: 0.6,
+    diskColors: [0xfff2c9, 0xffb92e, 0xff6a3d, 0xff2d3d], diskOpacityMul: 1, spinMul: 1,
+    hawkingMax: isSmall ? 30 : 60, hawkingColor: 0xff2020
+  });
+
+  // companion — smaller, orbits the big black hole itself, so both are always in motion together
+  const smallBH = createBlackHole({
+    anchor: bigBH.anchor.clone(),
+    orbitCenter: bigBH,
+    radius: isSmall ? 0.6 : 0.85,
+    orbitRadius: isSmall ? 3.8 : 5.2, orbitSpeed: 0.16, bobAmp: 0.9,
+    diskColors: [0xffd9a0, 0xff8a3d, 0xff2d3d], diskOpacityMul: 0.85, spinMul: 1.6,
+    hawkingMax: isSmall ? 16 : 30, hawkingColor: 0xff3030
+  });
+
+  function spawnHawking(bh, t){
+    if (bh.hawkingParticles.length >= bh.hawkingMax) return;
+    const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+    const mat = new THREE.MeshBasicMaterial({ color: bh.hawkingColor, transparent: true, opacity: 0, fog: false });
+    const mesh = new THREE.Mesh(bh.hawkingGeo, mat);
+    mesh.position.copy(bh.pos).addScaledVector(dir, bh.radius * 1.03);
+    scene.add(mesh);
+    bh.hawkingParticles.push({ mesh, dir, born: t, life: 2 + Math.random() * 2, speed: 1.1 + Math.random() * 1.6 });
+  }
+
+  // persistent gravity funnel: sums the pull from every black hole, bending each grid layer permanently
+  const _funnel = { x: 0, y: 0, z: 0 };
+  function gravityFunnel(bx, bz, layerY, out){
+    out.x = 0; out.y = 0; out.z = 0;
+    for (let h = 0; h < blackHoles.length; h++){
+      const bh = blackHoles[h];
+      const dx = bx - bh.pos.x, dz = bz - bh.pos.z, dy = layerY - bh.pos.y;
+      const d = Math.sqrt(dx * dx + dz * dz + dy * dy) + 0.001;
+      const pull = (bh.radius * 10) / (d * d + bh.radius * bh.radius);
+      out.y -= pull;
+      out.x -= (dx / d) * pull * 0.5;
+      out.z -= (dz / d) * pull * 0.5;
+    }
+  }
+
+  // ---- Pulsars: rotating neutron stars sweeping twin beams, flashing sharply as each beam passes ----
+  const pulsars = [];
+  function createPulsar(opts){
+    const p = {
+      pos: opts.pos.clone(), period: opts.period, tilt: opts.tilt,
+      phase: opts.phase || Math.random() * Math.PI * 2, color: opts.color
+    };
+
+    const coreGeo = new THREE.SphereGeometry(opts.coreRadius, 12, 12);
+    const coreMat = new THREE.MeshBasicMaterial({ color: opts.color, transparent: true, opacity: 1, fog: false });
+    p.core = new THREE.Mesh(coreGeo, coreMat);
+    p.core.position.copy(p.pos);
+    scene.add(p.core);
+
+    // soft halo standing in for bloom, since there's no post-processing pass here
+    const haloGeo = new THREE.SphereGeometry(opts.coreRadius * 3.4, 12, 12);
+    const haloMat = new THREE.MeshBasicMaterial({ color: opts.color, transparent: true, opacity: 0.12, fog: false });
+    p.halo = new THREE.Mesh(haloGeo, haloMat);
+    p.halo.position.copy(p.pos);
+    scene.add(p.halo);
+
+    // twin lighthouse beams, grouped so a single rotation sweeps both at once
+    p.beamGroup = new THREE.Group();
+    p.beamGroup.position.copy(p.pos);
+    p.beamGroup.rotation.z = opts.tilt;
+    const beamLen = opts.beamLen;
+    const beamGeo = new THREE.ConeGeometry(opts.coreRadius * 2.2, beamLen, 10, 1, true);
+    const beamMatA = new THREE.MeshBasicMaterial({ color: opts.color, transparent: true, opacity: 0.22, side: THREE.DoubleSide, fog: false });
+    const beamMatB = beamMatA.clone();
+    const beamUp = new THREE.Mesh(beamGeo, beamMatA);
+    beamUp.position.y = beamLen / 2;
+    const beamDown = new THREE.Mesh(beamGeo, beamMatB);
+    beamDown.rotation.x = Math.PI;
+    beamDown.position.y = -beamLen / 2;
+    p.beamGroup.add(beamUp, beamDown);
+    scene.add(p.beamGroup);
+    p.beamMats = [beamMatA, beamMatB];
+
+    pulsars.push(p);
+    return p;
+  }
+
+  // ---- Starfield: distant twinkling stars ----
+  const starCount = isSmall ? 260 : 480;
+  const starGeo = new THREE.BufferGeometry();
+  const starPos = new Float32Array(starCount * 3);
+  const starColorArr = new Float32Array(starCount * 3);
+  const starColorChoices = [new THREE.Color(0xffffff), new THREE.Color(0xffe9b0), new THREE.Color(0xcfe8ff), new THREE.Color(0xffd0e0)];
+  for (let i = 0; i < starCount; i++){
+    const r = 35 + Math.random() * 40;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos((Math.random() * 2) - 1);
+    starPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    starPos[i*3+1] = Math.abs(r * Math.cos(phi)) * 0.6 - 4;
+    starPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta) - 10;
+    const c = starColorChoices[Math.floor(Math.random() * starColorChoices.length)];
+    starColorArr[i*3] = c.r; starColorArr[i*3+1] = c.g; starColorArr[i*3+2] = c.b;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  starGeo.setAttribute('color', new THREE.BufferAttribute(starColorArr, 3));
+  const starMat = new THREE.PointsMaterial({ size: 0.16, vertexColors: true, transparent: true, opacity: 0.85, fog: true, sizeAttenuation: true });
+  const starField = new THREE.Points(starGeo, starMat);
+  scene.add(starField);
+
+  // ---- Planets + Moons: reusable solar-system factory, instanced several times around the scene ----
+  function makePlanet(radius, color, ring){
+    const g = new THREE.Group();
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 20, 20), new THREE.MeshBasicMaterial({ color, fog: true }));
+    g.add(mesh);
+    if (ring){
+      const ringMesh = new THREE.Mesh(
+        new THREE.RingGeometry(radius * 1.5, radius * 2.3, 40),
+        new THREE.MeshBasicMaterial({ color: ring, transparent: true, opacity: 0.5, side: THREE.DoubleSide, fog: true })
+      );
+      ringMesh.rotation.x = Math.PI / 2.4;
+      g.add(ringMesh);
+    }
+    return { group: g, mesh };
+  }
+
+  function createSolarSystem(opts){
+    const system = new THREE.Group();
+    system.position.copy(opts.pos);
+    system.scale.setScalar(opts.scale || 1);
+    scene.add(system);
+
+    const orbitA = new THREE.Group();
+    const planetA = makePlanet(0.55, opts.colorA, null);
+    planetA.group.position.set(3.2, 0, 0);
+    orbitA.add(planetA.group);
+    system.add(orbitA);
+
+    const moonOrbit = new THREE.Group();
+    const moon = makePlanet(0.16, 0xbfc6d0, null);
+    moon.group.position.set(0.9, 0, 0);
+    moonOrbit.add(moon.group);
+    planetA.group.add(moonOrbit);
+
+    const orbitB = new THREE.Group();
+    const planetB = makePlanet(0.85, opts.colorB, opts.ring || null);
+    planetB.group.position.set(5.4, 0.6, -1.2);
+    orbitB.add(planetB.group);
+    system.add(orbitB);
+
+    const orbitDwarf = new THREE.Group();
+    const dwarfPlanet = makePlanet(0.24, 0xb7a08c, null);
+    dwarfPlanet.group.position.set(7.1, -0.8, 1.8);
+    orbitDwarf.add(dwarfPlanet.group);
+    system.add(orbitDwarf);
+
+    const asteroidBelt = new THREE.Group();
+    const asteroidGeo = new THREE.IcosahedronGeometry(0.07, 0);
+    const asteroidCount = isSmall ? 10 : 18;
+    const asteroids = [];
+    for (let i = 0; i < asteroidCount; i++){
+      const a = new THREE.Mesh(asteroidGeo, new THREE.MeshBasicMaterial({ color: 0x8a7d6e, fog: true }));
+      const ang = (i / asteroidCount) * Math.PI * 2;
+      const rad = 4.2 + Math.random() * 0.6;
+      a.position.set(Math.cos(ang) * rad, (Math.random() - 0.5) * 0.4, Math.sin(ang) * rad * 0.5);
+      a.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+      asteroidBelt.add(a);
+      asteroids.push({ mesh: a, spin: 0.4 + Math.random() * 0.8 });
+    }
+    system.add(asteroidBelt);
+
+    return {
+      group: system, orbitA, orbitB, orbitDwarf, moonOrbit, planetA, planetB, asteroidBelt, asteroids,
+      baseY: opts.pos.y, bobSpeed: opts.bobSpeed || 0.08, bobAmp: opts.bobAmp || 0.6,
+      speedMul: opts.speedMul || 1
+    };
+  }
+
+  const solarSystems = [
+    createSolarSystem({ pos: new THREE.Vector3(isSmall ? -10 : -16, 5, -14), colorA: 0x4d8fd9, colorB: 0xe0a95e, ring: 0xffd9a0, scale: 1, speedMul: 1 }),
+    createSolarSystem({ pos: new THREE.Vector3(isSmall ? 13 : 22, -3, -19), colorA: 0xd96b6b, colorB: 0x6bd9a0, ring: 0xa6ffe0, scale: 0.75, speedMul: 1.3, bobSpeed: 0.05, bobAmp: 0.4 }),
+    createSolarSystem({ pos: new THREE.Vector3(isSmall ? -6 : -9, -10, -26), colorA: 0xb08fe0, colorB: 0xe0d06b, ring: 0xfff0b0, scale: 0.6, speedMul: 0.75, bobSpeed: 0.1, bobAmp: 0.5 }),
+    createSolarSystem({ pos: new THREE.Vector3(isSmall ? 6 : 10, 11, -24), colorA: 0x6bc9d9, colorB: 0xd98f4d, ring: 0xffcf9a, scale: 0.55, speedMul: 1.1, bobSpeed: 0.06, bobAmp: 0.35 })
+  ];
+
+  // brown dwarf: dim reddish glow, sitting apart from the planet systems
+  const brownDwarf = new THREE.Group();
+  const bdCore = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), new THREE.MeshBasicMaterial({ color: 0x8a4a3a, fog: true }));
+  const bdGlow = new THREE.Mesh(new THREE.SphereGeometry(0.62, 16, 16), new THREE.MeshBasicMaterial({ color: 0xcc6a4a, transparent: true, opacity: 0.25, fog: true }));
+  brownDwarf.add(bdCore, bdGlow);
+  brownDwarf.position.set(isSmall ? 12 : 20, -5, -9);
+  scene.add(brownDwarf);
+
+  // ---- Nebula: a soft glowing cloud made of layered translucent discs, far in the background ----
+  const nebula = new THREE.Group();
+  const nebColors = [0x7c5cff, 0xff3d81, 0x3d6cff];
+  for (let i = 0; i < 5; i++){
+    const disc = new THREE.Mesh(
+      new THREE.CircleGeometry(2.2 + Math.random() * 1.6, 24),
+      new THREE.MeshBasicMaterial({ color: nebColors[i % nebColors.length], transparent: true, opacity: 0.05, fog: true, depthWrite: false })
+    );
+    disc.position.set((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 1.5);
+    disc.rotation.z = Math.random() * Math.PI;
+    nebula.add(disc);
+  }
+  nebula.position.set(isSmall ? -8 : -14, -8, -22);
+  scene.add(nebula);
+
+  // ---- Galaxy: a slowly-rotating spiral of points, distant and small ----
+  const galaxyCount = isSmall ? 180 : 320;
+  const galaxyGeo = new THREE.BufferGeometry();
+  const galaxyPos = new Float32Array(galaxyCount * 3);
+  const galaxyColorArr = new Float32Array(galaxyCount * 3);
+  const galCore = new THREE.Color(0xfff2c9), galEdge = new THREE.Color(0x7c5cff);
+  for (let i = 0; i < galaxyCount; i++){
+    const arm = i % 3;
+    const t = i / galaxyCount;
+    const ang = t * Math.PI * 6 + arm * (Math.PI * 2 / 3);
+    const rad = t * 3.4;
+    galaxyPos[i*3]   = Math.cos(ang) * rad;
+    galaxyPos[i*3+1] = (Math.random() - 0.5) * 0.25;
+    galaxyPos[i*3+2] = Math.sin(ang) * rad;
+    const c = galCore.clone().lerp(galEdge, t);
+    galaxyColorArr[i*3] = c.r; galaxyColorArr[i*3+1] = c.g; galaxyColorArr[i*3+2] = c.b;
+  }
+  galaxyGeo.setAttribute('position', new THREE.BufferAttribute(galaxyPos, 3));
+  galaxyGeo.setAttribute('color', new THREE.BufferAttribute(galaxyColorArr, 3));
+  const galaxyMat = new THREE.PointsMaterial({ size: 0.09, vertexColors: true, transparent: true, opacity: 0.8, fog: true });
+  const galaxy = new THREE.Points(galaxyGeo, galaxyMat);
+  galaxy.rotation.x = 0.9;
+  galaxy.position.set(isSmall ? 10 : 17, 8.5, -20);
+  scene.add(galaxy);
+
+  // ---- Comet: a bright icy body on a slow looping path, with a longer particle tail ----
+  const comet = new THREE.Group();
+  const cometHead = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 12), new THREE.MeshBasicMaterial({ color: 0xdff3ff, fog: true }));
+  comet.add(cometHead);
+  const cometTailGeo = new THREE.BufferGeometry();
+  const cometTailCount = 22;
+  const cometTailPos = new Float32Array(cometTailCount * 3);
+  cometTailGeo.setAttribute('position', new THREE.BufferAttribute(cometTailPos, 3));
+  const cometTailMat = new THREE.PointsMaterial({ color: 0xaee0ff, size: 0.1, transparent: true, opacity: 0.55, fog: true });
+  const cometTail = new THREE.Points(cometTailGeo, cometTailMat);
+  comet.add(cometTail);
+  scene.add(comet);
+  const cometTrailHistory = [];
+  const cometPathCenter = new THREE.Vector3(isSmall ? -3 : -4, 1, -6);
+  const cometPathRadius = { x: isSmall ? 13 : 19, y: 6, z: 6 };
+
+  const pulsarColor = 0xcfe8ff; // cool white-blue, distinct from the warm black-hole palette
+  createPulsar({ pos: new THREE.Vector3(-16, -6, -11), period: 1.6, tilt: 0.7, coreRadius: 0.14, beamLen: 22, color: pulsarColor });
+  createPulsar({ pos: new THREE.Vector3(-7, 10.5, -15), period: 2.3, tilt: -0.5, coreRadius: 0.11, beamLen: 18, color: 0xe6d9ff });
+  if (!isSmall){
+    createPulsar({ pos: new THREE.Vector3(19, -9, 5), period: 1.1, tilt: 1.1, coreRadius: 0.12, beamLen: 20, color: pulsarColor });
+  }
+
+  // ---- Meteors: quick bright streaks that flash across the scene, trail fading behind them ----
+  const meteors = [];
+  const meteorMaxLen = isSmall ? 3.4 : 4.6;
+  const meteorHeadGeo = new THREE.SphereGeometry(0.09, 8, 8);
+  const meteorPalette = [0xffe9b0, 0xffb92e, 0xff3d81, 0xcfe8ff];
+
+  function spawnMeteor(){
+    const color = meteorPalette[Math.floor(Math.random() * meteorPalette.length)];
+    // enter from a top/side edge of the visible field, travel diagonally down-across
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const startX = side * (isSmall ? 16 : 24) * (0.4 + Math.random() * 0.6);
+    const startY = 8 + Math.random() * 10;
+    const startZ = -18 + Math.random() * 14;
+    const dir = new THREE.Vector3(-side * (0.7 + Math.random() * 0.3), -(0.5 + Math.random() * 0.4), (Math.random() - 0.5) * 0.3).normalize();
+    const speed = 14 + Math.random() * 10;
+
+    const head = new THREE.Mesh(meteorHeadGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, fog: false }));
+    head.position.set(startX, startY, startZ);
+    scene.add(head);
+
+    // trail: a thin line stretching back along the direction of travel, fading tail-to-head
+    const trailGeo = new THREE.BufferGeometry();
+    const trailPositions = new Float32Array(2 * 3);
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+    const trailMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0, fog: false });
+    const trail = new THREE.Line(trailGeo, trailMat);
+    scene.add(trail);
+
+    meteors.push({ head, trail, trailPositions, dir, speed, color, born: null, life: 0.9 + Math.random() * 0.7, age: 0 });
+  }
+
+  function onResize(){
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+  window.addEventListener('resize', onResize);
+
+  // ---- Click / tap: ripple the grid at the pointer position ----
+  const raycaster = new THREE.Raycaster();
+  const pointerNDC = new THREE.Vector2();
+  function rippleAt(clientX, clientY){
+    pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
+    pointerNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(pointerNDC, camera);
+    const hit = raycaster.intersectObject(grid, false)[0];
+    if (!hit) return;
+    wells.push({ x: hit.point.x, z: hit.point.z, y: hit.point.y, born: clock.getElapsedTime(), strength: 1.4 });
+    if (wells.length > 24) wells.shift();
+    if (!prefersReduced && pairs.length < maxPairs){
+      spawnPairAt(hit.point.x, hit.point.y + 1 + Math.random() * 3, hit.point.z);
+    }
+  }
+  window.addEventListener('pointerdown', (e) => rippleAt(e.clientX, e.clientY));
+
+  const clock = new THREE.Clock();
+  let spawnTimer = 0;
+  let meteorTimer = 1.2;
+
+  function animate(){
+    const dt = Math.min(clock.getDelta(), 0.05);
+    const t = clock.getElapsedTime();
+
+    if (!prefersReduced){
+      // ripple every depth layer: ambient volumetric waves + localized wells from recent pair events
+      for (let li = 0; li < layers.length; li++){
+        const layer = layers[li];
+        const arr = layer.pos.array;
+        const base = layer.base;
+        const ph = layer.phase;
+        for (let i = 0; i < arr.length; i += 3){
+          const bx = base[i], bz = base[i + 2];
+          let y = Math.sin(bx * 0.28 + t * 0.6 + ph) * 0.22 + Math.cos(bz * 0.24 + t * 0.5 + ph) * 0.22;
+          // gentle lateral drift so the fabric bulges in x/z too, not just y
+          let dx = Math.sin(bz * 0.2 + t * 0.35 + ph) * 0.12;
+          let dz = Math.cos(bx * 0.2 + t * 0.3 + ph) * 0.12;
+          for (let w = 0; w < wells.length; w++){
+            const well = wells[w];
+            const age = t - well.born;
+            if (age < 0 || age > 2.2) continue;
+            const wx = well.x, wz = well.z;
+            const ddx = bx - wx, ddz = bz - wz;
+            const d = Math.sqrt(ddx * ddx + ddz * ddz);
+            // waves reach each layer with a slight delay based on distance from the well's own depth
+            const layerDepthOffset = Math.abs((well.y || 0) - layer.y) * 0.3;
+            const ring = Math.sin(d * 1.6 - (age - layerDepthOffset) * 6.0)
+              * Math.exp(-d * 0.35) * Math.exp(-age * 1.1) * well.strength;
+            y -= ring * 0.9;
+            dx += (ddx / (d + 0.001)) * ring * 0.15;
+            dz += (ddz / (d + 0.001)) * ring * 0.15;
+          }
+          gravityFunnel(bx, bz, layer.y, _funnel);
+          y += _funnel.y;
+          dx += _funnel.x;
+          dz += _funnel.z;
+          arr[i] = bx + dx;
+          arr[i + 1] = y;
+          arr[i + 2] = bz + dz;
+        }
+        layer.pos.needsUpdate = true;
+      }
+
+      // spawn new pairs
+      spawnTimer -= dt;
+      if (spawnTimer <= 0 && pairs.length < maxPairs){
+        spawnPair();
+        spawnTimer = 0.18 + Math.random() * 0.35;
+      }
+
+      // animate each pair: pop in -> separate -> pull back -> annihilate flash
+      for (let i = pairs.length - 1; i >= 0; i--){
+        const p = pairs[i];
+        p.age += dt;
+        const f = p.age / p.life; // 0..1
+
+        let sep, opacity;
+        if (f < 0.5){
+          const k = f / 0.5;
+          sep = k * p.maxSep;
+          opacity = Math.min(1, k * 3);
+        } else {
+          const k = (f - 0.5) / 0.5;
+          sep = (1 - k) * p.maxSep;
+          opacity = Math.max(0, 1 - k * 1.15);
+        }
+
+        p.particle.position.copy(p.center).addScaledVector(p.dir, sep);
+        p.antiparticle.position.copy(p.center).addScaledVector(p.dir, -sep);
+        p.particle.material.opacity = opacity * 0.95;
+        p.antiparticle.material.opacity = opacity * 0.95;
+
+        // annihilation flash near the end
+        if (f > 0.88){
+          const k = (f - 0.88) / 0.12;
+          p.flash.material.opacity = (1 - k) * 0.5;
+          p.flash.scale.setScalar(0.05 + k * 1.4);
+        }
+
+        if (f >= 1){
+          scene.remove(p.particle, p.antiparticle, p.flash);
+          p.particle.material.dispose();
+          p.antiparticle.material.dispose();
+          p.flash.material.dispose();
+          pairs.splice(i, 1);
+        }
+      }
+
+      camera.position.x = Math.sin(t * 0.05) * 2.5;
+      camera.lookAt(0, -1, 0);
+
+      // move, spin, and emit for every black hole
+      for (let h = 0; h < blackHoles.length; h++){
+        const bh = blackHoles[h];
+        const center = bh.orbitCenter ? bh.orbitCenter.pos : bh.anchor;
+        const ang = t * bh.orbitSpeed + bh.orbitPhase;
+        bh.pos.set(
+          center.x + Math.cos(ang) * bh.orbitRadius,
+          bh.anchor.y + Math.sin(t * bh.orbitSpeed * 1.7) * bh.bobAmp,
+          center.z + Math.sin(ang) * bh.orbitRadius * 0.6
+        );
+        bh.mesh.position.copy(bh.pos);
+        bh.diskGroup.position.copy(bh.pos);
+
+        for (let i = 0; i < bh.diskRings.length; i++){
+          bh.diskRings[i].mesh.rotation.z = t * bh.diskRings[i].speed;
+        }
+        bh.mesh.rotation.y = t * 0.15;
+
+        bh.hawkingTimer -= dt;
+        if (bh.hawkingTimer <= 0){
+          spawnHawking(bh, t);
+          bh.hawkingTimer = 0.05 + Math.random() * 0.08;
+        }
+        for (let i = bh.hawkingParticles.length - 1; i >= 0; i--){
+          const hp = bh.hawkingParticles[i];
+          const age = t - hp.born;
+          const f = age / hp.life;
+          hp.mesh.position.addScaledVector(hp.dir, hp.speed * dt);
+          hp.mesh.material.opacity = f < 0.15 ? (f / 0.15) : Math.max(0, 1 - (f - 0.15) / 0.85);
+          if (f >= 1){
+            scene.remove(hp.mesh);
+            hp.mesh.material.dispose();
+            bh.hawkingParticles.splice(i, 1);
+          }
+        }
+      }
+      // spin and flash every pulsar as its beam sweeps around
+      for (let i = 0; i < pulsars.length; i++){
+        const p = pulsars[i];
+        const spin = t * (Math.PI * 2 / p.period) + p.phase;
+        p.beamGroup.rotation.y = spin;
+        // sharp flash pattern: bright when a beam points near the camera, dark between — like a real lighthouse
+        const pulse = Math.pow(Math.abs(Math.sin(spin)), 12);
+        p.core.material.opacity = 0.45 + pulse * 0.55;
+        p.core.scale.setScalar(1 + pulse * 0.7);
+        p.halo.material.opacity = 0.06 + pulse * 0.3;
+        p.halo.scale.setScalar(1 + pulse * 1.4);
+        p.beamMats[0].opacity = p.beamMats[1].opacity = 0.06 + pulse * 0.34;
+      }
+
+      // spawn meteors on their own random cadence, independent of vacuum-pair spawning
+      meteorTimer -= dt;
+      if (meteorTimer <= 0){
+        spawnMeteor();
+        meteorTimer = (isSmall ? 2.6 : 1.6) + Math.random() * 3.2;
+      }
+
+      // move each meteor along its streak, fading in fast then out, with a trail stretching behind
+      for (let i = meteors.length - 1; i >= 0; i--){
+        const m = meteors[i];
+        m.age += dt;
+        const f = m.age / m.life; // 0..1
+        m.head.position.addScaledVector(m.dir, m.speed * dt);
+
+        const opacity = f < 0.12 ? (f / 0.12) : Math.max(0, 1 - (f - 0.12) / 0.88);
+        m.head.material.opacity = opacity;
+        m.head.scale.setScalar(1 + (1 - opacity) * 0.4);
+
+        const tailPos = m.head.position.clone().addScaledVector(m.dir, -meteorMaxLen * Math.min(1, f / 0.12 || 1));
+        const arr = m.trailPositions;
+        arr[0] = m.head.position.x; arr[1] = m.head.position.y; arr[2] = m.head.position.z;
+        arr[3] = tailPos.x; arr[4] = tailPos.y; arr[5] = tailPos.z;
+        m.trail.geometry.attributes.position.needsUpdate = true;
+        m.trail.material.opacity = opacity * 0.6;
+
+        if (f >= 1){
+          scene.remove(m.head, m.trail);
+          m.head.material.dispose();
+          m.trail.material.dispose();
+          m.trail.geometry.dispose();
+          meteors.splice(i, 1);
+        }
+      }
+
+      // planets + moon: orbit around each local planet system, moon orbits its planet
+      for (const sys of solarSystems){
+        sys.orbitA.rotation.y = t * 0.12 * sys.speedMul;
+        sys.orbitB.rotation.y = t * 0.07 * sys.speedMul;
+        sys.orbitDwarf.rotation.y = t * 0.045 * sys.speedMul;
+        sys.moonOrbit.rotation.y = t * 0.9 * sys.speedMul;
+        sys.planetA.mesh.rotation.y = t * 0.5;
+        sys.planetB.mesh.rotation.y = t * 0.3;
+        sys.group.position.y = sys.baseY + Math.sin(t * sys.bobSpeed) * sys.bobAmp;
+
+        sys.asteroidBelt.rotation.y = t * 0.05 * sys.speedMul;
+        for (let i = 0; i < sys.asteroids.length; i++){
+          const a = sys.asteroids[i];
+          a.mesh.rotation.x += dt * a.spin * 0.3;
+          a.mesh.rotation.y += dt * a.spin * 0.4;
+        }
+      }
+
+      // brown dwarf: gentle pulsing glow and slow drift
+      brownDwarf.position.x += Math.sin(t * 0.03) * 0.002;
+      bdGlow.material.opacity = 0.2 + Math.sin(t * 0.8) * 0.06;
+      brownDwarf.rotation.y = t * 0.1;
+
+      // nebula: barely-perceptible drift and rotation, like a cloud seen from very far away
+      nebula.rotation.z = t * 0.01;
+      nebula.children.forEach((disc, i) => { disc.material.opacity = 0.04 + Math.sin(t * 0.3 + i) * 0.015; });
+
+      // galaxy: slow spiral rotation, distant
+      galaxy.rotation.z = t * 0.02;
+
+      // comet: loops along a wide elliptical path, leaving a fading particle tail behind it
+      const cAng = t * 0.09;
+      const cx = cometPathCenter.x + Math.cos(cAng) * cometPathRadius.x;
+      const cy = cometPathCenter.y + Math.sin(cAng * 1.3) * cometPathRadius.y * 0.4;
+      const cz = cometPathCenter.z + Math.sin(cAng) * cometPathRadius.z;
+      cometHead.position.set(0, 0, 0);
+      comet.position.set(cx, cy, cz);
+      cometTrailHistory.unshift({ x: cx, y: cy, z: cz });
+      if (cometTrailHistory.length > cometTailCount) cometTrailHistory.pop();
+      for (let i = 0; i < cometTailCount; i++){
+        const p = cometTrailHistory[i] || cometTrailHistory[cometTrailHistory.length - 1] || { x: cx, y: cy, z: cz };
+        cometTailPos[i*3] = p.x - cx;
+        cometTailPos[i*3+1] = p.y - cy;
+        cometTailPos[i*3+2] = p.z - cz;
+      }
+      cometTailGeo.attributes.position.needsUpdate = true;
+
+      // starfield + galaxy: gentle overall twinkle via opacity pulse
+      starMat.opacity = 0.7 + Math.sin(t * 0.6) * 0.12;
+    }
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+</script>
+
+<!-- 3D tilt interaction for tool cards -->
+<script>
+(function(){
+  const isTouch = matchMedia('(hover: none)').matches;
+  const cardEls = Array.from(document.querySelectorAll('main .card'));
+
+  function setTransform(card, rotX, rotY, lift){
+    card.style.transform = `perspective(700px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(${lift}px)`;
+  }
+  function reset(card){
+    card.style.transform = 'perspective(700px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+  }
+
+  cardEls.forEach(card => {
+    if (!isTouch){
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width - 0.5;
+        const py = (e.clientY - rect.top) / rect.height - 0.5;
+        setTransform(card, -py * 14, px * 14, 14);
+      });
+      card.addEventListener('mouseleave', () => reset(card));
+    } else {
+      card.addEventListener('touchstart', () => setTransform(card, 5, -3, 10), { passive: true });
+      card.addEventListener('touchend', () => reset(card), { passive: true });
+    }
+  });
+})();
+</script>
+
+<script src="supabase-client.js"></script>
+<script src="login-modal.js"></script>
+<script src="ask-question.js"></script>
+</body>
+</html>
