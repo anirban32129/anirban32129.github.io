@@ -3,8 +3,8 @@
 <head>
 <style id="ad-reserve-style">
 :root{--vh-adj:1vh}
-body{display:flex !important;flex-direction:column !important;height:100% !important}
-.viz-content-wrap{flex:1 1 auto;min-height:0;position:relative;overflow:hidden}
+body{display:flex !important;flex-direction:column !important;min-height:100% !important}
+.viz-content-wrap{flex:1 1 auto;position:relative;overflow:visible}
 .ad-reserve-bar{flex:0 0 50px;display:flex;align-items:center;justify-content:center;font:11px sans-serif;color:#8892a0;background:rgba(255,255,255,.02);border-top:1px solid rgba(120,130,150,.15);pointer-events:none}
 @media (max-width:700px){.ad-reserve-bar{display:none}}
 </style>
@@ -651,6 +651,39 @@ body.light .data-section {
 .pov-hud-val.sep  { color:var(--gold); }
 </style>
 <link rel="stylesheet" href="ask-question.css">
+<style>
+body{background:radial-gradient(ellipse at 50% -10%, #142033 0%, #05070a 65%) !important;background-attachment:fixed !important;position:relative !important;}
+body::before,body::after{content:'';position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(clamp(22px,6vw,50px));will-change:transform;}
+body::before{width:min(60vmax,600px);height:min(60vmax,600px);top:-18%;left:-12%;background:radial-gradient(circle,#4a90e24d 0%,transparent 70%);animation:bgDriftA 24s ease-in-out infinite alternate;}
+body::after{width:min(55vmax,540px);height:min(55vmax,540px);bottom:-20%;right:-10%;background:radial-gradient(circle,#38bdf840 0%,transparent 70%);animation:bgDriftB 30s ease-in-out infinite alternate;}
+@keyframes bgDriftA{0%{transform:translate(0,0) scale(1);}100%{transform:translate(6vw,5vh) scale(1.12);}}
+@keyframes bgDriftB{0%{transform:translate(0,0) scale(1);}100%{transform:translate(-5vw,-6vh) scale(1.08);}}
+@media (max-width:700px){
+  body::before,body::after{filter:blur(clamp(16px,8vw,32px));}
+  body::before{width:85vmax;height:85vmax;}
+  body::after{width:78vmax;height:78vmax;}
+}
+@media (prefers-reduced-motion:reduce){
+  body::before,body::after{animation:none !important;}
+}
+</style>
+<style>
+body{background:radial-gradient(ellipse at 50% -10%, #142033 0%, #05070a 65%) !important;background-attachment:fixed !important;position:relative !important;}
+body::before,body::after{content:'';position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(clamp(22px,6vw,50px));will-change:transform;}
+body::before{width:min(60vmax,600px);height:min(60vmax,600px);top:-18%;left:-12%;background:radial-gradient(circle,#4a90e24d 0%,transparent 70%);animation:bgDriftA 24s ease-in-out infinite alternate;}
+body::after{width:min(55vmax,540px);height:min(55vmax,540px);bottom:-20%;right:-10%;background:radial-gradient(circle,#38bdf840 0%,transparent 70%);animation:bgDriftB 30s ease-in-out infinite alternate;}
+@keyframes bgDriftA{0%{transform:translate(0,0) scale(1);}100%{transform:translate(6vw,5vh) scale(1.12);}}
+@keyframes bgDriftB{0%{transform:translate(0,0) scale(1);}100%{transform:translate(-5vw,-6vh) scale(1.08);}}
+@media (max-width:700px){
+  body::before,body::after{filter:blur(clamp(16px,8vw,32px));}
+  body::before{width:85vmax;height:85vmax;}
+  body::after{width:78vmax;height:78vmax;}
+}
+@media (prefers-reduced-motion:reduce){
+  body::before,body::after{animation:none !important;}
+}
+</style>
+<style>body{background:radial-gradient(ellipse at 50% -10%, #142033 0%, #05070a 65%) !important;background-attachment:fixed !important;}</style>
 </head>
 <body>
 <div class="viz-content-wrap">
@@ -3958,7 +3991,7 @@ document.getElementById('restart-modal').addEventListener('click', e=>{
 });
 </script>
 </div>
-<div class="ad-reserve-bar">Ad space</div>
+<div class="ad-reserve-bar"></div>
 <script src="ask-question.js"></script>
 </body>
 </html>

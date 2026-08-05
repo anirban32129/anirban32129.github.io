@@ -3,8 +3,8 @@
 <head>
 <style id="ad-reserve-style">
 :root{--vh-adj:1vh}
-body{display:flex !important;flex-direction:column !important;height:100% !important}
-.viz-content-wrap{flex:1 1 auto;min-height:0;position:relative;overflow:hidden}
+body{display:flex !important;flex-direction:column !important;min-height:100% !important}
+.viz-content-wrap{flex:1 1 auto;position:relative;overflow:visible}
 .ad-reserve-bar{flex:0 0 50px;display:flex;align-items:center;justify-content:center;font:11px sans-serif;color:#8892a0;background:rgba(255,255,255,.02);border-top:1px solid rgba(120,130,150,.15);pointer-events:none}
 @media (max-width:700px){.ad-reserve-bar{display:none}}
 </style>
@@ -65,6 +65,8 @@ input[type=range]::-webkit-slider-thumb {
   -webkit-appearance:none; width:13px; height:13px;
   border-radius:50%; background:#a3e635; box-shadow:0 0 8px #a3e635; cursor:pointer;
 }
+input[type=range]:disabled { opacity:.35; cursor:not-allowed; }
+input[type=range]:disabled::-webkit-slider-thumb { background:#5a5a7a; box-shadow:none; cursor:not-allowed; }
 .btn {
   background:rgba(163,230,53,.1); border:1px solid #a3e635; color:#a3e635;
   font-family:'JetBrains Mono',monospace; font-size:.68rem;
@@ -84,7 +86,7 @@ canvas#cCircle {
   border-radius:12px; background:#0d0d1a;
   border:1px solid #1e1e35; display:block;
   flex-shrink:0;
-  width:340px; height:340px;
+  width:460px; height:460px;
 }
 @media(max-width:720px){ canvas#cCircle { width:100%; height:auto; } }
 
@@ -146,6 +148,39 @@ tr.divider td {
 }
 </style>
 <link rel="stylesheet" href="ask-question.css">
+<style>
+body{background:radial-gradient(ellipse at 50% -10%, #12203f 0%, #05070f 65%) !important;background-attachment:fixed !important;position:relative !important;}
+body::before,body::after{content:'';position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(clamp(22px,6vw,50px));will-change:transform;}
+body::before{width:min(60vmax,600px);height:min(60vmax,600px);top:-18%;left:-12%;background:radial-gradient(circle,#38bdf84d 0%,transparent 70%);animation:bgDriftA 24s ease-in-out infinite alternate;}
+body::after{width:min(55vmax,540px);height:min(55vmax,540px);bottom:-20%;right:-10%;background:radial-gradient(circle,#6366f140 0%,transparent 70%);animation:bgDriftB 30s ease-in-out infinite alternate;}
+@keyframes bgDriftA{0%{transform:translate(0,0) scale(1);}100%{transform:translate(6vw,5vh) scale(1.12);}}
+@keyframes bgDriftB{0%{transform:translate(0,0) scale(1);}100%{transform:translate(-5vw,-6vh) scale(1.08);}}
+@media (max-width:700px){
+  body::before,body::after{filter:blur(clamp(16px,8vw,32px));}
+  body::before{width:85vmax;height:85vmax;}
+  body::after{width:78vmax;height:78vmax;}
+}
+@media (prefers-reduced-motion:reduce){
+  body::before,body::after{animation:none !important;}
+}
+</style>
+<style>
+body{background:radial-gradient(ellipse at 50% -10%, #12203f 0%, #05070f 65%) !important;background-attachment:fixed !important;position:relative !important;}
+body::before,body::after{content:'';position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(clamp(22px,6vw,50px));will-change:transform;}
+body::before{width:min(60vmax,600px);height:min(60vmax,600px);top:-18%;left:-12%;background:radial-gradient(circle,#38bdf84d 0%,transparent 70%);animation:bgDriftA 24s ease-in-out infinite alternate;}
+body::after{width:min(55vmax,540px);height:min(55vmax,540px);bottom:-20%;right:-10%;background:radial-gradient(circle,#6366f140 0%,transparent 70%);animation:bgDriftB 30s ease-in-out infinite alternate;}
+@keyframes bgDriftA{0%{transform:translate(0,0) scale(1);}100%{transform:translate(6vw,5vh) scale(1.12);}}
+@keyframes bgDriftB{0%{transform:translate(0,0) scale(1);}100%{transform:translate(-5vw,-6vh) scale(1.08);}}
+@media (max-width:700px){
+  body::before,body::after{filter:blur(clamp(16px,8vw,32px));}
+  body::before{width:85vmax;height:85vmax;}
+  body::after{width:78vmax;height:78vmax;}
+}
+@media (prefers-reduced-motion:reduce){
+  body::before,body::after{animation:none !important;}
+}
+</style>
+<style>body{background:radial-gradient(ellipse at 50% -10%, #12203f 0%, #05070f 65%) !important;background-attachment:fixed !important;}</style>
 </head>
 <body>
 <div class="viz-content-wrap">
@@ -161,14 +196,23 @@ tr.divider td {
     <input type="range" id="sT" min="0" max="360" value="45">
   </label>
   <button class="btn" id="btn">▶ Auto Rotate</button>
+  <button class="btn" id="btnVar">▶ Variable Force</button>
+  <button class="btn" id="btnTrace">◉ Trace</button>
 </div>
+<p id="varNote" style="display:none;color:#4a4a7a;font-size:.62rem;letter-spacing:1px;text-align:center;max-width:520px;">
+  F(t) = 95 + 55·sin(t) N — the circle's radius now pulses live as the force amplitude changes.
+</p>
+<p id="traceNote" style="display:none;color:#4a4a7a;font-size:.62rem;letter-spacing:1px;text-align:center;max-width:520px;">
+  Tracing the tip of the radius vector — keeps a rolling trail of the last 2 minutes of motion.
+</p>
 
 <!-- Circle + Graphs side by side -->
 <div class="main">
-  <canvas id="cCircle" width="300" height="300" style="flex-shrink:0;border-radius:12px;background:#0d0d1a;border:1px solid #1e1e35;display:block;"></canvas>
+  <canvas id="cCircle" width="460" height="460" style="flex-shrink:0;border-radius:12px;background:#0d0d1a;border:1px solid #1e1e35;display:block;"></canvas>
   <div style="display:flex;flex-direction:column;gap:12px;flex:1;min-width:260px;">
     <canvas id="cWaveFx" height="140" style="width:100%;border-radius:10px;background:#0d0d1a;border:1px solid #1e1e35;display:block;"></canvas>
     <canvas id="cWaveFy" height="140" style="width:100%;border-radius:10px;background:#0d0d1a;border:1px solid #1e1e35;display:block;"></canvas>
+    <canvas id="cWaveTrig" height="140" style="width:100%;border-radius:10px;background:#0d0d1a;border:1px solid #1e1e35;display:block;"></canvas>
   </div>
 </div>
 
@@ -227,23 +271,60 @@ tr.divider td {
 </div>
 
 <script>
-let theta = 45*Math.PI/180, F = 100, auto = false, raf = null;
+let theta = 45*Math.PI/180, F = 100, auto = false, varForce = false, varT = 0, raf = null;
+let trace = false, traceLog = [], lastTraceT = 0;
+const TRACE_MAX_MS = 120000;   // rolling window: keep at most the last 2 minutes
+const TRACE_MIN_GAP = 45;      // ms between recorded points (keeps it smooth but light)
 
 const sF=document.getElementById('sF'), sT=document.getElementById('sT'), btn=document.getElementById('btn');
+const btnVar=document.getElementById('btnVar'), varNote=document.getElementById('varNote');
+const btnTrace=document.getElementById('btnTrace'), traceNote=document.getElementById('traceNote');
+const Fmin=+sF.min, Fmax=+sF.max, Fmid=(Fmin+Fmax)/2, Famp=(Fmax-Fmin)/2;
 
 sF.oninput = e => { F=+e.target.value; document.getElementById('lF').textContent=F+' N'; refresh(); };
 sT.oninput = e => { theta=+e.target.value*Math.PI/180; document.getElementById('lT').textContent=e.target.value+'°'; refresh(); };
+
 btn.onclick = () => {
   auto=!auto; btn.textContent=auto?'⏹ Stop':'▶ Auto Rotate';
   btn.classList.toggle('on',auto);
-  if(auto) spin(); else cancelAnimationFrame(raf);
+  startOrStop();
 };
-function spin() {
-  if(!auto) return;
-  theta+=0.013; if(theta>Math.PI*2) theta-=Math.PI*2;
-  const d=Math.round(theta*180/Math.PI);
-  sT.value=d; document.getElementById('lT').textContent=d+'°';
-  refresh(); raf=requestAnimationFrame(spin);
+
+btnVar.onclick = () => {
+  varForce=!varForce; btnVar.textContent=varForce?'⏹ Stop Variable Force':'▶ Variable Force';
+  btnVar.classList.toggle('on',varForce);
+  sF.disabled=varForce;
+  varNote.style.display=varForce?'block':'none';
+  if(!varForce){ varT=0; } // reset phase so next start begins cleanly
+  startOrStop();
+};
+
+btnTrace.onclick = () => {
+  trace=!trace; btnTrace.textContent=trace?'⏹ Stop Trace':'◉ Trace';
+  btnTrace.classList.toggle('on',trace);
+  traceNote.style.display=trace?'block':'none';
+  if(trace){ traceLog=[]; lastTraceT=0; } // fresh trail each time trace is (re)started
+  startOrStop();
+};
+
+function startOrStop(){
+  if(auto||varForce||trace){ if(raf===null) raf=requestAnimationFrame(loop); }
+  else if(raf!==null){ cancelAnimationFrame(raf); raf=null; }
+}
+
+function loop() {
+  if(auto){
+    theta+=0.013; if(theta>Math.PI*2) theta-=Math.PI*2;
+    const d=Math.round(theta*180/Math.PI);
+    sT.value=d; document.getElementById('lT').textContent=d+'°';
+  }
+  if(varForce){
+    varT+=0.035;
+    F=Fmid+Famp*Math.sin(varT);
+    sF.value=F; document.getElementById('lF').textContent=F.toFixed(0)+' N';
+  }
+  refresh();
+  raf = (auto||varForce||trace) ? requestAnimationFrame(loop) : null;
 }
 
 function badge(id, val) {
@@ -291,7 +372,10 @@ function drawCircle() {
   for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
   for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
 
-  const cx=W/2, cy=H/2, R=W*.38;
+  const cx=W/2, cy=H/2;
+  const Rmax=W*.38;
+  const Fmax=+sF.max || 150;
+  const R=Rmax*(F/Fmax);   // circle radius now scales with the actual force amplitude
 
   // axes
   ctx.strokeStyle='rgba(80,80,140,.55)'; ctx.lineWidth=1;
@@ -302,19 +386,44 @@ function drawCircle() {
   lbl(ctx,'−x',14,cy-10,'rgba(80,80,140,.6)',9,'left');
   lbl(ctx,'−y',cx+10,H-14,'rgba(80,80,140,.6)',9);
 
-  // circle
-  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1.5;
+  // faint reference ring at max-force radius, for scale
+  ctx.setLineDash([3,4]);
+  ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(cx,cy,Rmax,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // amplitude circle (radius = current force magnitude)
+  ctx.strokeStyle='rgba(255,255,255,.14)'; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
 
   // quadrant labels
-  const qpad=R*.55;
+  const qpad=Rmax*.55;
   lbl(ctx,'Q I',   cx+qpad, cy-qpad,'rgba(163,230,53,.18)',9);
   lbl(ctx,'Q II',  cx-qpad, cy-qpad,'rgba(163,230,53,.18)',9);
   lbl(ctx,'Q III', cx-qpad, cy+qpad,'rgba(163,230,53,.18)',9);
   lbl(ctx,'Q IV',  cx+qpad, cy+qpad,'rgba(163,230,53,.18)',9);
 
   const cosV=Math.cos(theta), sinV=Math.sin(theta);
+  const fxv=F*cosV, fyv=F*sinV;
   const px=cx+R*cosV, py=cy-R*sinV;
+
+  // trace: record + draw a fading trail of the radius-vector tip (rolling 2-minute window)
+  if (trace) {
+    const now = performance.now();
+    if (now - lastTraceT >= TRACE_MIN_GAP) { traceLog.push({x:px,y:py,t:now}); lastTraceT = now; }
+    while (traceLog.length && now - traceLog[0].t > TRACE_MAX_MS) traceLog.shift();
+  }
+  if (traceLog.length > 1) {
+    const now = performance.now();
+    for (let i=1;i<traceLog.length;i++){
+      const p0=traceLog[i-1], p1=traceLog[i];
+      const age=(now-p1.t)/TRACE_MAX_MS;
+      const alpha=Math.max(0,1-age)*.6;
+      ctx.strokeStyle=`rgba(245,245,255,${alpha.toFixed(3)})`;
+      ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.moveTo(p0.x,p0.y); ctx.lineTo(p1.x,p1.y); ctx.stroke();
+    }
+  }
 
   // trailing arc (show swept angle)
   ctx.strokeStyle='rgba(163,230,53,.12)'; ctx.lineWidth=R*.9;
@@ -340,19 +449,19 @@ function drawCircle() {
   ctx.beginPath(); ctx.arc(cx,cy,R*.22,0,-theta,theta>0); ctx.stroke();
   lbl(ctx,'θ', cx+R*.33*Math.cos(-theta/2), cy+R*.33*Math.sin(-theta/2), '#a3e635', 13);
 
-  // cos label on axis
-  lbl(ctx,`cosθ=${cosV.toFixed(2)}`, (cx+px)/2, cy+(sinV>=0?17:-17), '#38bdf8', 9);
-  // sin label on axis
-  lbl(ctx,`sinθ=${sinV.toFixed(2)}`, cx+(cosV>=0?-50:50), (cy+py)/2, '#fb923c', 9);
+  // Fx label on axis (actual force component, in N)
+  lbl(ctx,`Fx=${fxv.toFixed(1)}N`, (cx+px)/2, cy+(sinV>=0?17:-17), '#38bdf8', 9);
+  // Fy label on axis (actual force component, in N)
+  lbl(ctx,`Fy=${fyv.toFixed(1)}N`, cx+(cosV>=0?-56:56), (cy+py)/2, '#fb923c', 9);
 
   // point on circle
   ctx.beginPath(); ctx.arc(px,py,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
   ctx.beginPath(); ctx.arc(px,py,10,0,Math.PI*2);
   ctx.strokeStyle='rgba(255,255,255,.2)'; ctx.lineWidth=1.5; ctx.stroke();
 
-  // (cosθ, sinθ) coordinate label
+  // (Fx, Fy) coordinate label — actual force amplitude, in N
   const offX=cosV>=0?12:-12, anchor=cosV>=0?'left':'right';
-  lbl(ctx,`(${cosV.toFixed(2)}, ${sinV.toFixed(2)})`, px+offX, py-16, 'rgba(200,200,240,.55)', 8, anchor);
+  lbl(ctx,`(${fxv.toFixed(1)}, ${fyv.toFixed(1)}) N`, px+offX, py-16, 'rgba(200,200,240,.55)', 8, anchor);
 
   // origin dot
   ctx.beginPath(); ctx.arc(cx,cy,4,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
@@ -387,15 +496,16 @@ function drawSingleWave(canvasId, valueFunc, color, label) {
     lbl(ctx,d+'°',x,pt+gH+12,'rgba(70,70,120,.8)',7);
   });
 
-  lbl(ctx,`+${F}`,pl-4,pt+5,'rgba(80,80,140,.7)',7,'right');
+  lbl(ctx,`+${Fmax}`,pl-4,pt+5,'rgba(80,80,140,.7)',7,'right');
   lbl(ctx,'0',pl-4,midY,'rgba(80,80,140,.7)',7,'right');
-  lbl(ctx,`-${F}`,pl-4,pt+gH-5,'rgba(80,80,140,.7)',7,'right');
+  lbl(ctx,`-${Fmax}`,pl-4,pt+gH-5,'rgba(80,80,140,.7)',7,'right');
 
-  // wave curve
+  // wave curve — normalized against the FIXED max force (Fmax), not the live F,
+  // so curve height correctly encodes true magnitude instead of always filling the graph
   ctx.beginPath();
   for(let i=0;i<=gW;i++){
     const t=(i/gW)*Math.PI*2;
-    const yy=midY-(valueFunc(t)/F)*amp;
+    const yy=midY-(valueFunc(t)/Fmax)*amp;
     i===0?ctx.moveTo(pl+i,yy):ctx.lineTo(pl+i,yy);
   }
   ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.stroke();
@@ -409,7 +519,7 @@ function drawSingleWave(canvasId, valueFunc, color, label) {
 
   // live dot
   const val=valueFunc(norm);
-  const dotY=midY-(val/F)*amp;
+  const dotY=midY-(val/Fmax)*amp;
   ctx.beginPath();ctx.arc(tx,dotY,5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
 
   // callout value — shift left if near right edge
@@ -423,6 +533,69 @@ function drawSingleWave(canvasId, valueFunc, color, label) {
 function drawWave() {
   drawSingleWave('cWaveFx', t => F*Math.cos(t), '#38bdf8', 'Fx = F·cosθ');
   drawSingleWave('cWaveFy', t => F*Math.sin(t), '#fb923c', 'Fy = F·sinθ');
+  drawTrigWave();
+}
+
+// pure sinθ/cosθ reference graph — this is what Fx/Fy would be if F = 1 N,
+// i.e. the unit-magnitude shape functions before scaling by the real force
+function drawTrigWave() {
+  const cv = document.getElementById('cWaveTrig');
+  if (!cv) return;
+  cv.width = cv.parentElement.clientWidth || 400;
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.strokeStyle='rgba(28,28,50,.9)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  const pl=46, pr=16, pt=16, pb=20;
+  const gW=W-pl-pr, gH=H-pt-pb;
+  const midY=pt+gH/2, amp=gH/2-4;
+
+  ctx.strokeStyle='rgba(80,80,140,.45)'; ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pl,midY);ctx.lineTo(W-pr,midY);ctx.stroke();
+
+  [0,90,180,270,360].forEach((d,i)=>{
+    const x=pl+i*gW/4;
+    ctx.strokeStyle='rgba(80,80,140,.18)'; ctx.lineWidth=1; ctx.setLineDash([3,5]);
+    ctx.beginPath();ctx.moveTo(x,pt);ctx.lineTo(x,pt+gH);ctx.stroke();
+    ctx.setLineDash([]);
+    lbl(ctx,d+'°',x,pt+gH+12,'rgba(70,70,120,.8)',7);
+  });
+
+  lbl(ctx,'+1',pl-4,pt+5,'rgba(80,80,140,.7)',7,'right');
+  lbl(ctx,'0',pl-4,midY,'rgba(80,80,140,.7)',7,'right');
+  lbl(ctx,'-1',pl-4,pt+gH-5,'rgba(80,80,140,.7)',7,'right');
+
+  function curve(fn,color){
+    ctx.beginPath();
+    for(let i=0;i<=gW;i++){
+      const t=(i/gW)*Math.PI*2;
+      const yy=midY-fn(t)*amp;
+      i===0?ctx.moveTo(pl+i,yy):ctx.lineTo(pl+i,yy);
+    }
+    ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.stroke();
+  }
+  curve(Math.cos, '#38bdf8');
+  curve(Math.sin, '#fb923c');
+
+  const norm=((theta%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+  const tx=pl+(norm/(Math.PI*2))*gW;
+  ctx.strokeStyle='rgba(163,230,53,.8)'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(tx,pt);ctx.lineTo(tx,pt+gH);ctx.stroke();
+  ctx.setLineDash([]);
+
+  const cosV=Math.cos(norm), sinV=Math.sin(norm);
+  const cosY=midY-cosV*amp, sinY=midY-sinV*amp;
+  ctx.beginPath();ctx.arc(tx,cosY,5,0,Math.PI*2);ctx.fillStyle='#38bdf8';ctx.fill();
+  ctx.beginPath();ctx.arc(tx,sinY,5,0,Math.PI*2);ctx.fillStyle='#fb923c';ctx.fill();
+
+  const callX = tx > W-130 ? tx-72 : tx+10;
+  lbl(ctx,`cosθ=${cosV.toFixed(2)}`,callX,cosY-10,'#38bdf8',9,'left');
+  lbl(ctx,`sinθ=${sinV.toFixed(2)}`,callX,sinY+14,'#fb923c',9,'left');
+
+  lbl(ctx,'sinθ, cosθ  (F = 1 N reference)',pl+6,pt+10,'rgba(200,200,240,.6)',9,'left');
 }
 
 function refresh() { updateTable(); drawCircle(); drawWave(); }
@@ -430,7 +603,7 @@ window.addEventListener('resize', refresh);
 refresh();
 </script>
 </div>
-<div class="ad-reserve-bar">Ad space</div>
+<div class="ad-reserve-bar"></div>
 <script src="ask-question.js"></script>
 </body>
 </html>

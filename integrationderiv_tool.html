@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8974374653448358"
+     crossorigin="anonymous"></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZR0SHJL6VJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZR0SHJL6VJ');
+</script>
+<meta name="google-adsense-account" content="ca-pub-8974374653448358">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Integration ↔ Derivatives — Area, Strip, Slope</title>
+<style>
+  :root{
+    --bg:#070a12;
+    --surface: rgba(18,24,38,0.72);
+    --surface-solid:#0e1420;
+    --border: rgba(255,255,255,0.09);
+    --c1:#00e5ff;   /* curve / area */
+    --c2:#ff3d81;   /* dx strip */
+    --c3:#ffcf5c;   /* rectangle approx */
+    --c4:#7cff6b;   /* convergence / success */
+    --c5:#b98bff;   /* UI accents */
+    --text:#e8ecf5;
+    --text-dim:#8b93a7;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(0,229,255,0.08), transparent 45%),
+      radial-gradient(circle at 85% 90%, rgba(185,139,255,0.08), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:'JetBrains Mono','SF Mono','Consolas',monospace;
+    overflow:hidden;
+  }
+  #app{ position:relative; width:100vw; height:100vh; }
+  canvas{ position:absolute; top:0; left:0; display:block; }
+
+  header{
+    position:absolute; top:0; left:0; right:0;
+    padding:16px 22px 10px 22px;
+    pointer-events:none;
+    z-index:5;
+  }
+  header h1{
+    margin:0; font-size:17px; font-weight:700; letter-spacing:0.5px;
+    color:var(--text);
+  }
+  header h1 span{ color:var(--c1); }
+  header p{
+    margin:4px 0 0 0; font-size:11.5px; color:var(--text-dim); max-width:560px; line-height:1.5;
+  }
+
+  .panel{
+    position:absolute;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+    z-index:6;
+  }
+
+  #controls{
+    top:16px; right:16px; width:250px;
+    padding:16px 16px 14px 16px;
+  }
+  #controls h2{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:1.4px;
+    color:var(--text-dim); margin:0 0 12px 0; font-weight:600;
+  }
+  .row{ margin-bottom:14px; }
+  .row label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:11.5px; color:var(--text-dim); margin-bottom:6px;
+  }
+  .row label b{ color:var(--text); font-weight:600; }
+  .row label .val{ color:var(--c1); font-weight:700; font-variant-numeric:tabular-nums; }
+
+  select{
+    width:100%; background:#0c1220; color:var(--text);
+    border:1px solid var(--border); border-radius:8px;
+    padding:7px 9px; font-family:inherit; font-size:12px;
+    outline:none; cursor:pointer;
+  }
+  select:focus{ border-color:var(--c1); }
+
+  input[type=range]{
+    -webkit-appearance:none; width:100%; height:4px; border-radius:2px;
+    background: linear-gradient(90deg, var(--c1), var(--c5));
+    outline:none; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+    background:#fff; border:2px solid var(--c1); cursor:grab;
+    box-shadow:0 0 8px rgba(0,229,255,0.7);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:15px; height:15px; border-radius:50%;
+    background:#fff; border:2px solid var(--c1); cursor:grab;
+    box-shadow:0 0 8px rgba(0,229,255,0.7);
+  }
+
+  .toggles{ display:flex; gap:8px; margin-top:2px; }
+  .btn{
+    flex:1; background:#0c1220; border:1px solid var(--border); color:var(--text-dim);
+    border-radius:8px; padding:8px 6px; font-family:inherit; font-size:10.5px;
+    letter-spacing:0.4px; cursor:pointer; text-align:center; transition:all .15s ease;
+  }
+  .btn:hover{ border-color:var(--c5); color:var(--text); }
+  .btn.active{ background:rgba(0,229,255,0.12); border-color:var(--c1); color:var(--c1); }
+  .btn.shrink{ width:100%; margin-top:4px; }
+  .btn.shrink.running{ background:rgba(255,61,129,0.14); border-color:var(--c2); color:var(--c2); }
+
+  .hint{ font-size:10px; color:var(--text-dim); line-height:1.5; margin-top:10px; opacity:.85; }
+  .hint b{ color:var(--c3); }
+
+  #readout{
+    bottom:16px; left:16px; width:320px;
+    padding:15px 16px 14px 16px;
+  }
+  #readout h2{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:1.4px;
+    color:var(--text-dim); margin:0 0 10px 0; font-weight:600;
+  }
+  .eq{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:12.5px; padding:5px 0; border-bottom:1px dashed var(--border);
+  }
+  .eq:last-child{ border-bottom:none; }
+  .eq .k{ color:var(--text-dim); }
+  .eq .v{ font-weight:700; font-variant-numeric:tabular-nums; }
+  .v.area{ color:var(--c1); }
+  .v.strip{ color:var(--c2); }
+  .v.rect{ color:var(--c3); }
+  .v.ratio{ color:var(--c4); }
+  .v.fx{ color:var(--c5); }
+
+  #convergeBar{
+    margin-top:10px; height:6px; border-radius:3px; background:#0c1220;
+    border:1px solid var(--border); overflow:hidden; position:relative;
+  }
+  #convergeFill{
+    height:100%; width:0%; border-radius:3px;
+    background:linear-gradient(90deg, var(--c2), var(--c4));
+    transition:width .12s linear;
+  }
+  #convergeLabel{
+    font-size:9.5px; color:var(--text-dim); margin-top:5px; text-align:center; letter-spacing:.3px;
+  }
+
+  #zoomPanel{
+    top:16px; left:16px; width:230px;
+    padding:10px 10px 8px 10px;
+  }
+  #zoomPanel h2{
+    font-size:10px; text-transform:uppercase; letter-spacing:1.2px;
+    color:var(--text-dim); margin:0; font-weight:600;
+  }
+  #zoomCanvas{ position:static; width:100%; height:140px; border-radius:8px; background:#050810; }
+  #zoomCaption{ font-size:9.5px; color:var(--text-dim); text-align:center; margin-top:5px; }
+  #zoomCaption b{ color:var(--c3); }
+
+  .panel-header{
+    display:flex; align-items:center; justify-content:space-between;
+    cursor:pointer; user-select:none;
+  }
+  .panel-header .chevron{
+    font-size:10px; color:var(--text-dim); transition:transform .2s ease;
+    margin-left:8px; flex-shrink:0;
+  }
+  .panel-header:hover .chevron{ color:var(--c1); }
+  .panel.collapsed .chevron{ transform:rotate(-90deg); }
+  .panel-body{
+    overflow:hidden;
+    max-height:600px; opacity:1;
+    transition:max-height .28s ease, opacity .2s ease, margin-top .28s ease;
+    margin-top:12px;
+  }
+  #zoomPanel .panel-body{ margin-top:6px; }
+  .panel.collapsed .panel-body{
+    max-height:0 !important; opacity:0; margin-top:0 !important; pointer-events:none;
+  }
+
+  ::selection{ background:rgba(0,229,255,0.3); }
+
+  @media (max-width: 720px){
+    #controls{ width:190px; padding:12px; }
+    #readout{ width:230px; }
+    #zoomPanel{ width:170px; }
+    #zoomCanvas{ height:100px; }
+    header p{ display:none; }
+  }
+</style>
+</head>
+<body>
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+<div id="app">
+  <canvas id="main"></canvas>
+
+  <header>
+    <h1>Integration <span>↔</span> Derivatives</h1>
+    <p>The area function A(x) sweeps out the region under f from a to x. Shrink the strip width Δx to zero and the strip's area, divided by Δx, settles on the curve's own height — f(x). That's the Fundamental Theorem of Calculus, watched live.</p>
+  </header>
+
+  <div class="panel" id="zoomPanel">
+    <div class="panel-header"><h2>Strip, magnified</h2><span class="chevron">▾</span></div>
+    <div class="panel-body">
+      <canvas id="zoomCanvas"></canvas>
+      <div id="zoomCaption">Area <b style="color:var(--c2)">(pink)</b> ÷ Δx = height <b style="color:var(--c4)">(green line)</b> — watch it meet f(x)</div>
+    </div>
+  </div>
+
+  <div class="panel" id="controls">
+    <div class="panel-header"><h2>Controls</h2><span class="chevron">▾</span></div>
+    <div class="panel-body">
+
+    <div class="row">
+      <label><b>Function</b></label>
+      <select id="fnSelect"></select>
+    </div>
+
+    <div class="row">
+      <label>Position <b>x</b> <span class="val" id="xVal">0.00</span></label>
+      <input type="range" id="xSlider" min="0" max="1000" value="500">
+    </div>
+
+    <div class="row">
+      <label>Strip width <b>Δx</b> <span class="val" id="dxVal">0.500</span></label>
+      <input type="range" id="dxSlider" min="0" max="1000" value="650">
+    </div>
+
+    <div class="row" style="margin-bottom:8px;">
+      <label><b>Display</b></label>
+      <div class="toggles">
+        <div class="btn active" id="toggleFill">A(x) fill</div>
+        <div class="btn" id="toggleRect">Rectangle</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>Animation speed <b></b> <span class="val" id="speedVal">1.000×</span></label>
+      <input type="range" id="speedSlider" min="1" max="1500" value="1000">
+    </div>
+
+    <div class="btn shrink" id="shrinkBtn">▸ Shrink Δx → 0 (auto)</div>
+
+    <div class="hint">Drag the <b>orange point</b> on the curve to move x. Drag its <b>right edge</b> to resize the strip directly on the canvas.</div>
+    </div>
+  </div>
+
+  <div class="panel" id="readout">
+    <div class="panel-header"><h2>Live numbers</h2><span class="chevron">▾</span></div>
+    <div class="panel-body">
+    <div class="eq"><span class="k">Area under curve, A(x)</span><span class="v area" id="rA">0.000</span></div>
+    <div class="eq"><span class="k" id="kStrip">Strip area, ΔA = A(x+Δx) − A(x)</span><span class="v strip" id="rDA">0.000</span></div>
+    <div class="eq"><span class="k" id="kWidth">Strip width, Δx</span><span class="v" id="rDX" style="color:var(--text)">0.000</span></div>
+    <div class="eq"><span class="k" id="kRatio">Height = ΔA ÷ Δx</span><span class="v ratio" id="rRatio">0.000</span></div>
+    <div class="eq"><span class="k">Actual f(x)</span><span class="v fx" id="rFX">0.000</span></div>
+    <div id="convergeBar"><div id="convergeFill"></div></div>
+    <div id="convergeLabel"><span id="convergeLabelText">|ΔA/Δx − f(x)|</span> = <span id="rErr">0.000</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.panel-header').forEach(function(hdr){
+    hdr.addEventListener('click', function(){
+      hdr.closest('.panel').classList.toggle('collapsed');
+    });
+  });
+</script>
+
+<script>
+(function(){
+  const mainCanvas = document.getElementById('main');
+  const ctx = mainCanvas.getContext('2d');
+  const zoomCanvas = document.getElementById('zoomCanvas');
+  const zctx = zoomCanvas.getContext('2d');
+
+  // ---------- functions library ----------
+  const FUNCS = {
+    "x^2 / 4":        { f: x => (x*x)/4,                a:-4, b:4,  label:"f(x) = x² / 4" },
+    "sin(x) + 1.6":   { f: x => Math.sin(x)+1.6,         a:-6, b:6,  label:"f(x) = sin(x) + 1.6" },
+    "x^3/12 + 2":     { f: x => (x*x*x)/12 + 2,          a:-4, b:4,  label:"f(x) = x³/12 + 2" },
+    "sqrt(x+4.2)":    { f: x => Math.sqrt(Math.max(0,x+4.2)), a:-4, b:5, label:"f(x) = √(x + 4.2)" },
+    "0.5 x + 2":      { f: x => 0.5*x + 2,               a:-4, b:4,  label:"f(x) = 0.5x + 2" },
+    "cos(x/1.3)+1.8": { f: x => Math.cos(x/1.3)+1.8,     a:-6, b:6,  label:"f(x) = cos(x/1.3) + 1.8" },
+  };
+  const fnSelect = document.getElementById('fnSelect');
+  Object.keys(FUNCS).forEach(k=>{
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = FUNCS[k].label;
+    fnSelect.appendChild(opt);
+  });
+  let fnKey = "x^2 / 4";
+  fnSelect.value = fnKey;
+
+  let f, a, b;
+  const GRID_N = 3000;
+  let grid = null;       // cumulative integral lookup
+  let gridX = null;
+
+  function buildGrid(){
+    const cfg = FUNCS[fnKey];
+    f = cfg.f; a = cfg.a; b = cfg.b;
+    gridX = new Float64Array(GRID_N+1);
+    grid = new Float64Array(GRID_N+1);
+    const h = (b-a)/GRID_N;
+    let acc = 0;
+    let prevY = f(a);
+    gridX[0] = a; grid[0] = 0;
+    for(let i=1;i<=GRID_N;i++){
+      const xi = a + i*h;
+      const yi = f(xi);
+      acc += (prevY+yi)/2*h;
+      gridX[i] = xi; grid[i] = acc;
+      prevY = yi;
+    }
+  }
+  buildGrid();
+
+  function A(x){
+    // clamp + linear-interp cumulative integral
+    if(x<=a) return 0;
+    if(x>=b) return grid[GRID_N];
+    const t = (x-a)/(b-a)*GRID_N;
+    const i0 = Math.floor(t);
+    const i1 = Math.min(i0+1, GRID_N);
+    const frac = t-i0;
+    return grid[i0]*(1-frac) + grid[i1]*frac;
+  }
+
+  // ---------- state ----------
+  let xPos = (a+b)/2 * 0.4; // current x
+  let dx = (b-a)*0.35;      // strip width
+  const dxMax = (b-a)*0.7;
+  const dxMin = (b-a)*0.001;
+  let showFill = true;
+  let showRect = false;
+  let shrinking = false;
+
+  const xSlider = document.getElementById('xSlider');
+  const dxSlider = document.getElementById('dxSlider');
+  const xVal = document.getElementById('xVal');
+  const dxVal = document.getElementById('dxVal');
+
+  function xFromSlider(v){ return a + (v/1000)*(b-a); }
+  function sliderFromX(x){ return Math.round((x-a)/(b-a)*1000); }
+  // dx slider mapped log-ish for fine control near zero
+  function dxFromSlider(v){
+    const t = v/1000; // 0..1
+    return dxMin + (dxMax-dxMin)*t*t*t; // cubic ease -> lots of resolution near small dx
+  }
+  function sliderFromDx(d){
+    const t = Math.cbrt((d-dxMin)/(dxMax-dxMin));
+    return Math.round(t*1000);
+  }
+
+  xSlider.value = sliderFromX(xPos);
+  dxSlider.value = sliderFromDx(dx);
+
+  xSlider.addEventListener('input', ()=>{ xPos = xFromSlider(+xSlider.value); clampXDx(); });
+  dxSlider.addEventListener('input', ()=>{ dx = dxFromSlider(+dxSlider.value); clampXDx(); if(shrinking) stopShrink(); });
+
+  function clampXDx(){
+    if(xPos < a) xPos = a;
+    if(xPos + dx > b) xPos = b - dx;
+    if(xPos < a) { xPos = a; dx = Math.min(dx, b-a); }
+  }
+
+  document.getElementById('toggleFill').addEventListener('click', function(){
+    showFill = !showFill; this.classList.toggle('active', showFill);
+  });
+  document.getElementById('toggleRect').addEventListener('click', function(){
+    showRect = !showRect; this.classList.toggle('active', showRect);
+  });
+
+  const shrinkBtn = document.getElementById('shrinkBtn');
+  const speedSlider = document.getElementById('speedSlider');
+  const speedVal = document.getElementById('speedVal');
+  let animSpeed = 1.0; // 1.0 = normal
+  function updateSpeedLabel(){ speedVal.textContent = animSpeed.toFixed(3)+'×'; }
+  speedSlider.addEventListener('input', ()=>{
+    animSpeed = (+speedSlider.value)/1000; // 0.001 .. 1.500
+    updateSpeedLabel();
+  });
+  updateSpeedLabel();
+
+  let shrinkRAF = null;
+  function startShrink(){
+    shrinking = true;
+    shrinkBtn.classList.add('running');
+    shrinkBtn.textContent = '■ Stop';
+    step();
+    function step(){
+      const decay = Math.pow(0.965, animSpeed); // slower speed -> decay closer to 1 -> slower shrink
+      dx = dx * decay;
+      if(dx <= dxMin*1.05){ dx = dxMin; stopShrink(); }
+      dxSlider.value = sliderFromDx(dx);
+      clampXDx();
+      if(shrinking) shrinkRAF = requestAnimationFrame(step);
+    }
+  }
+  function stopShrink(){
+    shrinking = false;
+    shrinkBtn.classList.remove('running');
+    shrinkBtn.textContent = '▸ Shrink Δx → 0 (auto)';
+    if(shrinkRAF) cancelAnimationFrame(shrinkRAF);
+  }
+  shrinkBtn.addEventListener('click', ()=>{
+    if(shrinking) stopShrink(); else { dx = dxMax*0.6; startShrink(); }
+  });
+
+  fnSelect.addEventListener('change', ()=>{
+    fnKey = fnSelect.value;
+    buildGrid();
+    xPos = (a+b)/2 * 0.4;
+    dx = (b-a)*0.35;
+    xSlider.value = sliderFromX(xPos);
+    dxSlider.value = sliderFromDx(dx);
+    stopShrink();
+  });
+
+  // ---------- canvas sizing ----------
+  let W,H, padL=60,padR=30,padT=70,padB=50;
+  function resize(){
+    W = window.innerWidth; H = window.innerHeight;
+    mainCanvas.width = W*devicePixelRatio; mainCanvas.height = H*devicePixelRatio;
+    mainCanvas.style.width = W+'px'; mainCanvas.style.height = H+'px';
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+
+    const zr = zoomCanvas.getBoundingClientRect();
+    zoomCanvas.width = zr.width*devicePixelRatio; zoomCanvas.height = zr.height*devicePixelRatio;
+    zctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- coordinate mapping (main canvas) ----------
+  let yMin, yMax;
+  function computeYRange(){
+    let lo=Infinity, hi=-Infinity;
+    for(let i=0;i<=GRID_N;i+=10){
+      const y = f(gridX[i]);
+      if(y<lo) lo=y; if(y>hi) hi=y;
+    }
+    if(lo>0) lo = 0; // always show baseline
+    const pad = (hi-lo)*0.15 || 1;
+    yMin = lo-pad; yMax = hi+pad;
+  }
+  computeYRange();
+  fnSelect.addEventListener('change', computeYRange);
+
+  function sx(x){ return padL + (x-a)/(b-a)*(W-padL-padR); }
+  function sy(y){ const plotH = H-padT-padB; return padT + plotH - (y-yMin)/(yMax-yMin)*plotH; }
+  function xAtScreen(px){ return a + (px-padL)/(W-padL-padR)*(b-a); }
+
+  // ---------- mouse interaction on main canvas ----------
+  let dragMode = null; // 'x' | 'dx'
+  mainCanvas.addEventListener('pointerdown', (e)=>{
+    const rect = mainCanvas.getBoundingClientRect();
+    const px = e.clientX-rect.left, py = e.clientY-rect.top;
+    const xScreen = sx(xPos), rScreen = sx(xPos+dx), yScreen = sy(f(xPos));
+    if(Math.hypot(px-xScreen, py-yScreen) < 16){
+      dragMode='x'; stopShrink();
+    } else if(Math.abs(px-rScreen) < 12){
+      dragMode='dx'; stopShrink();
+    }
+    mainCanvas.setPointerCapture(e.pointerId);
+  });
+  mainCanvas.addEventListener('pointermove', (e)=>{
+    if(!dragMode) return;
+    const rect = mainCanvas.getBoundingClientRect();
+    const px = e.clientX-rect.left;
+    const xv = xAtScreen(px);
+    if(dragMode==='x'){
+      xPos = Math.min(Math.max(xv, a), b-dx);
+    } else if(dragMode==='dx'){
+      const nd = xv - xPos;
+      dx = Math.min(Math.max(nd, dxMin), Math.min(dxMax, b-xPos));
+    }
+    xSlider.value = sliderFromX(xPos);
+    dxSlider.value = sliderFromDx(dx);
+  });
+  window.addEventListener('pointerup', ()=>{ dragMode=null; });
+
+  // ---------- readouts ----------
+  const rA = document.getElementById('rA');
+  const rDA = document.getElementById('rDA');
+  const rDX = document.getElementById('rDX');
+  const rRatio = document.getElementById('rRatio');
+  const rFX = document.getElementById('rFX');
+  const rErr = document.getElementById('rErr');
+  const convergeFill = document.getElementById('convergeFill');
+  const kStrip = document.getElementById('kStrip');
+  const kWidth = document.getElementById('kWidth');
+  const kRatio = document.getElementById('kRatio');
+  const convergeLabelText = document.getElementById('convergeLabelText');
+
+  // Once the strip is thin enough, switch notation from the finite
+  // difference Δx to the infinitesimal dx — visually marking the
+  // hand-off from "difference quotient" to "derivative".
+  const TINY_FRAC = 0.04; // fraction of (b-a) below which we call it "dx"
+  let lastTiny = null;
+  function isTiny(){ return dx < (b-a)*TINY_FRAC; }
+  function syncNotation(){
+    const tiny = isTiny();
+    if(tiny === lastTiny) return;
+    lastTiny = tiny;
+    const sym = tiny ? 'dx' : 'Δx';
+    const symA = tiny ? 'dA' : 'ΔA';
+    kStrip.textContent = `Strip area, ${symA} = A(x+${sym}) − A(x)`;
+    kWidth.textContent = `Strip width, ${sym}`;
+    kRatio.textContent = `Height = ${symA} ÷ ${sym}`;
+    convergeLabelText.textContent = `|${symA}/${sym} − f(x)|`;
+  }
+
+  function fmt(n){ return (Math.abs(n)<0.0005? 0 : n).toFixed(3); }
+
+  // ---------- draw ----------
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // axes
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padL, sy(0)); ctx.lineTo(W-padR, sy(0));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(sx(0>=a&&0<=b?0:a), padT); ctx.lineTo(sx(0>=a&&0<=b?0:a), H-padB);
+    ctx.stroke();
+
+    // x tick labels
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '10px monospace';
+    ctx.textAlign='center';
+    for(let t=Math.ceil(a); t<=Math.floor(b); t++){
+      if(t===0) continue;
+      ctx.fillText(t, sx(t), sy(0)+16);
+    }
+
+    // fill A(x): area from a to xPos
+    if(showFill){
+      ctx.beginPath();
+      ctx.moveTo(sx(a), sy(0));
+      const steps=140;
+      for(let i=0;i<=steps;i++){
+        const xi = a + (xPos-a)*i/steps;
+        ctx.lineTo(sx(xi), sy(f(xi)));
+      }
+      ctx.lineTo(sx(xPos), sy(0));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0,229,255,0.14)';
+      ctx.fill();
+    }
+
+    // strip [xPos, xPos+dx]
+    ctx.beginPath();
+    ctx.moveTo(sx(xPos), sy(0));
+    const stripSteps = 60;
+    for(let i=0;i<=stripSteps;i++){
+      const xi = xPos + dx*i/stripSteps;
+      ctx.lineTo(sx(xi), sy(f(xi)));
+    }
+    ctx.lineTo(sx(xPos+dx), sy(0));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,61,129,0.55)';
+    ctx.fill();
+
+    // THE ANSWER on the main canvas too: ΔA/Δx drawn as a horizontal height line across the strip
+    {
+      const ratio = (A(xPos+dx)-A(xPos))/dx;
+      const ry = sy(ratio);
+      ctx.beginPath();
+      ctx.setLineDash([3,4]);
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = '#7cff6b';
+      ctx.shadowColor = 'rgba(124,255,107,0.7)'; ctx.shadowBlur = 6;
+      ctx.moveTo(sx(xPos), ry);
+      ctx.lineTo(sx(xPos+dx), ry);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.setLineDash([]);
+    }
+
+    // rectangle approx f(x)*dx
+    if(showRect){
+      const rx0 = sx(xPos), rx1 = sx(xPos+dx);
+      const ry0 = sy(0), ry1 = sy(f(xPos));
+      ctx.setLineDash([5,4]);
+      ctx.strokeStyle = 'var(--c3)';
+      ctx.strokeStyle = '#ffcf5c';
+      ctx.lineWidth = 1.6;
+      ctx.strokeRect(Math.min(rx0,rx1), Math.min(ry0,ry1), Math.abs(rx1-rx0), Math.abs(ry1-ry0));
+      ctx.setLineDash([]);
+    }
+
+    // curve
+    ctx.beginPath();
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = '#00e5ff';
+    ctx.shadowColor = 'rgba(0,229,255,0.6)';
+    ctx.shadowBlur = 8;
+    for(let i=0;i<=GRID_N;i+=4){
+      const xi=gridX[i], yi=f(xi);
+      if(i===0) ctx.moveTo(sx(xi), sy(yi)); else ctx.lineTo(sx(xi), sy(yi));
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // draggable x point
+    const px = sx(xPos), py = sy(f(xPos));
+    ctx.beginPath();
+    ctx.arc(px, py, 7, 0, Math.PI*2);
+    ctx.fillStyle = '#ffcf5c';
+    ctx.shadowColor = 'rgba(255,207,92,0.8)'; ctx.shadowBlur=10;
+    ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.strokeStyle='#0a0e17'; ctx.lineWidth=2; ctx.stroke();
+
+    // right edge handle for dx
+    const px2 = sx(xPos+dx), py2 = sy(0);
+    ctx.beginPath();
+    ctx.moveTo(px2, sy(0)); ctx.lineTo(px2, sy(f(xPos+dx)));
+    ctx.strokeStyle='rgba(255,61,129,0.85)'; ctx.lineWidth=2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(px2, sy(f(xPos+dx)), 5, 0, Math.PI*2);
+    ctx.fillStyle='#ff3d81'; ctx.fill();
+
+    // labels near strip — merge into one tag once the strip is too
+    // thin on screen for two separate labels to stay readable
+    {
+      const sym = isTiny() ? 'dx' : 'Δx';
+      const pxGap = Math.abs(px2-px);
+      ctx.font = '11px monospace';
+      ctx.textAlign='center';
+      if(pxGap < 46){
+        ctx.fillStyle = '#e8ecf5';
+        ctx.fillText('x', (px+px2)/2, sy(0)+16);
+        ctx.fillStyle = '#ff3d81';
+        ctx.font = '10px monospace';
+        ctx.fillText(sym+' → 0', (px+px2)/2, sy(0)+29);
+      } else {
+        ctx.fillStyle = '#e8ecf5';
+        ctx.fillText('x', px, sy(0)+16);
+        ctx.fillStyle = '#ff3d81';
+        ctx.fillText('x+'+sym, px2, sy(0)+16);
+      }
+    }
+
+    ctx.textAlign='left';
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.font='10px monospace';
+    ctx.fillText('a='+a.toFixed(1), padL, H-padB+34);
+    ctx.textAlign='right';
+    ctx.fillText('b='+b.toFixed(1), W-padR, H-padB+34);
+    ctx.textAlign='left';
+
+    drawZoom();
+    updateReadout();
+  }
+
+  function drawZoom(){
+    const zr = zoomCanvas.getBoundingClientRect();
+    const zw = zr.width, zh = zr.height;
+    zctx.clearRect(0,0,zw,zh);
+
+    const x0 = xPos, x1 = xPos+dx;
+    const pad = dx*0.35 + 1e-6;
+    const yLo = Math.min(0, f(x0), f(x1));
+    let yHi = -Infinity;
+    const N=40;
+    for(let i=0;i<=N;i++){ yHi = Math.max(yHi, f(x0 + dx*i/N)); }
+    const yPad = (yHi-yLo)*0.25 || 0.5;
+
+    const zpadL=8, zpadR=8, zpadT=8, zpadB=8;
+    function zsx(x){ return zpadL + (x-(x0-pad))/((x1+pad)-(x0-pad))*(zw-zpadL-zpadR); }
+    function zsy(y){ const ph=zh-zpadT-zpadB; return zpadT+ph-(y-(yLo-yPad))/((yHi+yPad)-(yLo-yPad))*ph; }
+
+    // actual strip area
+    zctx.beginPath();
+    zctx.moveTo(zsx(x0), zsy(0));
+    for(let i=0;i<=N;i++){
+      const xi = x0 + dx*i/N;
+      zctx.lineTo(zsx(xi), zsy(f(xi)));
+    }
+    zctx.lineTo(zsx(x1), zsy(0));
+    zctx.closePath();
+    zctx.fillStyle='rgba(255,61,129,0.55)';
+    zctx.fill();
+
+    // rectangle f(x0)*dx
+    zctx.setLineDash([4,3]);
+    zctx.strokeStyle='#ffcf5c'; zctx.lineWidth=1.5;
+    zctx.strokeRect(zsx(x0), zsy(Math.max(0,f(x0))), zsx(x1)-zsx(x0), Math.abs(zsy(f(x0))-zsy(0)));
+    zctx.setLineDash([]);
+
+    // curve segment
+    zctx.beginPath();
+    zctx.lineWidth=2; zctx.strokeStyle='#00e5ff';
+    for(let i=0;i<=N;i++){
+      const xi = x0+dx*i/N, yi=f(xi);
+      if(i===0) zctx.moveTo(zsx(xi), zsy(yi)); else zctx.lineTo(zsx(xi), zsy(yi));
+    }
+    zctx.stroke();
+
+    // THE ANSWER: strip area / dx, drawn as a horizontal line = the height
+    const ratio = (A(x1)-A(x0))/dx;
+    const ry = zsy(ratio);
+    zctx.beginPath();
+    zctx.setLineDash([2,3]);
+    zctx.lineWidth = 2.4;
+    zctx.strokeStyle = '#7cff6b';
+    zctx.shadowColor = 'rgba(124,255,107,0.8)'; zctx.shadowBlur = 6;
+    zctx.moveTo(zsx(x0)-4, ry);
+    zctx.lineTo(zsx(x1)+4, ry);
+    zctx.stroke();
+    zctx.shadowBlur = 0;
+    zctx.setLineDash([]);
+    zctx.fillStyle = '#7cff6b';
+    zctx.font = '10px monospace';
+    zctx.textAlign = 'left';
+    const zsym = isTiny() ? 'h = dA/dx' : 'h = ΔA/Δx';
+    zctx.fillText(zsym, zsx(x1)+6 > zw-50 ? zsx(x0)-4 : zsx(x1)+6, ry+3);
+
+    // baseline
+    zctx.strokeStyle='rgba(255,255,255,0.15)';
+    zctx.beginPath(); zctx.moveTo(zpadL, zsy(0)); zctx.lineTo(zw-zpadR, zsy(0)); zctx.stroke();
+  }
+
+  function updateReadout(){
+    syncNotation();
+    const Ax = A(xPos);
+    const dA = A(xPos+dx) - Ax;
+    const ratio = dA/dx;
+    const fx = f(xPos);
+    const err = Math.abs(ratio-fx);
+
+    rA.textContent = fmt(Ax);
+    rDA.textContent = fmt(dA);
+    rDX.textContent = dx.toFixed(4);
+    rRatio.textContent = fmt(ratio);
+    rFX.textContent = fmt(fx);
+    rErr.textContent = err.toFixed(4);
+
+    // convergence bar: map err (relative) to width, log-scaled, capped
+    const scale = Math.max(Math.abs(fx), 0.5);
+    const rel = Math.min(1, err/scale);
+    const pct = Math.max(0, 100*(1-Math.min(1, rel/0.3)));
+    convergeFill.style.width = pct.toFixed(1)+'%';
+    xVal.textContent = xPos.toFixed(2);
+    dxVal.textContent = dx.toFixed(4);
+  }
+
+  function loop(){
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+</body>
+</html>

@@ -20,9 +20,17 @@
 //    to your homepage to log in.
 //  - Reads/writes the existing "Questions" table exactly as-is:
 //      id, created_at, user_id, user_name, question, admin_reply, status
-//    This script never creates the table, never touches RLS, and never
-//    writes to "admin_reply" or "status" — only your admin page does that.
+//    This script never creates the table and never writes to "admin_reply"
+//    or "status" — only your admin page does that. It DOES delete rows
+//    (see below), scoped to the logged-in user's own rows.
 //  - No realtime subscriptions: loads on open, reloads after sending.
+//  - Each of the student's own questions gets a small delete (🗑) button.
+//    Clicking it shows an inline "Are you sure?" confirmation before
+//    anything is deleted. The actual delete request is also filtered to
+//    `user_id = currentUser.id`, but the real security boundary is the
+//    "Students can delete their own questions" RLS policy on the
+//    "Questions" table — this file deliberately does not rely on hiding
+//    the button as its only protection.
 
 (function () {
   if (window.__askQuestionWidgetLoaded) return;
@@ -200,19 +208,119 @@
             </div>
           `;
         }
+        // Delete button is only ever rendered for rows belonging to the
+        // currently logged-in user (loadQuestions() already fetches only
+        // currentUser.id's own rows, and this check is a second,
+        // belt-and-suspenders confirmation of that). Real enforcement
+        // against deleting someone else's row happens in Supabase RLS,
+        // not here — see the "Students can delete their own questions"
+        // RLS policy.
+        const canDelete = row.user_id === currentUser.id;
         return `
-          <div class="aq-msg">
+          <div class="aq-msg" data-id="${row.id}">
             <div class="aq-q">${escapeHtml(row.question)}</div>
             <div class="aq-meta">
+              ${canDelete ? `<button class="aq-delete-btn" data-id="${row.id}" aria-label="Delete this question" title="Delete">🗑</button>` : ""}
               <span class="aq-badge ${badgeClass}">${badgeText}</span>
               <span>${formatDate(row.created_at)}</span>
             </div>
             ${replyHtml}
+            ${canDelete ? `
+              <div class="aq-confirm" id="aq-confirm-${row.id}">
+                <div class="aq-confirm-text">Are you sure you want to delete this comment?</div>
+                <div class="aq-confirm-actions">
+                  <button class="aq-confirm-cancel" data-id="${row.id}" type="button">Cancel</button>
+                  <button class="aq-confirm-delete" data-id="${row.id}" type="button">Delete</button>
+                </div>
+              </div>
+            ` : ""}
           </div>
         `;
       }).join("");
 
       body.scrollTop = body.scrollHeight;
+    }
+
+    // ---------- Delete a question (own rows only) ----------
+    // Event delegation: bound once, so it keeps working after body.innerHTML
+    // is replaced on every render — no per-row re-binding needed.
+    body.addEventListener("click", (e) => {
+      const delBtn = e.target.closest(".aq-delete-btn");
+      if (delBtn) {
+        showDeleteConfirm(delBtn.dataset.id);
+        return;
+      }
+      const cancelBtn = e.target.closest(".aq-confirm-cancel");
+      if (cancelBtn) {
+        hideDeleteConfirm(cancelBtn.dataset.id);
+        return;
+      }
+      const confirmBtn = e.target.closest(".aq-confirm-delete");
+      if (confirmBtn) {
+        handleDeleteConfirmed(confirmBtn.dataset.id);
+        return;
+      }
+    });
+
+    function showDeleteConfirm(id) {
+      const confirmEl = document.getElementById(`aq-confirm-${id}`);
+      if (confirmEl) confirmEl.classList.add("aq-confirm-open");
+      document.querySelectorAll(`.aq-delete-btn[data-id="${id}"]`).forEach((b) => (b.style.visibility = "hidden"));
+    }
+
+    function hideDeleteConfirm(id) {
+      const confirmEl = document.getElementById(`aq-confirm-${id}`);
+      if (confirmEl) confirmEl.classList.remove("aq-confirm-open");
+      document.querySelectorAll(`.aq-delete-btn[data-id="${id}"]`).forEach((b) => (b.style.visibility = ""));
+    }
+
+    async function handleDeleteConfirmed(id) {
+      if (!currentUser) return;
+      const confirmBtn = document.querySelector(`.aq-confirm-delete[data-id="${id}"]`);
+      const cancelBtn = document.querySelector(`.aq-confirm-cancel[data-id="${id}"]`);
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Deleting…";
+      }
+      if (cancelBtn) cancelBtn.disabled = true;
+
+      try {
+        const supabase = await getSupabase();
+        // The .eq("user_id", ...) here is defense-in-depth, matching what
+        // the RLS policy enforces server-side — it is NOT what stops a
+        // student from deleting someone else's row (RLS does that even if
+        // this line were removed or this whole file were rewritten by the
+        // person using browser dev tools).
+        const { error, count } = await supabase
+          .from(QUESTIONS_TABLE)
+          .delete({ count: "exact" })
+          .eq("id", id)
+          .eq("user_id", currentUser.id);
+
+        if (error || count === 0) {
+          setStatus("Unable to delete comment. Please try again.", "error");
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "Delete";
+          }
+          if (cancelBtn) cancelBtn.disabled = false;
+          return;
+        }
+
+        setStatus("Comment deleted successfully.", "success");
+        const msgEl = document.querySelector(`.aq-msg[data-id="${id}"]`);
+        if (msgEl) msgEl.remove();
+        if (!body.querySelector(".aq-msg")) {
+          body.innerHTML = `<div id="aq-empty">No questions yet. Ask your first question below!</div>`;
+        }
+      } catch (err) {
+        setStatus("Unable to delete comment. Please try again.", "error");
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = "Delete";
+        }
+        if (cancelBtn) cancelBtn.disabled = false;
+      }
     }
 
     async function loadQuestions() {

@@ -96,6 +96,61 @@ async function getCurrentUser() {
   return data.user;
 }
 
+/**
+ * Permanently deletes the currently logged-in user's account.
+ *
+ * This calls the "delete-account" Supabase Edge Function, which runs
+ * server-side with admin privileges. The Edge Function verifies the
+ * caller's JWT itself and only ever deletes the account that JWT belongs
+ * to — no service_role key or admin credential is ever present in this
+ * file or sent to the browser.
+ *
+ * Deletes (server-side, in this order):
+ *   1. The user's rows in the "Questions" table.
+ *   2. The user's Supabase Auth account.
+ *
+ * This function does NOT sign the user out or touch localStorage/
+ * sessionStorage — the caller (login-modal.js) does that after a
+ * successful response, since only it knows when it's safe to redirect.
+ */
+async function deleteAccount() {
+  const supabase = await getSupabase();
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData || !sessionData.session) {
+    return { error: { message: "You're not logged in." } };
+  }
+  try {
+    const { data, error } = await supabase.functions.invoke("delete-account", {
+      method: "POST",
+    });
+    return { data, error };
+  } catch (err) {
+    return { error: { message: (err && err.message) || "Something went wrong. Try again." } };
+  }
+}
+
+/**
+ * Removes Supabase auth/session keys from localStorage and sessionStorage.
+ * Supabase namespaces its own keys with a "sb-" prefix, so this only ever
+ * touches keys it created — nothing else on the page is affected.
+ */
+function clearSupabaseAuthStorage() {
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("sb-"))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch (e) {
+    /* localStorage may be unavailable (e.g. private browsing) — ignore */
+  }
+  try {
+    Object.keys(sessionStorage)
+      .filter((k) => k.startsWith("sb-"))
+      .forEach((k) => sessionStorage.removeItem(k));
+  } catch (e) {
+    /* sessionStorage may be unavailable — ignore */
+  }
+}
+
 // Example helper functions — customize or remove as needed
 
 /**

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2305070a'/%3E%3Cg transform='translate(50,50)'%3E%3Cellipse cx='0' cy='0' rx='33' ry='14' fill='none' stroke='%237c5cff' stroke-width='3' transform='rotate(-20)'/%3E%3Cellipse cx='0' cy='0' rx='33' ry='14' fill='none' stroke='%23ffb92e' stroke-width='2.5' stroke-opacity='0.6' transform='rotate(40)'/%3E%3Cpath d='M-31,6 Q-16,-17 0,6 T31,6' fill='none' stroke='%23e8edf4' stroke-width='2.5' stroke-linecap='round' opacity='0.85'/%3E%3Ccircle r='6' fill='%23ffb92e'/%3E%3Ccircle cx='27' cy='-5' r='3.5' fill='%23ff3d81'/%3E%3Ccircle cx='-24' cy='8' r='3' fill='%237c5cff'/%3E%3C/g%3E%3C/svg%3E">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index, follow">
+<title>Delete Your Account — Mathinphys</title>
+<style>
+  :root{
+    --bg:#05070a; --panel:#12181f; --grid:#1c2530; --text:#e8edf4; --dim:#7c8a9c;
+    --torch:#ffb92e; --pink:#ff3d81; --violet:#7c5cff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;}
+  a{color:var(--torch);}
+  header.page-head{padding:56px 20px 24px;text-align:center;}
+  h1{font-size:26px;margin:0 0 10px;letter-spacing:0.5px;}
+  h1 span{color:var(--torch);}
+  .sub{color:var(--dim);font-size:13px;max-width:640px;margin:0 auto;line-height:1.6;}
+  main.content{max-width:640px;margin:0 auto;padding:10px 22px 60px;line-height:1.75;font-size:14.5px;}
+  main.content h2{font-size:16px;color:var(--text);margin:34px 0 12px;letter-spacing:0.3px;}
+  main.content h3{font-size:14px;color:var(--dim);margin:22px 0 8px;text-transform:uppercase;letter-spacing:0.6px;}
+  main.content p{color:#c7d0dc;margin:0 0 14px;}
+  main.content ul{color:#c7d0dc;padding-left:20px;margin:0 0 14px;}
+  main.content li{margin-bottom:6px;}
+  .card-box{background:var(--panel);border:1px solid var(--grid);border-radius:12px;padding:18px 20px;margin:0 0 18px;}
+  .home-badge{position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;
+    padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);
+    box-shadow:0 4px 14px rgba(0,0,0,0.35);}
+  footer{text-align:center;color:var(--dim);font-size:11px;padding:30px 20px 50px;}
+  footer a{color:var(--torch);text-decoration:none;}
+  .footer-nav{max-width:700px;margin:0 auto 14px;display:flex;flex-wrap:wrap;justify-content:center;gap:14px;}
+  .footer-nav a{color:var(--dim);text-decoration:none;font-size:11px;letter-spacing:0.3px;}
+  .footer-nav a:hover{color:var(--torch);}
+
+  /* --- Self-service delete widget --- */
+  .modal-field{display:block;width:100%;margin-bottom:12px;padding:11px 12px;border-radius:8px;
+    border:1px solid var(--grid);background:var(--bg);color:var(--text);font-size:14px;outline:none;}
+  .modal-field:focus{border-color:var(--violet);}
+  .btn-primary{width:100%;padding:11px 12px;margin-top:4px;border-radius:8px;border:none;
+    background:linear-gradient(180deg, #9075ff 0%, var(--violet) 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:0 4px 0 0 #4a35b0, 0 6px 10px rgba(124,92,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition:transform .08s ease, box-shadow .08s ease, opacity .15s ease;transform:translateY(0);}
+  .btn-primary:hover:not(:disabled){transform:translateY(-1px);}
+  .btn-primary:active:not(:disabled){transform:translateY(3px);}
+  .btn-primary:disabled{opacity:0.5;cursor:default;transform:none;}
+  .btn-secondary{width:100%;padding:11px 12px;margin-top:10px;border-radius:8px;border:1px solid var(--grid);
+    background:linear-gradient(180deg, #1c2530 0%, var(--panel) 100%);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;
+    transition:border-color .15s ease;}
+  .btn-secondary:hover:not(:disabled){border-color:var(--violet);}
+  .btn-danger{width:100%;padding:11px 12px;margin-top:4px;border-radius:8px;border:none;
+    background:linear-gradient(180deg, #ff6b9d 0%, var(--pink) 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:0 4px 0 0 #a8134f, 0 6px 10px rgba(255,61,129,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition:transform .08s ease, opacity .15s ease;transform:translateY(0);}
+  .btn-danger:hover:not(:disabled){transform:translateY(-1px);}
+  .btn-danger:disabled{opacity:0.4;cursor:default;transform:none;}
+  #widget-message{min-height:16px;font-size:12.5px;margin:10px 0 0;color:var(--dim);text-align:center;}
+  #logged-in-email{display:block;font-size:14px;margin-bottom:14px;text-align:center;word-break:break-all;color:var(--text);}
+  #confirm-label{display:block;font-size:12px;color:var(--dim);margin:14px 0 8px;}
+  #confirm-label b{color:var(--text);}
+  #widget-loading-view, #widget-login-view, #widget-confirm-view, #widget-done-view{display:none;}
+  #widget-loading-view.active, #widget-login-view.active, #widget-confirm-view.active, #widget-done-view.active{display:block;}
+  #widget-warning{color:#c7d0dc;font-size:13px;line-height:1.65;margin:0 0 4px;}
+  #widget-warning b{color:var(--pink);}
+  #google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+    padding:10px 12px;margin-bottom:16px;border-radius:8px;border:1px solid #e2e2e2;
+    background:linear-gradient(180deg, #ffffff 0%, #f1f1f1 100%);color:#1f1f1f;font-size:14px;font-weight:600;cursor:pointer;}
+  #widget-divider{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:var(--dim);font-size:11.5px;}
+  #widget-divider::before,#widget-divider::after{content:"";flex:1;height:1px;background:var(--grid);}
+</style>
+</head>
+<body>
+<a href="index.html" class="home-badge">&larr; Home</a>
+<header class="page-head">
+  <h1>Delete Your <span>Mathinphys</span> Account</h1>
+  <div class="sub">This page lets you permanently delete your Mathinphys account and the data tied to it. It works whether or not you're currently logged in.</div>
+</header>
+
+<main class="content">
+
+<div class="card-box">
+<p>
+<strong>Mathinphys</strong> (also published on Google Play as the Mathinphys app, and available on the
+web at <a href="https://mathintphys.com">mathintphys.com</a>) lets you optionally create an account to
+submit questions through the "Ask a Question" feature. This page is the account-deletion request
+mechanism for that account, as required by Google Play's Data Safety policy.
+</p>
+</div>
+
+<h2>What gets deleted</h2>
+<p>Deleting your account permanently and irreversibly removes:</p>
+<ul>
+  <li><strong>Your login credentials</strong> — your Supabase Auth account, i.e. your email address and encrypted password (or Google sign-in link), and your account ID.</li>
+  <li><strong>Your submitted questions</strong> — every row you own in the "Ask a Question" data table: the question text, your display name as stored with it, timestamps, and any admin reply attached to it.</li>
+</ul>
+<p>None of the interactive math and physics tools on Mathinphys require an account, and using them doesn't create any account-linked data in the first place — so if you never used "Ask a Question," there's typically nothing account-related to delete beyond the login itself.</p>
+
+<h2>What may be retained, and for how long</h2>
+<ul>
+  <li><strong>Active database:</strong> once deletion completes, your account and the data listed above are removed from the live Mathinphys database immediately — they are not just hidden or deactivated.</li>
+  <li><strong>Backups:</strong> like most cloud database providers, our database host (Supabase) keeps encrypted infrastructure backups for a limited rolling window as part of its own disaster-recovery process, after which older backups are automatically overwritten. We do not use backups to restore or reconstruct an individual account once you've deleted it, and we do not control or extend that window beyond what our hosting plan provides.</li>
+  <li><strong>Analytics and advertising:</strong> pages on Mathinphys use Google Analytics and Google AdSense, which may retain aggregated, de-identified usage data (like page views) under Google's own retention policies. This data isn't linked to your Mathinphys account and isn't something a Mathinphys account deletion can remove — see our <a href="privacy-policy.html">Privacy Policy</a> and <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a> for details.</li>
+  <li><strong>Legal obligations:</strong> we don't currently retain any account data for legal, tax, or security purposes beyond the above. If that ever changes, this page will be updated to say so and for how long.</li>
+</ul>
+
+<h2>How to request deletion</h2>
+<p>Choose whichever works for you:</p>
+
+<div class="card-box">
+<h3>Option 1 — Delete it yourself, right now</h3>
+<p>Log in below to delete your account immediately. This is fully automatic: once you confirm, your data is deleted right away by the same secure process the app itself uses.</p>
+
+<div id="widget-loading-view" class="active">
+  <p id="widget-message" style="text-align:center;">Loading…</p>
+</div>
+
+<div id="widget-login-view">
+  <button type="button" id="google-btn">
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4c-7.5 0-14 4.2-17.7 10.7z"/>
+      <path fill="#4CAF50" d="M24 44c5.3 0 10.2-2 13.9-5.4l-6.4-5.4C29.4 34.9 26.8 36 24 36c-5.4 0-9.9-3.4-11.5-8.2l-6.6 5.1C9.9 39.7 16.4 44 24 44z"/>
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.7 2.1-2 3.9-3.8 5.2l6.4 5.4C41.4 36.4 44 30.6 44 24c0-1.3-.1-2.4-.4-3.5z"/>
+    </svg>
+    <span>Continue with Google</span>
+  </button>
+  <div id="widget-divider"><span>or</span></div>
+  <form id="login-form">
+    <input class="modal-field" type="email" id="login-email" placeholder="Email" autocomplete="email" required>
+    <input class="modal-field" type="password" id="login-password" placeholder="Password" autocomplete="current-password" required>
+    <button type="submit" class="btn-primary" id="login-btn">Log In</button>
+  </form>
+  <div id="login-message" style="min-height:16px;font-size:12.5px;margin:10px 0 0;color:var(--dim);text-align:center;"></div>
+</div>
+
+<div id="widget-confirm-view">
+  <span id="logged-in-email"></span>
+  <p id="widget-warning">
+    This will <b>permanently delete</b> your Mathinphys account and your submitted questions.
+    This cannot be undone.
+  </p>
+  <label id="confirm-label" for="confirm-input">Type <b>DELETE</b> to confirm</label>
+  <input class="modal-field" type="text" id="confirm-input" autocomplete="off" autocapitalize="off">
+  <button type="button" class="btn-danger" id="confirm-delete-btn" disabled>Permanently Delete My Account</button>
+  <button type="button" class="btn-secondary" id="confirm-cancel-btn">Log out without deleting</button>
+  <div id="widget-message2" style="min-height:16px;font-size:12.5px;margin:10px 0 0;color:var(--dim);text-align:center;"></div>
+</div>
+
+<div id="widget-done-view">
+  <p id="done-message" style="text-align:center;color:#4ade80;"></p>
+  <a href="index.html" class="btn-secondary" style="display:block;text-align:center;text-decoration:none;">Go to homepage</a>
+</div>
+</div>
+
+<div class="card-box">
+<h3>Option 2 — Can't log in?</h3>
+<p>
+If you've lost access to your account, email
+<a href="mailto:abinashdebnath32129@gmail.com?subject=Mathinphys%20Account%20Deletion%20Request">abinashdebnath32129@gmail.com</a>
+from the address you signed up with, with the subject "Account Deletion Request." Include the
+email associated with your account. We'll verify it's really your account and delete it manually —
+this is a manual process, so it isn't instant, but we aim to handle it within a few business days.
+</p>
+</div>
+
+<h2>Questions</h2>
+<p>For anything else about this process, see our <a href="privacy-policy.html">Privacy Policy</a> or
+<a href="contact.html">contact us</a> directly.</p>
+
+</main>
+
+<footer>
+<div class="footer-nav">
+  <a href="index.html">Home</a>
+  <a href="tools.html">All Tools</a>
+  <a href="learn.html">Learn</a>
+  <a href="faq.html">FAQ</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="privacy-policy.html">Privacy</a>
+  <a href="terms.html">Terms</a>
+  <a href="disclaimer.html">Disclaimer</a>
+</div>
+  Built by Akash &middot; <a href="mailto:abinashdebnath32129@gmail.com">Email</a>
+</footer>
+
+<script src="supabase-client.js"></script>
+<script>
+(function () {
+  const loadingView = document.getElementById("widget-loading-view");
+  const loginView = document.getElementById("widget-login-view");
+  const confirmView = document.getElementById("widget-confirm-view");
+  const doneView = document.getElementById("widget-done-view");
+
+  const googleBtn = document.getElementById("google-btn");
+  const loginForm = document.getElementById("login-form");
+  const loginBtn = document.getElementById("login-btn");
+  const loginMessageEl = document.getElementById("login-message");
+
+  const loggedInEmailEl = document.getElementById("logged-in-email");
+  const confirmInput = document.getElementById("confirm-input");
+  const confirmDeleteBtn = document.getElementById("confirm-delete-btn");
+  const confirmCancelBtn = document.getElementById("confirm-cancel-btn");
+  const widgetMessage2El = document.getElementById("widget-message2");
+  const doneMessageEl = document.getElementById("done-message");
+
+  function showView(view) {
+    [loadingView, loginView, confirmView, doneView].forEach((v) => v.classList.remove("active"));
+    view.classList.add("active");
+  }
+
+  function showLoginMessage(text, type) {
+    loginMessageEl.textContent = text;
+    loginMessageEl.style.color = type === "error" ? "#ff3d81" : type === "success" ? "#4ade80" : "var(--dim)";
+  }
+
+  function showConfirmMessage(text, type) {
+    widgetMessage2El.textContent = text;
+    widgetMessage2El.style.color = type === "error" ? "#ff3d81" : type === "success" ? "#4ade80" : "var(--dim)";
+  }
+
+  function enterConfirmView(user) {
+    loggedInEmailEl.textContent = "Logged in as " + user.email;
+    confirmInput.value = "";
+    confirmDeleteBtn.disabled = true;
+    confirmDeleteBtn.textContent = "Permanently Delete My Account";
+    confirmCancelBtn.disabled = false;
+    confirmInput.disabled = false;
+    showConfirmMessage("", "");
+    showView(confirmView);
+  }
+
+  googleBtn.addEventListener("click", async () => {
+    googleBtn.disabled = true;
+    showLoginMessage("", "");
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        showLoginMessage(error.message, "error");
+        googleBtn.disabled = false;
+      }
+      // On success Supabase redirects the browser to Google.
+    } catch (err) {
+      showLoginMessage("Something went wrong. Try again.", "error");
+      googleBtn.disabled = false;
+    }
+  });
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+    loginBtn.disabled = true;
+    showLoginMessage("", "");
+    try {
+      const { data, error } = await signIn(email, password);
+      if (error) {
+        showLoginMessage(error.message, "error");
+      } else {
+        enterConfirmView(data.user);
+      }
+    } catch (err) {
+      showLoginMessage("Something went wrong. Try again.", "error");
+    } finally {
+      loginBtn.disabled = false;
+    }
+  });
+
+  confirmInput.addEventListener("input", () => {
+    confirmDeleteBtn.disabled = confirmInput.value.trim() !== "DELETE";
+  });
+
+  confirmCancelBtn.addEventListener("click", async () => {
+    confirmCancelBtn.disabled = true;
+    try {
+      await signOut();
+    } catch (e) {}
+    clearSupabaseAuthStorage();
+    window.location.reload();
+  });
+
+  confirmDeleteBtn.addEventListener("click", async () => {
+    if (confirmInput.value.trim() !== "DELETE") return;
+
+    confirmDeleteBtn.disabled = true;
+    confirmCancelBtn.disabled = true;
+    confirmInput.disabled = true;
+    confirmDeleteBtn.textContent = "Deleting…";
+    showConfirmMessage("Deleting your account. Please wait…", "info");
+
+    try {
+      const { error } = await deleteAccount();
+
+      if (error) {
+        showConfirmMessage(error.message || "Could not delete your account. Try again.", "error");
+        confirmDeleteBtn.disabled = false;
+        confirmCancelBtn.disabled = false;
+        confirmInput.disabled = false;
+        confirmDeleteBtn.textContent = "Permanently Delete My Account";
+        return;
+      }
+
+      try {
+        await signOut();
+      } catch (e) {}
+      clearSupabaseAuthStorage();
+
+      doneMessageEl.textContent = "Your Mathinphys account and associated data have been permanently deleted.";
+      showView(doneView);
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 4000);
+    } catch (err) {
+      showConfirmMessage("Something went wrong. Try again.", "error");
+      confirmDeleteBtn.disabled = false;
+      confirmCancelBtn.disabled = false;
+      confirmInput.disabled = false;
+      confirmDeleteBtn.textContent = "Permanently Delete My Account";
+    }
+  });
+
+  // On load: figure out if someone's already logged in (e.g. arrived here
+  // after a Google OAuth redirect, or already had a session on this domain).
+  (async () => {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        enterConfirmView(user);
+      } else {
+        showView(loginView);
+      }
+    } catch (e) {
+      showView(loginView);
+    }
+  })();
+})();
+</script>
+</body>
+</html>

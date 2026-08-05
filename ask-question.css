@@ -49,6 +49,22 @@
 .aq-badge.waiting{background:rgba(255,185,46,0.15);color:#ffb92e;}
 .aq-badge.answered{background:rgba(74,222,128,0.15);color:#4ade80;}
 
+.aq-delete-btn{background:none;border:none;color:#7c8a9c;font-size:13px;line-height:1;
+  cursor:pointer;padding:4px 5px;border-radius:5px;order:-1;}
+.aq-delete-btn:hover{color:#ff3d81;background:rgba(255,61,129,0.1);}
+
+.aq-confirm{display:none;margin-top:8px;padding:10px 11px;border-radius:8px;
+  border:1px solid #3a2130;background:rgba(255,61,129,0.08);}
+.aq-confirm.aq-confirm-open{display:block;}
+.aq-confirm-text{font-size:12px;color:#e8edf4;line-height:1.5;margin-bottom:9px;}
+.aq-confirm-actions{display:flex;gap:8px;justify-content:flex-end;}
+.aq-confirm-actions button{padding:7px 13px;border-radius:6px;font-size:12px;font-weight:600;
+  cursor:pointer;border:1px solid #1c2530;background:transparent;color:#e8edf4;}
+.aq-confirm-cancel:hover{border-color:#7c5cff;}
+.aq-confirm-delete{background:#ff3d81;border-color:#ff3d81;color:#fff;}
+.aq-confirm-delete:hover{background:#ff5c96;}
+.aq-confirm-actions button:disabled{opacity:0.6;cursor:default;}
+
 #aq-empty{color:#7c8a9c;font-size:13px;text-align:center;padding:30px 10px;}
 #aq-status{min-height:16px;font-size:12px;margin:0 16px 10px;color:#7c8a9c;}
 #aq-status.error{color:#ff3d81;}

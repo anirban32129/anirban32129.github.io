@@ -90,11 +90,25 @@
   .q-actions button{padding:9px 14px;border-radius:8px;border:1px solid var(--grid);
     background:transparent;color:var(--text);font-size:12.5px;cursor:pointer;font-weight:600;}
   .q-actions button.primary{background:var(--violet);border-color:var(--violet);color:#fff;}
+  .q-actions button.danger{border-color:rgba(255,61,129,0.4);color:var(--pink);}
+  .q-actions button.danger:hover{background:rgba(255,61,129,0.1);border-color:var(--pink);}
   .q-actions button:disabled{opacity:0.55;cursor:default;}
   .q-savestatus{min-height:16px;font-size:12px;margin-top:8px;}
   .q-savestatus.error{color:var(--pink);}
   .q-savestatus.success{color:var(--green);}
   #qEmpty{color:var(--dim);font-size:13px;text-align:center;padding:20px 0;display:none;}
+
+  .q-confirm{display:none;margin-top:10px;padding:12px 14px;border-radius:10px;
+    border:1px solid rgba(255,61,129,0.35);background:rgba(255,61,129,0.08);}
+  .q-confirm.q-confirm-open{display:block;}
+  .q-confirm-text{font-size:13px;color:var(--text);line-height:1.55;margin-bottom:10px;}
+  .q-confirm-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
+  .q-confirm-actions button{padding:8px 14px;border-radius:7px;font-size:12.5px;font-weight:600;
+    cursor:pointer;border:1px solid var(--grid);background:transparent;color:var(--text);}
+  .q-confirm-actions button:hover:not(:disabled){border-color:var(--violet);}
+  .q-confirm-actions button.danger{background:var(--pink);border-color:var(--pink);color:#fff;}
+  .q-confirm-actions button.danger:hover:not(:disabled){background:#ff5c96;border-color:#ff5c96;}
+  .q-confirm-actions button:disabled{opacity:0.55;cursor:default;}
 
   /* --- reused login modal styles --- */
   #login-toggle-btn{position:fixed;top:18px;right:20px;z-index:900;padding:9px 18px;
@@ -231,6 +245,7 @@
 
     <section>
       <h2>User Questions<span id="qUnansweredCount" class="count-badge" style="display:none;"></span></h2>
+      <div id="qGlobalStatus" class="q-savestatus" style="margin-bottom:10px;"></div>
       <div class="q-filters">
         <button data-qfilter="all" class="active">All</button>
         <button data-qfilter="waiting">Waiting</button>
@@ -483,6 +498,19 @@
   const qList = document.getElementById("qList");
   const qEmpty = document.getElementById("qEmpty");
   const qUnansweredCount = document.getElementById("qUnansweredCount");
+  const qGlobalStatus = document.getElementById("qGlobalStatus");
+
+  function setQGlobalStatus(text, type) {
+    qGlobalStatus.textContent = text;
+    qGlobalStatus.className = "q-savestatus " + (type || "");
+    if (text) {
+      clearTimeout(setQGlobalStatus._t);
+      setQGlobalStatus._t = setTimeout(() => {
+        qGlobalStatus.textContent = "";
+        qGlobalStatus.className = "q-savestatus";
+      }, 4000);
+    }
+  }
   const qFilterBtns = document.querySelectorAll("[data-qfilter]");
 
   let allQuestions = [];
@@ -572,8 +600,16 @@
             <button data-action="mark-answered" data-id="${row.id}" ${isAnswered ? "disabled" : ""}>
               ${isAnswered ? "Answered" : "Mark as Answered"}
             </button>
+            <button class="danger" data-action="delete" data-id="${row.id}">Delete</button>
           </div>
           <div class="q-savestatus" id="save-status-${row.id}"></div>
+          <div class="q-confirm" id="q-confirm-${row.id}">
+            <div class="q-confirm-text">Are you sure you want to delete this comment?</div>
+            <div class="q-confirm-actions">
+              <button data-action="delete-cancel" data-id="${row.id}" type="button">Cancel</button>
+              <button class="danger" data-action="delete-confirm" data-id="${row.id}" type="button">Delete</button>
+            </div>
+          </div>
         </div>
       `;
 
@@ -589,6 +625,24 @@
     });
     qList.querySelectorAll('[data-action="mark-answered"]').forEach((btn) => {
       btn.addEventListener("click", () => handleMarkAnswered(btn.dataset.id));
+    });
+    // Admin delete flow: clicking "Delete" shows an inline "Are you sure?"
+    // confirmation (Cancel / Delete) before anything is removed — see
+    // handleDeleteQuestion() for the actual delete call.
+    qList.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const confirmEl = document.getElementById(`q-confirm-${btn.dataset.id}`);
+        if (confirmEl) confirmEl.classList.add("q-confirm-open");
+      });
+    });
+    qList.querySelectorAll('[data-action="delete-cancel"]').forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const confirmEl = document.getElementById(`q-confirm-${btn.dataset.id}`);
+        if (confirmEl) confirmEl.classList.remove("q-confirm-open");
+      });
+    });
+    qList.querySelectorAll('[data-action="delete-confirm"]').forEach((btn) => {
+      btn.addEventListener("click", () => handleDeleteQuestion(btn.dataset.id));
     });
   }
 
@@ -634,6 +688,53 @@
       return;
     }
     loadQuestions();
+  }
+
+  // Admins can delete ANY student's question (not just their own). This
+  // page never sends a service_role key or admin credential to the
+  // browser — the delete request goes through with the admin's own
+  // logged-in session, and it's the "Admin can delete any question" RLS
+  // policy (matching this page's ADMIN_EMAILS via auth.jwt()->>'email')
+  // that actually authorizes it server-side.
+  async function handleDeleteQuestion(id) {
+    const confirmBtn = document.querySelector(`[data-action="delete-confirm"][data-id="${id}"]`);
+    const cancelBtn = document.querySelector(`[data-action="delete-cancel"][data-id="${id}"]`);
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Deleting…";
+    }
+    if (cancelBtn) cancelBtn.disabled = true;
+    setQSaveStatus(id, "", "");
+
+    const supabase = await getSupabase();
+    const { error, count } = await supabase
+      .from(QUESTIONS_TABLE)
+      .delete({ count: "exact" })
+      .eq("id", id);
+
+    if (error || count === 0) {
+      setQSaveStatus(id, "Unable to delete comment. Please try again.", "error");
+      setQGlobalStatus("Unable to delete comment. Please try again.", "error");
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Delete";
+      }
+      if (cancelBtn) cancelBtn.disabled = false;
+      return;
+    }
+
+    allQuestions = allQuestions.filter((r) => String(r.id) !== String(id));
+    const waitingCount = allQuestions.filter((r) => r.status !== "answered").length;
+    if (waitingCount > 0) {
+      qUnansweredCount.style.display = "inline-block";
+      qUnansweredCount.textContent = waitingCount + " waiting";
+    } else {
+      qUnansweredCount.style.display = "none";
+    }
+    renderQuestions();
+    qEmpty.style.display = allQuestions.length === 0 ? "block" : "none";
+    if (allQuestions.length === 0) qEmpty.textContent = "No questions yet.";
+    setQGlobalStatus("Comment deleted successfully.", "success");
   }
 
   // Re-check access whenever login state changes (login/logout via the modal)

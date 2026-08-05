@@ -25,6 +25,13 @@
   const forgotMessageEl = document.getElementById("modal-forgot-message");
   const forgotBackLink = document.getElementById("modal-forgot-back");
 
+  const deleteAccountBtn = document.getElementById("modal-delete-account-btn");
+  const deleteView = document.getElementById("modal-delete-view");
+  const deleteConfirmInput = document.getElementById("modal-delete-confirm-input");
+  const deleteConfirmBtn = document.getElementById("modal-delete-confirm-btn");
+  const deleteCancelBtn = document.getElementById("modal-delete-cancel-btn");
+  const deleteMessageEl = document.getElementById("modal-delete-message");
+
   let isLoggedIn = false;
 
   function openModal() {
@@ -33,6 +40,14 @@
 
   function closeModal() {
     overlay.style.display = "none";
+    // If the user closes the modal mid-delete-flow, don't leave the
+    // confirmation view showing (with a live "DELETE" typed in) next time
+    // they reopen it.
+    if (deleteView.style.display === "block") {
+      deleteView.style.display = "none";
+      appView.style.display = "block";
+      resetDeleteView();
+    }
   }
 
   toggleBtn.addEventListener("click", openModal);
@@ -157,6 +172,81 @@
     closeModal();
   });
 
+  function showDeleteMessage(text, type) {
+    deleteMessageEl.textContent = text;
+    deleteMessageEl.style.color = type === "error" ? "#ff3d81" : type === "success" ? "#4ade80" : "var(--dim)";
+  }
+
+  function resetDeleteView() {
+    deleteConfirmInput.value = "";
+    deleteConfirmBtn.disabled = true;
+    deleteConfirmBtn.textContent = "Permanently Delete My Account";
+    deleteCancelBtn.disabled = false;
+    deleteConfirmInput.disabled = false;
+    showDeleteMessage("", "");
+  }
+
+  deleteAccountBtn.addEventListener("click", () => {
+    appView.style.display = "none";
+    resetDeleteView();
+    deleteView.style.display = "block";
+  });
+
+  deleteCancelBtn.addEventListener("click", () => {
+    deleteView.style.display = "none";
+    appView.style.display = "block";
+  });
+
+  deleteConfirmInput.addEventListener("input", () => {
+    deleteConfirmBtn.disabled = deleteConfirmInput.value.trim() !== "DELETE";
+  });
+
+  deleteConfirmBtn.addEventListener("click", async () => {
+    // Belt-and-suspenders: only proceed if the confirmation text is exact,
+    // even though the button is disabled otherwise.
+    if (deleteConfirmInput.value.trim() !== "DELETE") return;
+
+    deleteConfirmBtn.disabled = true;
+    deleteCancelBtn.disabled = true;
+    deleteConfirmInput.disabled = true;
+    deleteConfirmBtn.textContent = "Deleting…";
+    showDeleteMessage("Deleting your account. Please wait…", "info");
+
+    try {
+      const { error } = await deleteAccount();
+
+      if (error) {
+        showDeleteMessage(error.message || "Could not delete your account. Try again.", "error");
+        deleteConfirmBtn.disabled = false;
+        deleteCancelBtn.disabled = false;
+        deleteConfirmInput.disabled = false;
+        deleteConfirmBtn.textContent = "Permanently Delete My Account";
+        return;
+      }
+
+      showDeleteMessage("Your account has been deleted. Signing you out…", "success");
+
+      // Best-effort: the account is already gone server-side, so this call
+      // mainly exists to let the Supabase client tidy up its own state.
+      try {
+        await signOut();
+      } catch (e) {
+        /* account no longer exists server-side — safe to ignore */
+      }
+      clearSupabaseAuthStorage();
+
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 1200);
+    } catch (err) {
+      showDeleteMessage("Something went wrong. Try again.", "error");
+      deleteConfirmBtn.disabled = false;
+      deleteCancelBtn.disabled = false;
+      deleteConfirmInput.disabled = false;
+      deleteConfirmBtn.textContent = "Permanently Delete My Account";
+    }
+  });
+
   function showLoggedIn(user) {
     isLoggedIn = true;
     authView.style.display = "none";
@@ -171,6 +261,7 @@
     isLoggedIn = false;
     appView.style.display = "none";
     forgotView.style.display = "none";
+    deleteView.style.display = "none";
     authView.style.display = "block";
     form.reset();
     setMode("login");
