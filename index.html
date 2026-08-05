@@ -412,6 +412,12 @@ input.addEventListener('input', () => {
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, tier(1.5, 2)));
   renderer.setSize(window.innerWidth, window.innerHeight);
+  // Filmic tone mapping lets the overbright glow/emissive shader colors (values > 1)
+  // roll off softly instead of clipping to flat white — the single biggest lever
+  // for making every additive/glow effect below actually look "HDR".
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  if (THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
 
   const palette = [0xffb92e, 0xff3d81, 0x7c5cff]; // torch, pink, violet
 
@@ -463,6 +469,325 @@ input.addEventListener('input', () => {
   // wells: localized dips left behind briefly where a pair popped
   const wells = []; // {x, z, born, strength}
 
+  // Shared fbm noise (hash → value-noise → fractal sum), reused by the planet
+  // surface shader and the accretion-disk turbulence shader below.
+  const noiseGLSL = `
+    float hash(vec3 p){
+      p = fract(p * 0.3183099 + 0.1);
+      p *= 17.0;
+      return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+    }
+    float noise(vec3 x){
+      vec3 i = floor(x);
+      vec3 f = fract(x);
+      f = f * f * (3.0 - 2.0 * f);
+      return mix(
+        mix(mix(hash(i+vec3(0,0,0)), hash(i+vec3(1,0,0)), f.x),
+            mix(hash(i+vec3(0,1,0)), hash(i+vec3(1,1,0)), f.x), f.y),
+        mix(mix(hash(i+vec3(0,0,1)), hash(i+vec3(1,0,1)), f.x),
+            mix(hash(i+vec3(0,1,1)), hash(i+vec3(1,1,1)), f.x), f.y), f.z);
+    }
+    float fbm(vec3 p){
+      float v = 0.0, a = 0.5;
+      for (int i = 0; i < 5; i++){
+        v += a * noise(p);
+        p *= 2.02;
+        a *= 0.5;
+      }
+      return v;
+    }
+  `;
+
+  // Shared vertex shader: local + view-space normal & view-space position,
+  // used by the planet, black-hole and glow-particle fragment shaders below.
+  const stdVert = `
+    varying vec3 vNormalL;
+    varying vec3 vNormalV;
+    varying vec3 vViewPos;
+    void main(){
+      vNormalL = normal;
+      vNormalV = normalize(normalMatrix * normal);
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vViewPos = mv.xyz;
+      gl_Position = projectionMatrix * mv;
+    }
+  `;
+  const planetVert = stdVert;
+  const planetFrag = noiseGLSL + `
+    uniform float uTime;
+    uniform float uSeed;
+    uniform float uGas;
+    uniform vec3 uColorBase;
+    uniform vec3 uColorLight;
+    uniform vec3 uColorDark;
+    uniform vec3 uColorRim;
+    uniform vec3 uFogColor;
+    uniform float uFogNear;
+    uniform float uFogFar;
+    varying vec3 vNormalL;
+    varying vec3 vNormalV;
+    varying vec3 vViewPos;
+
+    void main(){
+      vec3 p = vNormalL * 3.0 + vec3(uSeed);
+      float n;
+      if (uGas > 0.5){
+        float lat = vNormalL.y * 4.0;
+        float warp = fbm(p * 1.3 + vec3(0.0, uTime * 0.015, 0.0)) * 1.3;
+        n = sin(lat * 3.0 + warp * 3.0) * 0.5 + 0.5;
+        n = mix(n, fbm(p * 0.8 + vec3(uTime * 0.008, 0.0, 0.0)), 0.35);
+      } else {
+        n = fbm(p);
+        n = smoothstep(0.32, 0.78, n);
+      }
+      vec3 surf = mix(uColorBase, uColorLight, n);
+
+      vec3 lightDir = normalize(vec3(0.5, 0.55, 0.75));
+      float diff = max(dot(vNormalV, lightDir), 0.0);
+      float ambient = 0.30;
+      vec3 lit = surf * (ambient + diff * 0.85);
+      lit = mix(lit, uColorDark, (1.0 - diff) * 0.30);
+
+      vec3 viewDir = normalize(-vViewPos);
+      float rim = pow(1.0 - max(dot(vNormalV, viewDir), 0.0), 2.4);
+      lit += uColorRim * rim * 0.55;
+
+      float fogDepth = length(vViewPos);
+      float fogFactor = smoothstep(uFogNear, uFogFar, fogDepth);
+      lit = mix(lit, uFogColor, fogFactor);
+
+      gl_FragColor = vec4(lit, 1.0);
+    }
+  `;
+
+  // Black-hole event horizon: near-black sphere with a crisp bright "photon
+  // ring" at the silhouette (grazing-angle fresnel), flickering slightly.
+  const bhFrag = `
+    uniform float uTime;
+    uniform float uSeed;
+    varying vec3 vNormalV;
+    varying vec3 vViewPos;
+    float hash1(float n){ return fract(sin(n) * 43758.5453123); }
+    void main(){
+      vec3 viewDir = normalize(-vViewPos);
+      float fres = pow(1.0 - max(dot(vNormalV, viewDir), 0.0), 6.0);
+      float flick = 0.82 + 0.18 * hash1(floor(uTime * 10.0 + uSeed * 97.0));
+      vec3 ringColor = vec3(1.0, 0.8, 0.5) * flick;
+      vec3 col = mix(vec3(0.0), ringColor, fres);
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `;
+
+  // Accretion disk: turbulent flowing plasma (fbm noise scrolling over time)
+  // hottest near the inner edge, softly faded at both the inner & outer rim.
+  const diskVert = `
+    varying vec3 vPosL;
+    void main(){
+      vPosL = position;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * mv;
+    }
+  `;
+  const diskFrag = noiseGLSL + `
+    uniform float uTime;
+    uniform float uSeed;
+    uniform float uRIn;
+    uniform float uROut;
+    uniform vec3 uColorBase;
+    uniform vec3 uColorHot;
+    uniform float uOpacity;
+    uniform float uCamAngle;  // angle (in this ring's local frame) pointing toward the camera
+    uniform float uSpinSign;  // +1 / -1, matches this ring's actual spin direction
+    varying vec3 vPosL;
+    void main(){
+      float r = length(vPosL.xy);
+      float rad = clamp((r - uRIn) / max(uROut - uRIn, 0.0001), 0.0, 1.0);
+      float ang = atan(vPosL.y, vPosL.x);
+      vec3 p = vec3(cos(ang) * 3.0, sin(ang) * 3.0, rad * 3.0) + vec3(uSeed);
+      float flow = fbm(p * 1.6 + vec3(0.0, 0.0, -uTime * 0.5));
+      float turb = fbm(p * 3.2 + vec3(uTime * 0.12, 0.0, 0.0));
+      float heat = (1.0 - rad) * 0.65 + turb * 0.45;
+      vec3 col = mix(uColorBase, uColorHot, clamp(heat + flow * 0.25, 0.0, 1.0));
+
+      // Relativistic (Doppler) beaming: the side of the disk sweeping toward the
+      // camera reads brighter and slightly blue-shifted, the receding side dimmer
+      // and redder — a cheap but physically-motivated approximation.
+      float beam = 0.5 + 0.5 * sin(ang - uCamAngle) * uSpinSign;
+      vec3 blue = mix(col, vec3(0.72, 0.82, 1.0), 0.4);
+      col = mix(col * 0.7, blue * 1.25, smoothstep(0.15, 0.85, beam));
+
+      float edge = smoothstep(0.0, 0.15, rad) * smoothstep(1.0, 0.8, rad);
+      float alpha = uOpacity * edge * (0.55 + 0.45 * turb) * (0.65 + 0.55 * beam);
+      gl_FragColor = vec4(col * 1.3, alpha);
+    }
+  `;
+
+  // Shared point-sprite shader for starfield & galaxy: per-point size + phase
+  // attributes drive perspective-scaled twinkle, and bright points additionally
+  // get a soft four-spike diffraction flare, like a real long-exposure star photo.
+  const starPointVert = `
+    attribute float aSize;
+    attribute float aPhase;
+    attribute float aBrightness;
+    uniform float uTime;
+    uniform float uPixelRatio;
+    varying vec3 vColor;
+    varying float vBrightness;
+    void main(){
+      vColor = color;
+      vBrightness = aBrightness;
+      float twinkle = 0.72 + 0.28 * sin(uTime * (1.1 + aPhase * 0.4) + aPhase * 6.28);
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = aSize * twinkle * uPixelRatio * (260.0 / max(-mv.z, 0.001));
+      gl_Position = projectionMatrix * mv;
+    }
+  `;
+  const starPointFrag = `
+    varying vec3 vColor;
+    varying float vBrightness;
+    void main(){
+      vec2 uv = gl_PointCoord - 0.5;
+      float d = length(uv) * 2.0;
+      float core = pow(clamp(1.0 - d, 0.0, 1.0), 2.2);
+      float spikeX = (1.0 - smoothstep(0.0, 0.85, abs(uv.y) * 30.0)) * (1.0 - smoothstep(0.0, 0.5, abs(uv.x)));
+      float spikeY = (1.0 - smoothstep(0.0, 0.85, abs(uv.x) * 30.0)) * (1.0 - smoothstep(0.0, 0.5, abs(uv.y)));
+      float spikes = (spikeX + spikeY) * vBrightness * 0.8;
+      float glow = clamp(core + spikes, 0.0, 1.4);
+      vec3 col = vColor * (1.0 + vBrightness * 0.6);
+      gl_FragColor = vec4(col, glow);
+    }
+  `;
+
+  // Nebula: layered, domain-warped fbm clouds on camera-facing billboards —
+  // real volumetric-looking gas instead of flat translucent discs.
+  const nebulaVert = `
+    varying vec2 vUv;
+    void main(){
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `;
+  const nebulaFrag = noiseGLSL + `
+    uniform float uTime;
+    uniform float uSeed;
+    uniform vec3 uColorA;
+    uniform vec3 uColorB;
+    uniform vec3 uColorC;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    void main(){
+      vec2 uv = vUv - 0.5;
+      float dist = length(uv) * 2.0;
+      vec3 p = vec3(uv * 2.3, uSeed);
+      vec2 warp = vec2(
+        fbm(p + vec3(0.0, 0.0, uTime * 0.014)),
+        fbm(p + vec3(5.2, 1.3, uTime * 0.011))
+      ) * 0.55;
+      float n  = fbm(vec3(uv * 2.0 + warp, uSeed + uTime * 0.008));
+      float n2 = fbm(vec3(uv * 4.2 + warp * 1.6, uSeed + 3.7));
+      float density = smoothstep(0.15, 0.9, n) * 0.7 + smoothstep(0.35, 0.95, n2) * 0.35;
+      float edge = smoothstep(1.0, 0.1, dist);
+      density *= edge;
+      vec3 col = mix(uColorA, uColorB, smoothstep(0.2, 0.85, n));
+      col = mix(col, uColorC, smoothstep(0.55, 1.0, n2) * 0.65);
+      float alpha = clamp(density, 0.0, 1.0) * uOpacity;
+      gl_FragColor = vec4(col, alpha);
+    }
+  `;
+
+  // Virtual particle / antiparticle: a small glowing orb — pulsing core plus
+  // a brighter fresnel rim — instead of a flat, unlit dot.
+  const glowFrag = `
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    uniform float uTime;
+    uniform float uSeed;
+    varying vec3 vNormalV;
+    varying vec3 vViewPos;
+    void main(){
+      vec3 viewDir = normalize(-vViewPos);
+      float fres = pow(1.0 - max(dot(vNormalV, viewDir), 0.0), 2.0);
+      float pulse = 0.85 + 0.15 * sin(uTime * 6.0 + uSeed * 10.0);
+      vec3 core = uColor * (1.25 * pulse);
+      vec3 glow = mix(core, vec3(1.0), fres * 0.55);
+      float alpha = uOpacity * (0.55 + fres * 0.45);
+      gl_FragColor = vec4(glow, alpha);
+    }
+  `;
+
+  // Annihilation flash: a soft glowing shell (bright rim, transparent center)
+  // that reads like an expanding shockwave as it scales up.
+  const flashFrag = `
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying vec3 vNormalV;
+    varying vec3 vViewPos;
+    void main(){
+      vec3 viewDir = normalize(-vViewPos);
+      float fres = pow(1.0 - max(dot(vNormalV, viewDir), 0.0), 1.4);
+      float alpha = uOpacity * fres;
+      gl_FragColor = vec4(uColor * 1.4, alpha);
+    }
+  `;
+
+  function makeGlowMaterial(colorHex, seed){
+    return new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: new THREE.Color(colorHex) }, uOpacity: { value: 0 }, uTime: { value: 0 }, uSeed: { value: seed } },
+      vertexShader: stdVert, fragmentShader: glowFrag,
+      transparent: true, depthWrite: false
+    });
+  }
+  function makeFlashMaterial(colorHex){
+    return new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: new THREE.Color(colorHex) }, uOpacity: { value: 0 } },
+      vertexShader: stdVert, fragmentShader: flashFrag,
+      transparent: true, depthWrite: false
+    });
+  }
+  function makeBHMaterial(seed){
+    return new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uSeed: { value: seed } },
+      vertexShader: stdVert, fragmentShader: bhFrag
+    });
+  }
+  function makeDiskMaterial(colorHex, opacity, seed, rInner, rOuter, spinSign){
+    const base = new THREE.Color(colorHex);
+    const hot  = base.clone().lerp(new THREE.Color(0xffffff), 0.6);
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 }, uSeed: { value: seed }, uRIn: { value: rInner }, uROut: { value: rOuter },
+        uColorBase: { value: base }, uColorHot: { value: hot }, uOpacity: { value: opacity },
+        uCamAngle: { value: 0 }, uSpinSign: { value: spinSign || 1 }
+      },
+      vertexShader: diskVert, fragmentShader: diskFrag,
+      transparent: true, side: THREE.DoubleSide, depthWrite: false
+    });
+  }
+
+  const fogColorVec = new THREE.Color(0x05070a);
+  function makePlanetMaterial(colorHex, seed, gasGiant){
+    const base  = new THREE.Color(colorHex);
+    const light = base.clone().lerp(new THREE.Color(0xffffff), 0.4);
+    const dark  = base.clone().multiplyScalar(0.32);
+    const rim   = base.clone().lerp(new THREE.Color(0xbfe3ff), 0.55);
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uTime:      { value: 0 },
+        uSeed:      { value: seed },
+        uGas:       { value: gasGiant ? 1 : 0 },
+        uColorBase: { value: base },
+        uColorLight:{ value: light },
+        uColorDark: { value: dark },
+        uColorRim:  { value: rim },
+        uFogColor:  { value: fogColorVec },
+        uFogNear:   { value: 10 },
+        uFogFar:    { value: 52 }
+      },
+      vertexShader: planetVert,
+      fragmentShader: planetFrag
+    });
+  }
+
   // ---- Virtual particle–antiparticle pairs ----
   const pairs = [];
   const maxPairs = tierInt(7, 13);
@@ -481,9 +806,9 @@ input.addEventListener('input', () => {
     const dir = new THREE.Vector3(Math.random() - 0.5, (Math.random() - 0.5) * 0.4, Math.random() - 0.5).normalize();
     const maxSep = 0.6 + Math.random() * 1.1;
 
-    const particle = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 }));
-    const antiparticle = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color: 0xf4f8ff, transparent: true, opacity: 0 }));
-    const flash = new THREE.Mesh(flashGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 }));
+    const particle = new THREE.Mesh(partGeo, makeGlowMaterial(color, Math.random() * 10));
+    const antiparticle = new THREE.Mesh(partGeo, makeGlowMaterial(0xf4f8ff, Math.random() * 10));
+    const flash = new THREE.Mesh(flashGeo, makeFlashMaterial(color));
     flash.scale.setScalar(0.01);
     particle.position.set(cx, cy, cz);
     antiparticle.position.set(cx, cy, cz);
@@ -520,7 +845,7 @@ input.addEventListener('input', () => {
     };
 
     const bhGeo = new THREE.SphereGeometry(bh.radius, 40, 40);
-    const bhMat = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false });
+    const bhMat = makeBHMaterial(Math.random() * 10);
     bh.mesh = new THREE.Mesh(bhGeo, bhMat);
     bh.mesh.position.copy(bh.pos);
     scene.add(bh.mesh);
@@ -533,10 +858,10 @@ input.addEventListener('input', () => {
       const rInner = bh.radius * (1.18 + i * 0.38);
       const rOuter = rInner + bh.radius * 0.34;
       const ringGeo = new THREE.RingGeometry(rInner, rOuter, 72, 1);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: opts.diskColors[i], transparent: true, opacity: (0.6 - i * 0.1) * opts.diskOpacityMul,
-        side: THREE.DoubleSide, fog: false
-      });
+      const spinSign = opts.spinMul >= 0 ? 1 : -1;
+      const ringMat = makeDiskMaterial(
+        opts.diskColors[i], (0.6 - i * 0.1) * opts.diskOpacityMul, Math.random() * 10 + i, rInner, rOuter, spinSign
+      );
       const ring = new THREE.Mesh(ringGeo, ringMat);
       bh.diskGroup.add(ring);
       bh.diskRings.push({ mesh: ring, speed: (0.55 - i * 0.09) * opts.spinMul });
@@ -634,11 +959,15 @@ input.addEventListener('input', () => {
     return p;
   }
 
-  // ---- Starfield: distant twinkling stars ----
+  // ---- Starfield: distant twinkling stars, custom shader sprites with per-star
+  // size/twinkle and diffraction flares on the brightest handful ----
   const starCount = tierInt(260, 480);
   const starGeo = new THREE.BufferGeometry();
   const starPos = new Float32Array(starCount * 3);
   const starColorArr = new Float32Array(starCount * 3);
+  const starSizeArr = new Float32Array(starCount);
+  const starPhaseArr = new Float32Array(starCount);
+  const starBrightArr = new Float32Array(starCount);
   const starColorChoices = [new THREE.Color(0xffffff), new THREE.Color(0xffe9b0), new THREE.Color(0xcfe8ff), new THREE.Color(0xffd0e0)];
   for (let i = 0; i < starCount; i++){
     const r = 35 + Math.random() * 40;
@@ -649,17 +978,34 @@ input.addEventListener('input', () => {
     starPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta) - 10;
     const c = starColorChoices[Math.floor(Math.random() * starColorChoices.length)];
     starColorArr[i*3] = c.r; starColorArr[i*3+1] = c.g; starColorArr[i*3+2] = c.b;
+    // most stars stay small and plain; a bright minority get a real diffraction flare
+    const isHero = Math.random() < 0.08;
+    starSizeArr[i] = isHero ? (2.6 + Math.random() * 2.2) : (0.9 + Math.random() * 1.3);
+    starBrightArr[i] = isHero ? (0.7 + Math.random() * 0.3) : Math.random() * 0.15;
+    starPhaseArr[i] = Math.random();
   }
   starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
   starGeo.setAttribute('color', new THREE.BufferAttribute(starColorArr, 3));
-  const starMat = new THREE.PointsMaterial({ size: 0.16, vertexColors: true, transparent: true, opacity: 0.85, fog: true, sizeAttenuation: true });
+  starGeo.setAttribute('aSize', new THREE.BufferAttribute(starSizeArr, 1));
+  starGeo.setAttribute('aPhase', new THREE.BufferAttribute(starPhaseArr, 1));
+  starGeo.setAttribute('aBrightness', new THREE.BufferAttribute(starBrightArr, 1));
+  const starMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, tier(1.5, 2)) } },
+    vertexShader: starPointVert, fragmentShader: starPointFrag, vertexColors: true,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false
+  });
   const starField = new THREE.Points(starGeo, starMat);
   scene.add(starField);
 
-  // ---- Planets + Moons: reusable solar-system factory, instanced several times around the scene ----
-  function makePlanet(radius, color, ring){
+  const planetMaterials = []; // tracked so animate() can update uTime each frame
+
+  function makePlanet(radius, color, ring, opts){
+    opts = opts || {};
     const g = new THREE.Group();
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 20, 20), new THREE.MeshBasicMaterial({ color, fog: true }));
+    const seg = opts.segments || 26;
+    const mat = makePlanetMaterial(color, opts.seed || 0, opts.gasGiant);
+    planetMaterials.push(mat);
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, seg, seg), mat);
     g.add(mesh);
     if (ring){
       const ringMesh = new THREE.Mesh(
@@ -678,26 +1024,29 @@ input.addEventListener('input', () => {
     system.scale.setScalar(opts.scale || 1);
     scene.add(system);
 
+    // per-system seed offsets so each planet's procedural texture is unique
+    const seedBase = Math.abs(opts.pos.x * 0.13 + opts.pos.z * 0.07);
+
     const orbitA = new THREE.Group();
-    const planetA = makePlanet(0.55, opts.colorA, null);
+    const planetA = makePlanet(0.55, opts.colorA, null, { seed: seedBase + 0.0 });
     planetA.group.position.set(3.2, 0, 0);
     orbitA.add(planetA.group);
     system.add(orbitA);
 
     const moonOrbit = new THREE.Group();
-    const moon = makePlanet(0.16, 0xbfc6d0, null);
+    const moon = makePlanet(0.16, 0xbfc6d0, null, { seed: seedBase + 5.0, segments: 16 });
     moon.group.position.set(0.9, 0, 0);
     moonOrbit.add(moon.group);
     planetA.group.add(moonOrbit);
 
     const orbitB = new THREE.Group();
-    const planetB = makePlanet(0.85, opts.colorB, opts.ring || null);
+    const planetB = makePlanet(0.85, opts.colorB, opts.ring || null, { seed: seedBase + 10.0, gasGiant: true });
     planetB.group.position.set(5.4, 0.6, -1.2);
     orbitB.add(planetB.group);
     system.add(orbitB);
 
     const orbitDwarf = new THREE.Group();
-    const dwarfPlanet = makePlanet(0.24, 0xb7a08c, null);
+    const dwarfPlanet = makePlanet(0.24, 0xb7a08c, null, { seed: seedBase + 15.0, segments: 18 });
     dwarfPlanet.group.position.set(7.1, -0.8, 1.8);
     orbitDwarf.add(dwarfPlanet.group);
     system.add(orbitDwarf);
@@ -739,26 +1088,49 @@ input.addEventListener('input', () => {
   brownDwarf.position.set(tier(12, 20), -5, -9);
   scene.add(brownDwarf);
 
-  // ---- Nebula: a soft glowing cloud made of layered translucent discs, far in the background ----
+  // ---- Nebula: layered, camera-facing volumetric-noise gas clouds, far in the background ----
+  function makeNebulaMaterial(colorA, colorB, colorC, seed, opacity){
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 }, uSeed: { value: seed },
+        uColorA: { value: new THREE.Color(colorA) },
+        uColorB: { value: new THREE.Color(colorB) },
+        uColorC: { value: new THREE.Color(colorC) },
+        uOpacity: { value: opacity }
+      },
+      vertexShader: nebulaVert, fragmentShader: nebulaFrag,
+      transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.NormalBlending, fog: false
+    });
+  }
   const nebula = new THREE.Group();
-  const nebColors = [0x7c5cff, 0xff3d81, 0x3d6cff];
-  for (let i = 0; i < 5; i++){
-    const disc = new THREE.Mesh(
-      new THREE.CircleGeometry(2.2 + Math.random() * 1.6, 24),
-      new THREE.MeshBasicMaterial({ color: nebColors[i % nebColors.length], transparent: true, opacity: 0.05, fog: true, depthWrite: false })
+  const nebulaMaterials = [];
+  const nebulaPlaneCount = tierInt(2, 4);
+  for (let i = 0; i < nebulaPlaneCount; i++){
+    const size = 8 + Math.random() * 6;
+    const mat = makeNebulaMaterial(
+      i % 2 === 0 ? 0x7c5cff : 0x3d6cff,
+      i % 2 === 0 ? 0xff3d81 : 0x7c5cff,
+      0x1a1030,
+      Math.random() * 20,
+      0.5 + Math.random() * 0.2
     );
-    disc.position.set((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 1.5);
-    disc.rotation.z = Math.random() * Math.PI;
-    nebula.add(disc);
+    nebulaMaterials.push(mat);
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(size, size), mat);
+    plane.position.set((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 2);
+    nebula.add(plane);
   }
   nebula.position.set(tier(-8, -14), -8, -22);
   scene.add(nebula);
 
-  // ---- Galaxy: a slowly-rotating spiral of points, distant and small ----
+  // ---- Galaxy: a slowly-rotating spiral of glowing star sprites (same shader as the
+  // main starfield), distant and small, with a bright warm-glow core ----
   const galaxyCount = tierInt(180, 320);
   const galaxyGeo = new THREE.BufferGeometry();
   const galaxyPos = new Float32Array(galaxyCount * 3);
   const galaxyColorArr = new Float32Array(galaxyCount * 3);
+  const galaxySizeArr = new Float32Array(galaxyCount);
+  const galaxyPhaseArr = new Float32Array(galaxyCount);
+  const galaxyBrightArr = new Float32Array(galaxyCount);
   const galCore = new THREE.Color(0xfff2c9), galEdge = new THREE.Color(0x7c5cff);
   for (let i = 0; i < galaxyCount; i++){
     const arm = i % 3;
@@ -770,14 +1142,34 @@ input.addEventListener('input', () => {
     galaxyPos[i*3+2] = Math.sin(ang) * rad;
     const c = galCore.clone().lerp(galEdge, t);
     galaxyColorArr[i*3] = c.r; galaxyColorArr[i*3+1] = c.g; galaxyColorArr[i*3+2] = c.b;
+    const isHero = t < 0.12 || Math.random() < 0.05;
+    galaxySizeArr[i] = isHero ? (2.2 + Math.random() * 1.6) : (0.7 + Math.random() * 0.8);
+    galaxyBrightArr[i] = isHero ? (0.6 + Math.random() * 0.4) : Math.random() * 0.1;
+    galaxyPhaseArr[i] = Math.random();
   }
   galaxyGeo.setAttribute('position', new THREE.BufferAttribute(galaxyPos, 3));
   galaxyGeo.setAttribute('color', new THREE.BufferAttribute(galaxyColorArr, 3));
-  const galaxyMat = new THREE.PointsMaterial({ size: 0.09, vertexColors: true, transparent: true, opacity: 0.8, fog: true });
+  galaxyGeo.setAttribute('aSize', new THREE.BufferAttribute(galaxySizeArr, 1));
+  galaxyGeo.setAttribute('aPhase', new THREE.BufferAttribute(galaxyPhaseArr, 1));
+  galaxyGeo.setAttribute('aBrightness', new THREE.BufferAttribute(galaxyBrightArr, 1));
+  const galaxyMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, tier(1.5, 2)) } },
+    vertexShader: starPointVert, fragmentShader: starPointFrag, vertexColors: true,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false
+  });
   const galaxy = new THREE.Points(galaxyGeo, galaxyMat);
   galaxy.rotation.x = 0.9;
   galaxy.position.set(tier(10, 17), 8.5, -20);
   scene.add(galaxy);
+
+  // soft warm glow at the galactic core, reusing the nebula shader for a tight blob.
+  // Added directly to the scene (not as a child of `galaxy`) and billboarded to the
+  // camera each frame in animate(), so its spin stays independent of the arm rotation.
+  const galaxyCoreMat = makeNebulaMaterial(0xfff2c9, 0xffb92e, 0x7c5cff, 4.2, 0.6);
+  nebulaMaterials.push(galaxyCoreMat);
+  const galaxyCore = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4), galaxyCoreMat);
+  galaxyCore.position.copy(galaxy.position);
+  scene.add(galaxyCore);
 
   // ---- Comet: a bright icy body on a slow looping path, with a longer particle tail ----
   const comet = new THREE.Group();
@@ -858,6 +1250,7 @@ input.addEventListener('input', () => {
   window.addEventListener('pointerdown', (e) => rippleAt(e.clientX, e.clientY));
 
   const clock = new THREE.Clock();
+  const _camLocalScratch = new THREE.Vector3();
   let spawnTimer = 0;
   let meteorTimer = 1.2;
 
@@ -930,13 +1323,15 @@ input.addEventListener('input', () => {
 
         p.particle.position.copy(p.center).addScaledVector(p.dir, sep);
         p.antiparticle.position.copy(p.center).addScaledVector(p.dir, -sep);
-        p.particle.material.opacity = opacity * 0.95;
-        p.antiparticle.material.opacity = opacity * 0.95;
+        p.particle.material.uniforms.uOpacity.value = opacity * 0.95;
+        p.antiparticle.material.uniforms.uOpacity.value = opacity * 0.95;
+        p.particle.material.uniforms.uTime.value = t;
+        p.antiparticle.material.uniforms.uTime.value = t;
 
         // annihilation flash near the end
         if (f > 0.88){
           const k = (f - 0.88) / 0.12;
-          p.flash.material.opacity = (1 - k) * 0.5;
+          p.flash.material.uniforms.uOpacity.value = (1 - k) * 0.5;
           p.flash.scale.setScalar(0.05 + k * 1.4);
         }
 
@@ -964,9 +1359,16 @@ input.addEventListener('input', () => {
         );
         bh.mesh.position.copy(bh.pos);
         bh.diskGroup.position.copy(bh.pos);
+        bh.mesh.material.uniforms.uTime.value = t;
 
         for (let i = 0; i < bh.diskRings.length; i++){
-          bh.diskRings[i].mesh.rotation.z = t * bh.diskRings[i].speed;
+          const ringMesh = bh.diskRings[i].mesh;
+          ringMesh.rotation.z = t * bh.diskRings[i].speed;
+          ringMesh.material.uniforms.uTime.value = t;
+          // camera direction expressed in this ring's own local frame, for Doppler beaming
+          _camLocalScratch.copy(camera.position);
+          ringMesh.worldToLocal(_camLocalScratch);
+          ringMesh.material.uniforms.uCamAngle.value = Math.atan2(_camLocalScratch.y, _camLocalScratch.x);
         }
         bh.mesh.rotation.y = t * 0.15;
 
@@ -1037,6 +1439,7 @@ input.addEventListener('input', () => {
       }
 
       // planets + moon: orbit around each local planet system, moon orbits its planet
+      for (const mat of planetMaterials) mat.uniforms.uTime.value = t;
       for (const sys of solarSystems){
         sys.orbitA.rotation.y = t * 0.12 * sys.speedMul;
         sys.orbitB.rotation.y = t * 0.07 * sys.speedMul;
@@ -1059,12 +1462,16 @@ input.addEventListener('input', () => {
       bdGlow.material.opacity = 0.2 + Math.sin(t * 0.8) * 0.06;
       brownDwarf.rotation.y = t * 0.1;
 
-      // nebula: barely-perceptible drift and rotation, like a cloud seen from very far away
+      // nebula: barely-perceptible drift/rotation, plus each cloud plane always
+      // faces the camera and its noise slowly evolves for a living, volumetric feel
       nebula.rotation.z = t * 0.01;
-      nebula.children.forEach((disc, i) => { disc.material.opacity = 0.04 + Math.sin(t * 0.3 + i) * 0.015; });
+      for (const p of nebula.children) p.quaternion.copy(camera.quaternion);
+      for (const mat of nebulaMaterials) mat.uniforms.uTime.value = t;
 
-      // galaxy: slow spiral rotation, distant
+      // galaxy: slow spiral rotation, distant; core glow billboards to the camera
       galaxy.rotation.z = t * 0.02;
+      galaxyCore.quaternion.copy(camera.quaternion);
+      galaxyMat.uniforms.uTime.value = t;
 
       // comet: loops along a wide elliptical path, leaving a fading particle tail behind it
       const cAng = t * 0.09;
@@ -1083,8 +1490,8 @@ input.addEventListener('input', () => {
       }
       cometTailGeo.attributes.position.needsUpdate = true;
 
-      // starfield + galaxy: gentle overall twinkle via opacity pulse
-      starMat.opacity = 0.7 + Math.sin(t * 0.6) * 0.12;
+      // starfield: per-star twinkle now lives in the vertex shader; just feed it time
+      starMat.uniforms.uTime.value = t;
     }
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
