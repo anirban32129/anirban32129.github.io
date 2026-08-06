@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Double-Slit Experiment — 3D Interference Lab</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#1b2032;
+    --panel:#242a42;
+    --panel-line:#3a4266;
+    --ink:#f4f6fc;
+    --ink-dim:#a9b2cc;
+    --accent:#ffffff; /* overridden live by wavelength color */
+    --accent-dim:#ffffff33;
+    --mono:'Space Mono', monospace;
+    --sans:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:var(--bg); font-family:var(--sans); color:var(--ink);}
+  #canvas-wrap{position:fixed; inset:0;}
+  canvas{display:block;}
+
+  /* ---------- top masthead ---------- */
+  #masthead{
+    position:fixed; top:0; left:0; right:0; z-index:20;
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:16px 22px 10px 22px;
+    pointer-events:none;
+    background:linear-gradient(to bottom, rgba(20,24,38,0.92), rgba(20,24,38,0));
+  }
+  #masthead .title{
+    font-family:var(--mono); font-weight:700; font-size:14px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--ink);
+  }
+  #masthead .title span{ color:var(--accent); transition:color .3s; }
+  #masthead .subtitle{
+    font-family:var(--mono); font-size:10.5px; color:var(--ink-dim); letter-spacing:0.06em; margin-top:3px;
+  }
+
+  /* ---------- control dock ---------- */
+  #dock{
+    position:fixed; left:16px; bottom:16px; z-index:20;
+    width:308px; max-height:min(72vh, 640px);
+    background:rgba(36,42,66,0.88); backdrop-filter:blur(14px) saturate(140%);
+    border:1px solid var(--panel-line); border-radius:14px;
+    padding:14px 16px 16px 16px; overflow-y:auto;
+    box-shadow:0 20px 50px rgba(0,0,0,0.55);
+  }
+  #dock::-webkit-scrollbar{width:6px;}
+  #dock::-webkit-scrollbar-thumb{background:#2a3350; border-radius:6px;}
+
+  .dock-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .dock-head h2{ margin:0; font-size:11px; font-family:var(--mono); letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-dim);}
+  #collapseBtn, .collapse-btn{
+    background:none; border:1px solid var(--panel-line); color:var(--ink-dim); width:22px; height:22px; border-radius:6px;
+    cursor:pointer; font-size:12px; line-height:1; display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+    transition:transform .2s;
+  }
+  .collapse-btn:hover{ background:#3a4368; color:var(--ink); }
+  .panel-collapsed .panel-body{ display:none; }
+  .panel-collapsed{ padding-bottom:14px !important; }
+  .panel-collapsed .collapse-btn{ transform:rotate(-90deg); }
+
+  .field{ margin-bottom:13px; }
+  .field label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:11.5px; color:var(--ink); margin-bottom:5px; font-weight:500;
+  }
+  .field label .val{ font-family:var(--mono); color:var(--accent); font-size:11.5px; transition:color .3s;}
+  input[type=range]{
+    -webkit-appearance:none; width:100%; height:3px; border-radius:3px;
+    background:#232a3f; outline:none; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+    background:var(--accent); border:2px solid #1b2032; cursor:pointer; margin-top:-5.5px;
+    box-shadow:0 0 8px var(--accent-dim);
+    transition:background .3s;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px; height:14px; border-radius:50%; background:var(--accent); border:2px solid #1b2032; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track{ height:3px; border-radius:3px;}
+
+  .divider{ height:1px; background:var(--panel-line); margin:14px 0 12px 0; }
+
+  .btn-row{ display:flex; gap:6px; }
+  .icon-btn{
+    flex:1; padding:9px 6px; background:#2c3350; border:1px solid var(--panel-line); color:var(--ink);
+    font-family:var(--sans); font-size:11.5px; font-weight:500; border-radius:8px; cursor:pointer; transition:all .2s;
+  }
+  .icon-btn:hover{ background:#3a4368; }
+
+  /* readout */
+  #readout{
+    position:fixed; right:16px; top:16px; z-index:20; width:224px;
+    background:rgba(36,42,66,0.88); backdrop-filter:blur(14px);
+    border:1px solid var(--panel-line); border-radius:14px; padding:14px 16px;
+  }
+  #readout h2{ margin:0; font-size:11px; font-family:var(--mono); letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-dim); }
+  #readout .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .rline{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:11.5px; padding:3px 0; color:var(--ink); }
+  .rline .k{ color:var(--ink-dim); }
+  .rline .v{ color:var(--accent); transition:color .3s;}
+
+  /* intensity graph */
+  #graphWrap{
+    position:fixed; right:16px; top:238px; z-index:20; width:224px;
+    background:rgba(36,42,66,0.88); backdrop-filter:blur(14px);
+    border:1px solid var(--panel-line); border-radius:14px; padding:12px 14px 10px 14px;
+  }
+  #graphWrap h2{ margin:0; font-size:11px; font-family:var(--mono); letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-dim); }
+  #graphWrap .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  #graphCanvas{ width:100%; height:110px; display:block; border-radius:6px; background:#12162480; }
+  #graphWrap .cap{ font-family:var(--mono); font-size:9.5px; color:var(--ink-dim); margin-top:6px; text-align:center; }
+
+  /* hint / loading */
+  #loadOverlay{
+    position:fixed; inset:0; z-index:100; background:#1b2032; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:10px; transition:opacity .5s;
+  }
+  #loadOverlay .spinner{
+    width:34px; height:34px; border-radius:50%; border:2px solid #232a3f; border-top-color:#fff; animation:spin 0.9s linear infinite;
+  }
+  #loadOverlay .ltext{ font-family:var(--mono); font-size:11px; color:var(--ink-dim); letter-spacing:0.08em; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  #gpuTag{
+    position:fixed; left:16px; top:16px; z-index:20; font-family:var(--mono); font-size:9.5px; letter-spacing:0.08em;
+    color:var(--ink-dim); background:rgba(36,42,66,0.75); border:1px solid var(--panel-line); padding:4px 9px; border-radius:20px;
+  }
+  #gpuTag b{ color:#7bffb0; font-weight:700; }
+
+  @media (max-width: 720px){
+    #readout, #graphWrap{ display:none; }
+    #dock{ width:min(88vw, 320px); }
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+<div id="loadOverlay">
+  <div class="spinner"></div>
+  <div class="ltext">INITIALIZING RENDERER…</div>
+</div>
+
+<div id="canvas-wrap"></div>
+
+<div id="gpuTag">BACKEND: <b id="backendName">—</b></div>
+
+<div id="masthead">
+  <div>
+    <div class="title">DOUBLE-SLIT <span id="titleAccent">INTERFERENCE</span> LAB</div>
+    <div class="subtitle">Young's Experiment · 3D Wavefront &amp; Photon-Buildup Simulation</div>
+  </div>
+</div>
+
+<div id="dock">
+  <div class="dock-head"><h2>Apparatus Controls</h2><button class="collapse-btn" data-target="dock" title="Collapse">▾</button></div>
+
+  <div class="panel-body">
+  <div class="field" style="margin-bottom:16px;">
+  <label>Wave ⟷ Particle <span class="val" id="v_duality">Particle</span></label>
+    <input type="range" id="s_duality" min="0" max="100" step="100" value="100">
+  </div>
+  <div id="modeCaption" style="font-size:10.5px; line-height:1.5; color:var(--ink-dim); margin:-10px 0 12px 0; font-family:var(--mono);">
+    Wave–particle duality — the wavefront still guides where each photon lands.
+  </div>
+
+  <div class="field">
+    <label>Wavelength (λ) <span class="val" id="v_lambda">550 nm</span></label>
+    <input type="range" id="s_lambda" min="400" max="700" step="1" value="550">
+  </div>
+
+  <div class="field">
+    <label>Slit separation (d) <span class="val" id="v_d">0.80 mm</span></label>
+    <input type="range" id="s_d" min="20" max="300" step="1" value="80">
+  </div>
+
+  <div class="field">
+    <label>Slit width (a) <span class="val" id="v_a">0.10 mm</span></label>
+    <input type="range" id="s_a" min="2" max="60" step="1" value="10">
+  </div>
+
+  <div class="field">
+    <label>Screen distance (D) <span class="val" id="v_D">1.50 m</span></label>
+    <input type="range" id="s_D" min="30" max="500" step="1" value="150">
+  </div>
+
+  <div class="field">
+    <label>Wave animation speed <span class="val" id="v_speed">1.0×</span></label>
+    <input type="range" id="s_speed" min="0" max="300" step="1" value="100">
+  </div>
+
+  <div class="field" id="rateField">
+    <label>Photon rate <span class="val" id="v_rate">medium</span></label>
+    <input type="range" id="s_rate" min="1" max="10" step="1" value="5">
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="btn-row" style="margin-bottom:8px;">
+    <button class="icon-btn" id="btnPause" style="background:#4a8f5c; font-weight:600;">▶ Start</button>
+  </div>
+  <div class="btn-row" style="margin-bottom:8px;">
+    <button class="icon-btn" id="btnFire">⚛ Fire 1 Photon</button>
+  </div>
+  <div class="btn-row">
+    <button class="icon-btn" id="btnReset">⟲ Reset View</button>
+    <button class="icon-btn" id="btnClear">✕ Clear</button>
+  </div>
+  </div>
+</div>
+
+<div id="readout">
+  <div class="panel-head"><h2>Live Readout</h2><button class="collapse-btn" data-target="readout" title="Collapse">▾</button></div>
+  <div class="panel-body">
+  <div class="rline"><span class="k">Fringe spacing β</span><span class="v" id="r_beta">—</span></div>
+  <div class="rline"><span class="k">1st minimum θ</span><span class="v" id="r_theta">—</span></div>
+  <div class="rline"><span class="k">Fringes in envelope</span><span class="v" id="r_n">—</span></div>
+  <div class="rline"><span class="k">Path diff. (edge)</span><span class="v" id="r_pd">—</span></div>
+  <div class="rline"><span class="k">Photons detected</span><span class="v" id="r_photons">0</span></div>
+  </div>
+</div>
+
+<div id="graphWrap">
+  <div class="panel-head"><h2>Intensity I(y)</h2><button class="collapse-btn" data-target="graphWrap" title="Collapse">▾</button></div>
+  <div class="panel-body">
+  <canvas id="graphCanvas" width="220" height="110"></canvas>
+  <div class="cap">central maximum · bright fringe = I₀</div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.170.0/build/three.webgpu.js",
+    "three/webgpu": "https://unpkg.com/three@0.170.0/build/three.webgpu.js",
+    "three/tsl": "https://unpkg.com/three@0.170.0/build/three.tsl.js",
+    "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* =========================================================================
+   PHYSICS
+   All physically-accurate quantities (fringe pattern, readouts, graph) use
+   REAL units (meters / nanometers). The 3D ripple-tank visualization uses
+   an artistically-exaggerated wavelength so the wave fronts are visible to
+   the eye — it is explicitly a schematic, not a to-scale render.
+   ========================================================================= */
+
+const state = {
+  lambdaNm: 550,   // nm
+  dMm: 0.80,       // mm  (slit separation)
+  aMm: 0.10,       // mm  (slit width)
+  Dm: 1.50,        // m   (slit-to-screen distance)
+  speed: 1.0,      // animation multiplier
+  duality: 1,      // now a hard toggle: 0 = pure wave ("web-like" wavefront), 1 = pure particle (full-size balls) — no in-between
+  photonRate: 5,
+  paused: true, // sim starts idle — press Start to begin building the pattern
+};
+
+function clampSlitWidth(){
+  // keep a comfortably smaller than d so slits never overlap/merge visually
+  const maxA = state.dMm * 0.85;
+  if (state.aMm > maxA) state.aMm = maxA;
+}
+
+// normalized (unitless) intensity, y & D in meters, lambda in meters, d & a in meters
+function intensityAt(yMeters, DMeters, lambdaM, dM, aM){
+  const theta = Math.atan2(yMeters, DMeters);
+  const s = Math.sin(theta);
+  const beta = Math.PI * dM * s / lambdaM;     // interference term argument
+  const alpha = Math.PI * aM * s / lambdaM;    // single-slit diffraction argument
+  const sinc = Math.abs(alpha) < 1e-9 ? 1 : Math.sin(alpha) / alpha;
+  const interference = Math.cos(beta);
+  return (interference * interference) * (sinc * sinc);
+}
+
+function fringeSpacing(){
+  const lambdaM = state.lambdaNm * 1e-9;
+  const dM = state.dMm * 1e-3;
+  return (lambdaM * state.Dm) / dM; // meters
+}
+// FIXED display window (not tied to the current λ/d/D) — this is what makes
+// changing wavelength (or d, or D) actually visible on the graph and screen.
+// Before, the window auto-rescaled to always show ~5.5 fringes on each side
+// no matter what β was, so every setting looked identical. Now the window
+// size is calibrated once from the default apparatus and held constant, so
+// a bigger β genuinely shows up as wider/fewer fringes and a smaller β as
+// narrower/more fringes — exactly like the real experiment.
+const REF_HALF_EXTENT_M = (550e-9 * 1.50 / 0.80e-3) * 5.5;
+function displayHalfExtentM(){
+  return REF_HALF_EXTENT_M;
+}
+function firstMinimumAngleDeg(){
+  const lambdaM = state.lambdaNm * 1e-9;
+  const aM = state.aMm * 1e-3;
+  return Math.asin(Math.min(1, lambdaM / aM)) * 180 / Math.PI;
+}
+function fringesInEnvelope(){
+  // central diffraction envelope half-width in y maps to ~ 2*d/a fringes across the full envelope
+  return Math.max(1, Math.round(2 * (state.dMm / state.aMm)));
+}
+
+/* wavelength (nm) -> approximate visible RGB, 0..1 */
+function wavelengthToRGB(nm){
+  let r=0,g=0,b=0;
+  if (nm>=380 && nm<440){ r=-(nm-440)/(440-380); g=0; b=1; }
+  else if (nm>=440 && nm<490){ r=0; g=(nm-440)/(490-440); b=1; }
+  else if (nm>=490 && nm<510){ r=0; g=1; b=-(nm-510)/(510-490); }
+  else if (nm>=510 && nm<580){ r=(nm-510)/(580-510); g=1; b=0; }
+  else if (nm>=580 && nm<645){ r=1; g=-(nm-645)/(645-580); b=0; }
+  else if (nm>=645 && nm<=780){ r=1; g=0; b=0; }
+  let factor=1;
+  if (nm>=380 && nm<420) factor = 0.3 + 0.7*(nm-380)/(420-380);
+  else if (nm>=645 && nm<=780) factor = 0.3 + 0.7*(780-nm)/(780-645);
+  const gamma = 0.85;
+  r = Math.pow(Math.max(0,r)*factor, gamma);
+  g = Math.pow(Math.max(0,g)*factor, gamma);
+  b = Math.pow(Math.max(0,b)*factor, gamma);
+  return {r,g,b};
+}
+function rgbToCss({r,g,b}, a=1){
+  return `rgba(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)},${a})`;
+}
+function rgbToHex({r,g,b}){
+  const c = (r*255<<16) + (g*255<<8) + (b*255|0);
+  return (Math.round(r*255)<<16) + (Math.round(g*255)<<8) + Math.round(b*255);
+}
+
+/* =========================================================================
+   RENDERER / SCENE
+   ========================================================================= */
+
+const wrap = document.getElementById('canvas-wrap');
+let renderer, scene, camera, controls;
+let rippleMesh, rippleGeo, ripplePositions, rippleColors;
+let barrierGroup, screenMesh, screenGeo, screenColors;
+let laserCone, screenFrame;
+let clock = new THREE.Clock();
+let simTime = 0;
+
+const RIPPLE_W = 8;      // scene units, X spread of ripple plane
+const BARRIER_Z = 0;
+const SOURCE_Z = -4.2;
+const RIPPLE_SEG_X = 130;
+const RIPPLE_SEG_Z = 90;
+const D_M_MIN = 0.30, D_M_MAX = 5.00;     // matches the s_D slider range (30..500 -> 0.3..5.0 m)
+const SCENE_Z_MIN = 5.5, SCENE_Z_MAX = 17; // how far the screen physically travels in the 3D scene
+
+let SCREEN_Z = SCENE_Z_MIN; // now dynamic - updated by updateScreenDistance()
+function sceneZForD(Dm){
+  const t = THREE.MathUtils.clamp((Dm - D_M_MIN)/(D_M_MAX - D_M_MIN), 0, 1);
+  return THREE.MathUtils.lerp(SCENE_Z_MIN, SCENE_Z_MAX, t);
+}
+
+async function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1b2032);
+  scene.fog = new THREE.FogExp2(0x1b2032, 0.016);
+
+  camera = new THREE.PerspectiveCamera(46, window.innerWidth/window.innerHeight, 0.1, 200);
+  camera.position.set(-7.2, 6.4, -6.5);
+  camera.lookAt(0, 0.5, SCREEN_Z*0.35);
+
+  renderer = new THREE.WebGPURenderer({ antialias: true });
+  await renderer.init();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.35;
+  wrap.appendChild(renderer.domElement);
+
+  document.getElementById('backendName').textContent =
+    (renderer.backend && renderer.backend.isWebGPUBackend) ? 'WebGPU' : 'WebGL (fallback)';
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0.3, SCREEN_Z*0.4);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 4;
+  controls.maxDistance = 30;
+  controls.maxPolarAngle = Math.PI*0.49;
+  controls.update();
+
+  buildLights();
+  buildSource();
+  buildBarrier();
+  buildRipplePlane();
+  buildScreen();
+  buildGroundGrid();
+  updateScreenDistance(); // sync screen/tank length to the slider's actual default value
+
+  window.addEventListener('resize', onResize);
+  onResize();
+
+  document.getElementById('loadOverlay').style.opacity = '0';
+  setTimeout(()=>document.getElementById('loadOverlay').remove(), 550);
+
+  applyColorTheme();
+  applyDuality();
+  updateReadouts();
+  renderer.setAnimationLoop(animate);
+}
+
+let rimLight;
+function buildLights(){
+  scene.add(new THREE.HemisphereLight(0x8fb0ff, 0x1a1f30, 1.1));
+  scene.add(new THREE.AmbientLight(0x4a5b8f, 0.9));
+  const key = new THREE.PointLight(0xffffff, 14, 40, 1.8);
+  key.position.set(-3, 7, -2);
+  scene.add(key);
+  const key2 = new THREE.PointLight(0xffffff, 8, 40, 1.8);
+  key2.position.set(4, 6, 6);
+  scene.add(key2);
+  rimLight = new THREE.PointLight(0x88aaff, 6, 40, 1.8);
+  rimLight.position.set(4, 3, SCREEN_Z);
+  scene.add(rimLight);
+}
+
+function buildGroundGrid(){
+  const grid = new THREE.GridHelper(34, 40, 0x4a5580, 0x2a3050);
+  grid.position.y = -1.55;
+  scene.add(grid);
+}
+
+function buildSource(){
+  const g = new THREE.Group();
+  const bodyGeo = new THREE.CylinderGeometry(0.18, 0.22, 0.9, 24);
+  const bodyMat = new THREE.MeshStandardMaterial({ color:0x3d4568, metalness:0.55, roughness:0.3 });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.rotation.x = Math.PI/2;
+  g.add(body);
+
+  const capGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.14, 24);
+  const capMat = new THREE.MeshStandardMaterial({ color:0xffffff, emissive:0xffffff, emissiveIntensity:2 });
+  const cap = new THREE.Mesh(capGeo, capMat);
+  cap.rotation.x = Math.PI/2;
+  cap.position.z = 0.5;
+  g.add(cap);
+  laserCone = cap;
+
+  g.position.set(0, 0.15, SOURCE_Z);
+  scene.add(g);
+
+  // laserBeam (solid connecting cylinder) intentionally removed — the
+  // individual flying photon dots now tell that visual story on their own.
+}
+
+// slider real-world ranges (kept in one place so the mapping below always matches the HTML sliders)
+const D_MM_MIN = 0.20, D_MM_MAX = 3.00;   // slit separation slider range (mm)
+const A_MM_MIN = 0.02, A_MM_MAX = 0.60;   // slit width slider range (mm)
+
+function slitScenePositions(){
+  // map physical d (mm) to a visual spread on the barrier, purely schematic (fixed: was dividing by 300 instead of the real max)
+  const dNorm = THREE.MathUtils.clamp((state.dMm - D_MM_MIN)/(D_MM_MAX - D_MM_MIN), 0, 1);
+  const spread = 0.35 + dNorm*1.95; // scene units half-separation range
+  return spread; // half-separation
+}
+function slitSceneWidth(){
+  // fixed: was dividing by 60 instead of the real max (0.6mm), so this was permanently clamped to its floor
+  const aNorm = THREE.MathUtils.clamp((state.aMm - A_MM_MIN)/(A_MM_MAX - A_MM_MIN), 0, 1);
+  return 0.06 + aNorm*0.42;
+}
+
+function buildBarrier(){
+  barrierGroup = new THREE.Group();
+  scene.add(barrierGroup);
+  rebuildBarrierGeometry();
+}
+function rebuildBarrierGeometry(){
+  while (barrierGroup.children.length) barrierGroup.remove(barrierGroup.children[0]);
+
+  const half = slitScenePositions();
+  const w = slitSceneWidth();
+  const totalW = 6.2;
+  const H = 2.4;
+  const mat = new THREE.MeshStandardMaterial({ color:0x3a4266, metalness:0.4, roughness:0.5 });
+
+  const segs = [
+    { from: -totalW/2, to: -half - w/2 },
+    { from: -half + w/2, to: half - w/2 },
+    { from: half + w/2, to: totalW/2 },
+  ];
+  segs.forEach(s=>{
+    const width = s.to - s.from;
+    if (width <= 0.001) return;
+    const geo = new THREE.BoxGeometry(width, H, 0.14);
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set((s.from+s.to)/2, 0.35, BARRIER_Z);
+    barrierGroup.add(m);
+  });
+
+  // thin glow rim around each slit
+  [-half, half].forEach(cx=>{
+    const glowGeo = new THREE.PlaneGeometry(w*1.4, 0.9);
+    const glowMat = new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.18, side:THREE.DoubleSide, depthWrite:false });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.set(cx, 0.35, BARRIER_Z+0.08);
+    barrierGroup.add(glow);
+  });
+}
+
+function buildRipplePlane(){
+  const mat = new THREE.MeshStandardMaterial({
+    vertexColors:true, metalness:0.05, roughness:0.55,
+    transparent:true, opacity:0.95, side:THREE.DoubleSide,
+    emissive:0x223355, emissiveIntensity:0.15,
+  });
+  rippleMesh = new THREE.Mesh(new THREE.BufferGeometry(), mat);
+  rippleMesh.position.set(0, 0.0, BARRIER_Z);
+  scene.add(rippleMesh);
+  rebuildRipplePlane(SCREEN_Z);
+}
+
+// rebuilds the wave-tank geometry so its length always reaches the screen at its current distance
+function rebuildRipplePlane(length){
+  if (rippleGeo) rippleGeo.dispose();
+  rippleGeo = new THREE.PlaneGeometry(RIPPLE_W, length, RIPPLE_SEG_X, RIPPLE_SEG_Z);
+  rippleGeo.rotateX(-Math.PI/2);
+  rippleGeo.translate(0, 0, length/2);
+  ripplePositions = rippleGeo.attributes.position;
+  rippleColors = new Float32Array(ripplePositions.count * 3);
+  rippleGeo.setAttribute('color', new THREE.BufferAttribute(rippleColors, 3));
+  rippleMesh.geometry = rippleGeo;
+}
+
+// call whenever the screen-distance slider changes: moves the screen and restretches the wave tank
+function updateScreenDistance(){
+  SCREEN_Z = sceneZForD(state.Dm);
+  rebuildRipplePlane(SCREEN_Z);
+  if (screenMesh){
+    screenMesh.position.z = SCREEN_Z;
+    screenFrame.position.z = SCREEN_Z + 0.06;
+  }
+  if (rimLight) rimLight.position.z = SCREEN_Z;
+  controls.target.z = SCREEN_Z*0.4;
+}
+
+// Screen is now plain vertex-colored geometry — the exact same technique the
+// ripple tank uses. No canvas, no texture, no UV/mipmap/backface headaches.
+const SCREEN_W = 6.4, SCREEN_H = 2.4;
+const SCREEN_SEG_X = 240, SCREEN_SEG_Y = 1;
+const SCREEN_BG = { r:0.02, g:0.027, b:0.047 }; // resting dark-screen color
+
+function buildScreen(){
+  screenGeo = new THREE.PlaneGeometry(SCREEN_W, SCREEN_H, SCREEN_SEG_X, SCREEN_SEG_Y);
+  screenColors = new Float32Array((SCREEN_SEG_X+1)*(SCREEN_SEG_Y+1)*3);
+  screenGeo.setAttribute('color', new THREE.BufferAttribute(screenColors, 3));
+  const mat = new THREE.MeshBasicMaterial({ vertexColors:true, side:THREE.DoubleSide, toneMapped:false });
+  screenMesh = new THREE.Mesh(screenGeo, mat);
+  screenMesh.position.set(0, 0.6, SCREEN_Z);
+  scene.add(screenMesh);
+
+  // thin static reference lines (center + tick marks), parented to the screen
+  // so they track its position/distance automatically — cheap, drawn once.
+  const lineMat = new THREE.LineBasicMaterial({ color:0xffffff, transparent:true, opacity:0.14 });
+  const centerGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0,-SCREEN_H/2,-0.02), new THREE.Vector3(0,SCREEN_H/2,-0.02)
+  ]);
+  screenMesh.add(new THREE.Line(centerGeo, lineMat));
+  const tickPts = [];
+  for (let i=-5;i<=5;i++){
+    const x = (i/5.5)*(SCREEN_W/2);
+    tickPts.push(new THREE.Vector3(x,-SCREEN_H/2,-0.02), new THREE.Vector3(x,-SCREEN_H/2+0.14,-0.02));
+  }
+  const tickGeo = new THREE.BufferGeometry().setFromPoints(tickPts);
+  screenMesh.add(new THREE.LineSegments(tickGeo, lineMat));
+
+  const frameGeo = new THREE.BoxGeometry(6.6, 2.6, 0.08);
+  const frameMat = new THREE.MeshStandardMaterial({ color:0x2a3350, metalness:0.6, roughness:0.4 });
+  screenFrame = new THREE.Mesh(frameGeo, frameMat);
+  // The frame sits BEHIND the screen (farther from the camera/source), not in
+  // front — it was a solid box placed in front of the screen plane, which
+  // fully occluded it from the normal viewing side. That's why the fringe
+  // pattern only ever "showed up in the back of the screen": you'd only see
+  // it by orbiting around behind the opaque frame. Sitting behind and
+  // slightly larger, it now reads as a bezel instead of a occluder.
+  screenFrame.position.set(0, 0.6, SCREEN_Z + 0.06);
+  scene.add(screenFrame);
+
+  clearScreenColors();
+}
+
+function setScreenColumn(col, r, g, b){
+  const rows = SCREEN_SEG_Y+1, cols = SCREEN_SEG_X+1;
+  for (let row=0; row<rows; row++){
+    const i = (row*cols + col)*3;
+    screenColors[i]=r; screenColors[i+1]=g; screenColors[i+2]=b;
+  }
+}
+
+function clearScreenColors(){
+  for (let col=0; col<SCREEN_SEG_X+1; col++) setScreenColumn(col, SCREEN_BG.r, SCREEN_BG.g, SCREEN_BG.b);
+  screenGeo.attributes.color.needsUpdate = true;
+}
+
+/* ---- the screen ONLY ever reflects actual detected photon hits — no
+   instant analytic glow baked in, at any duality setting. It starts
+   completely empty and brightens gradually, dot by dot, as photons
+   genuinely land, which is the whole point of the demo. The duality
+   slider does NOT affect the screen at all; it only changes how things
+   look in the 3D scene (ripple-tank wavefront opacity via applyDuality,
+   and flying-photon ball size in spawnPhoton) — that's where the
+   wave-like vs particle-like visual distinction lives. The Live Readout
+   graph panel (drawGraph) reflects this exact same photonAccum
+   histogram, so it starts blank and builds up hit by hit in lockstep
+   with the screen — no baked-in analytic curve there either. ---- */
+function repaintScreen(){
+  const halfExtentM = displayHalfExtentM(); // show ~5-6 fringes each side
+  const color = wavelengthToRGB(state.lambdaNm);
+  const cols = SCREEN_SEG_X+1;
+
+  for (let col=0; col<cols; col++){
+    const bin = Math.min(PHOTON_BINS-1, Math.floor((col/(cols-1)) * PHOTON_BINS));
+    // Fixed brightness target (NOT the running peak bin) — this is what
+    // makes the buildup feel gradual: with only a few dozen photons the
+    // pattern is still faint and speckled, and a bin only reaches full
+    // brightness once it has genuinely collected PHOTON_FULL_BRIGHTNESS
+    // hits, matching how the real experiment looks (sparse dots at
+    // first, slowly firming into fringes over many, many photons).
+    const I = Math.min(1, photonAccum[bin] / PHOTON_FULL_BRIGHTNESS);
+    const r = SCREEN_BG.r + color.r*I*1.15;
+    const g = SCREEN_BG.g + color.g*I*1.15;
+    const b = SCREEN_BG.b + color.b*I*1.15;
+    setScreenColumn(col, Math.min(1,r), Math.min(1,g), Math.min(1,b));
+  }
+  screenGeo.attributes.color.needsUpdate = true;
+  // vertex-color interpolation across 240 columns already gives a smooth
+  // gradient between fringes — no blur pass needed like the old canvas version.
+}
+
+/* ---- draw the intensity graph panel (2D UI canvas) ----
+   This plots the SAME photonAccum histogram that paints the screen —
+   not the analytic formula — so it starts blank and builds up hit by
+   hit in exact lockstep with what's landing on the screen. It
+   autoscales to the tallest bin collected so far (with a floor, so a
+   handful of early stray hits don't get blown up to full height);
+   that's what makes the fringe shape visibly firm up over time
+   instead of snapping in fully formed. ---- */
+const graphCanvas = document.getElementById('graphCanvas');
+const graphCtx = graphCanvas.getContext('2d');
+function drawGraph(){
+  const w = graphCanvas.width, h = graphCanvas.height;
+  graphCtx.clearRect(0,0,w,h);
+  const color = wavelengthToRGB(state.lambdaNm);
+
+  graphCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+  graphCtx.beginPath(); graphCtx.moveTo(0,h-1); graphCtx.lineTo(w,h-1); graphCtx.stroke();
+
+  let maxBin = PHOTON_FULL_BRIGHTNESS * 0.6; // floor — keeps early noise from filling the height
+  for (let i=0; i<PHOTON_BINS; i++) if (photonAccum[i] > maxBin) maxBin = photonAccum[i];
+
+  graphCtx.beginPath();
+  for (let x=0; x<w; x++){
+    const bin = Math.min(PHOTON_BINS-1, Math.floor((x/w) * PHOTON_BINS));
+    const I = photonAccum[bin] / maxBin;
+    const py = h - I*(h-6) - 2;
+    if (x===0) graphCtx.moveTo(x,py); else graphCtx.lineTo(x,py);
+  }
+  graphCtx.strokeStyle = rgbToCss(color, 0.95);
+  graphCtx.lineWidth = 1.6;
+  graphCtx.stroke();
+
+  graphCtx.lineTo(w,h); graphCtx.lineTo(0,h); graphCtx.closePath();
+  const grad = graphCtx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, rgbToCss(color,0.35));
+  grad.addColorStop(1, rgbToCss(color,0.02));
+  graphCtx.fillStyle = grad;
+  graphCtx.fill();
+}
+
+/* =========================================================================
+   RIPPLE ANIMATION (illustrative Huygens wavefronts)
+   ========================================================================= */
+function updateRipple(dt){
+  simTime += dt * state.speed;
+  const half = slitScenePositions();
+  const visualLambda = 0.55 + (state.lambdaNm-400)/300*0.55; // 0.55..1.10 scene units, exaggerated
+  const k = (2*Math.PI)/visualLambda;
+  const omega = k * 2.4; // wave speed factor
+  const amp = 0.16;
+
+  const slit1 = new THREE.Vector2(-half, 0);
+  const slit2 = new THREE.Vector2(half, 0);
+  const color1 = wavelengthToRGB(state.lambdaNm);
+
+  const pos = ripplePositions;
+  const count = pos.count;
+  for (let i=0;i<count;i++){
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    const r1 = Math.hypot(x-slit1.x, z-slit1.y) + 0.001;
+    const r2 = Math.hypot(x-slit2.x, z-slit2.y) + 0.001;
+    const atten1 = Math.min(1, 1.6/Math.sqrt(r1));
+    const atten2 = Math.min(1, 1.6/Math.sqrt(r2));
+    const w1 = Math.cos(k*r1 - omega*simTime) * atten1;
+    const w2 = Math.cos(k*r2 - omega*simTime) * atten2;
+    const front = (z < 0.05) ? 0 : 1; // no ripple behind the barrier
+    const yDisp = (w1 + w2) * amp * front;
+    pos.setY(i, yDisp);
+
+    const norm = THREE.MathUtils.clamp((yDisp/ (amp*2)) * 0.5 + 0.5, 0, 1);
+    const cr = THREE.MathUtils.lerp(0.02, color1.r, norm) ;
+    const cg = THREE.MathUtils.lerp(0.02, color1.g, norm) ;
+    const cb = THREE.MathUtils.lerp(0.05, color1.b, norm) ;
+    rippleColors[i*3] = cr; rippleColors[i*3+1]=cg; rippleColors[i*3+2]=cb;
+  }
+  pos.needsUpdate = true;
+  rippleGeo.attributes.color.needsUpdate = true;
+  rippleGeo.computeVertexNormals();
+}
+
+/* =========================================================================
+   PHOTON BUILDUP
+   ========================================================================= */
+let photonPool = [];
+let photonsDetected = 0;
+const PHOTON_BINS = 160;
+const PHOTON_FULL_BRIGHTNESS = 55; // hits needed in a bin to reach full brightness — tuned so growth is visible within seconds, not minutes
+let photonAccum = new Float32Array(PHOTON_BINS); // Float32Array histogram — live from the start
+
+function resetPhotonBuildup(){
+  photonsDetected = 0;
+  photonAccum.fill(0);
+  document.getElementById('r_photons').textContent = '0';
+  photonPool.forEach(p=>scene.remove(p.mesh, p.glow));
+  photonPool = [];
+  clearScreenColors(); // force a genuinely blank screen — don't let the wave-glow term repaint over it
+  drawGraph(); // and blank the graph in the same instant, instead of leaving the old curve up
+}
+
+function sampleScreenY(){
+  const lambdaM = state.lambdaNm*1e-9, dM = state.dMm*1e-3, aM = state.aMm*1e-3;
+  const halfExtentM = displayHalfExtentM();
+  for (let tries=0; tries<60; tries++){
+    const yM = (Math.random()*2 - 1) * halfExtentM;
+    const I = intensityAt(yM, state.Dm, lambdaM, dM, aM);
+    if (Math.random() < I) return { yM, halfExtentM };
+  }
+  return { yM: 0, halfExtentM };
+}
+
+let photonSpawnAccumulator = 0;
+// spawning cadence — always runs; light is never purely wave or purely
+// particle, the slider just changes how it's rendered (see applyDuality)
+function autoSpawnPhotons(dt){
+  photonSpawnAccumulator += dt * state.photonRate * 4;
+  while (photonSpawnAccumulator > 1){
+    photonSpawnAccumulator -= 1;
+    spawnPhoton();
+  }
+}
+
+// movement + hit registration — runs every frame regardless of the slider
+function processPhotons(dt){
+  const speed = 3.6 / Math.max(0.6, state.Dm/1.5); // scale flight time gently with distance
+  for (let i=photonPool.length-1; i>=0; i--){
+    const p = photonPool[i];
+    p.t += dt*speed;
+    if (p.t < 1){
+      const tt = Math.min(1, p.t/0.28);
+      p.mesh.position.lerpVectors(p.start, p.mid, tt);
+      if (p.t >= 0.28){
+        const tt2 = (p.t-0.28)/0.72;
+        p.mesh.position.lerpVectors(p.mid, p.end, Math.min(1,tt2));
+      }
+      const fade = 1 - Math.max(0, p.t-0.88)/0.12;
+      p.mesh.material.opacity = p.coreOpacity*fade;
+      p.glow.material.opacity = p.glowOpacity*fade;
+      p.glow.position.copy(p.mesh.position);
+    } else {
+      registerPhotonHit(p.yM, p.halfExtentM);
+      scene.remove(p.mesh, p.glow);
+      photonPool.splice(i,1);
+    }
+  }
+}
+
+// ball size scales with the wave↔particle slider: near 0 the balls shrink to
+// almost nothing (so the ripple wavefront reads as the whole story — "web
+// like"), near 1 they're full-size, clearly individual particles. The photon
+// still physically flies and lands correctly at every setting — only its
+// rendered size changes, never where it's statistically allowed to land.
+const BALL_R_MIN = 0.004, BALL_R_MAX = 0.11;
+const GLOW_R_MIN = 0.03,  GLOW_R_MAX = 0.22;
+
+function spawnPhoton(){
+  const half = slitScenePositions();
+  const chosen = Math.random()<0.5 ? -half : half;
+  const { yM, halfExtentM } = sampleScreenY();
+  const color = wavelengthToRGB(state.lambdaNm);
+  const hex = rgbToHex(color);
+
+  const ballR = THREE.MathUtils.lerp(BALL_R_MIN, BALL_R_MAX, state.duality);
+  const glowR = THREE.MathUtils.lerp(GLOW_R_MIN, GLOW_R_MAX, state.duality);
+  const coreOpacity = THREE.MathUtils.lerp(0.25, 1.0, state.duality);
+  const glowOpacity = THREE.MathUtils.lerp(0.10, 0.55, state.duality);
+
+  // bright core
+  const geo = new THREE.SphereGeometry(ballR, 12, 12);
+  const mat = new THREE.MeshBasicMaterial({ color: hex, transparent:true, opacity:coreOpacity });
+  const mesh = new THREE.Mesh(geo, mat);
+
+  // soft additive halo so the "particle" reads clearly against the scene —
+  // this (plus the emissive core) carries the glow; no per-photon PointLight,
+  // since dozens of live dynamic lights at once was a real source of the lag.
+  const glowGeo = new THREE.SphereGeometry(glowR, 12, 12);
+  const glowMat = new THREE.MeshBasicMaterial({ color: hex, transparent:true, opacity:glowOpacity, blending:THREE.AdditiveBlending, depthWrite:false });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+
+  const start = new THREE.Vector3(0, 0.15, SOURCE_Z);
+  const mid = new THREE.Vector3(chosen, 0.35, BARRIER_Z);
+  const screenYscene = 0.6 + (yM/halfExtentM) * 1.05;
+  const end = new THREE.Vector3(chosen*0.15, screenYscene, SCREEN_Z);
+  mesh.position.copy(start); glow.position.copy(start);
+  scene.add(mesh, glow);
+  photonPool.push({ mesh, glow, start, mid, end, t:0, yM, halfExtentM, coreOpacity, glowOpacity });
+}
+
+function registerPhotonHit(yM, halfExtentM){
+  photonsDetected++;
+  document.getElementById('r_photons').textContent = photonsDetected.toString();
+  const frac = (yM/halfExtentM)*0.5+0.5; // 0..1 across the screen
+  const bin = Math.floor(frac * PHOTON_BINS);
+  if (bin>=0 && bin<PHOTON_BINS) photonAccum[bin]++;
+  repaintScreen();
+  drawGraph(); // keep the graph exactly in sync with the screen, hit by hit
+}
+
+/* =========================================================================
+   UI WIRING
+   ========================================================================= */
+function fmt(n, d=2){ return n.toFixed(d); }
+
+function applyColorTheme(){
+  const c = wavelengthToRGB(state.lambdaNm);
+  const hex = '#'+rgbToHex(c).toString(16).padStart(6,'0');
+  document.documentElement.style.setProperty('--accent', hex);
+  document.documentElement.style.setProperty('--accent-dim', hex+'55');
+  laserCone.material.color.setHex(rgbToHex(c));
+  laserCone.material.emissive.setHex(rgbToHex(c));
+}
+
+function updateReadouts(){
+  document.getElementById('v_lambda').textContent = `${state.lambdaNm} nm`;
+  document.getElementById('v_d').textContent = `${fmt(state.dMm,2)} mm`;
+  document.getElementById('v_a').textContent = `${fmt(state.aMm,2)} mm`;
+  document.getElementById('v_D').textContent = `${fmt(state.Dm,2)} m`;
+  document.getElementById('v_speed').textContent = `${fmt(state.speed,1)}×`;
+  document.getElementById('v_duality').textContent = state.duality < 0.5 ? 'Wave' : 'Particle';
+  const rateLabels = {1:'very slow',2:'slow',3:'slow',4:'gentle',5:'medium',6:'medium',7:'brisk',8:'fast',9:'fast',10:'rapid'};
+  document.getElementById('v_rate').textContent = rateLabels[state.photonRate] || 'medium';
+  document.getElementById('modeCaption').textContent =
+    state.duality < 0.5 ? 'Wavefront mode — light propagating as a continuous wave through both slits (photons still land quietly in the background).'
+    : 'Particle mode — discrete photons landing one at a time, building the fringe pattern hit by hit.';
+
+  const beta = fringeSpacing();
+  const betaStr = beta < 0.01 ? `${fmt(beta*1e6,1)} µm` : `${fmt(beta*1000,3)} mm`;
+  document.getElementById('r_beta').textContent = betaStr;
+  document.getElementById('r_theta').textContent = `${fmt(firstMinimumAngleDeg(),2)}°`;
+  document.getElementById('r_n').textContent = `${fringesInEnvelope()}`;
+
+  const lambdaM = state.lambdaNm*1e-9;
+  const pathDiffEdgeWaves = (state.dMm*1e-3 * Math.sin(Math.atan2(displayHalfExtentM(), state.Dm))) / lambdaM;
+  document.getElementById('r_pd').textContent = `${fmt(pathDiffEdgeWaves,2)} λ`;
+
+  drawGraph();
+  repaintScreen(); // reflects only actual accumulated photon hits
+  applyColorTheme();
+}
+
+// visual blend only — the underlying physics (analytic curve + photon
+// sampling) runs identically regardless of this slider, so the fringe
+// pattern on the screen is always mathematically correct at any setting.
+function applyDuality(){
+  const opacity = THREE.MathUtils.lerp(0.95, 0.05, state.duality);
+  rippleMesh.material.opacity = opacity;
+  rippleMesh.visible = state.duality < 0.97;
+}
+
+function bindSlider(id, onChange){
+  const el = document.getElementById(id);
+  el.addEventListener('input', ()=>{ onChange(parseFloat(el.value)); updateReadouts(); });
+}
+bindSlider('s_lambda', v=>{ state.lambdaNm = v; resetPhotonBuildup(); });
+bindSlider('s_d', v=>{ state.dMm = v/100; clampSlitWidth(); document.getElementById('s_a').value = Math.round(state.aMm*100); rebuildBarrierGeometry(); });
+bindSlider('s_a', v=>{ state.aMm = v/100; clampSlitWidth(); rebuildBarrierGeometry(); });
+bindSlider('s_D', v=>{ state.Dm = v/100; updateScreenDistance(); });
+bindSlider('s_speed', v=>{ state.speed = v/100; });
+bindSlider('s_rate', v=>{ state.photonRate = v; });
+bindSlider('s_duality', v=>{ state.duality = v/100; applyDuality(); resetPhotonBuildup(); });
+
+function setPaused(paused){
+  state.paused = paused;
+  const btn = document.getElementById('btnPause');
+  if (paused){
+    btn.textContent = '▶ Resume';
+    btn.style.background = '#4a8f5c';
+  } else {
+    btn.textContent = '⏸ Pause';
+    btn.style.background = '#3a4368';
+  }
+}
+
+document.querySelectorAll('.collapse-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const panel = document.getElementById(btn.dataset.target);
+    panel.classList.toggle('panel-collapsed');
+    btn.textContent = panel.classList.contains('panel-collapsed') ? '▸' : '▾';
+  });
+});
+
+document.getElementById('btnFire').addEventListener('click', ()=>{
+  // Pause auto-spawn first — otherwise, at a fast Photon Rate, this single
+  // manually-fired photon just gets lost in the crowd of continuously
+  // auto-spawned ones and it *looks* like the button did nothing. Pausing
+  // makes it a clean, visible single-step you can watch land on its own.
+  setPaused(true);
+  spawnPhoton();
+});
+
+document.getElementById('btnPause').addEventListener('click', (e)=>{
+  setPaused(!state.paused);
+});
+document.getElementById('btnReset').addEventListener('click', ()=>{
+  // Recreate OrbitControls rather than just re-pointing camera/target: if the
+  // user clicks Reset mid-drag, the controls' internal rotation/pan momentum
+  // survives a plain controls.update() and keeps nudging the view afterward,
+  // which is what made "Reset View" look broken. A fresh instance has none.
+  controls.dispose();
+  camera.position.set(-7.2, 6.4, -6.5);
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0.3, SCREEN_Z*0.4);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 4;
+  controls.maxDistance = 30;
+  controls.maxPolarAngle = Math.PI*0.49;
+  controls.update();
+});
+document.getElementById('btnClear').addEventListener('click', ()=>resetPhotonBuildup());
+
+function onResize(){
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+/* =========================================================================
+   MAIN LOOP
+   ========================================================================= */
+function animate(){
+  const dt = Math.min(0.05, clock.getDelta());
+  if (!state.paused){
+    // wave and particle behavior both always run — real light is never purely
+    // one or the other. The slider only changes how each is *rendered*.
+    updateRipple(dt);
+    autoSpawnPhotons(dt);
+    processPhotons(dt);
+  }
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+init();
+</script>
+</body>
+</html>
