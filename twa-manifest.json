@@ -1,0 +1,29 @@
+{
+  "packageId": "com.anirban32129.mathphysicslab",
+  "host": "anirban32129.github.io",
+  "name": "Interactive Math & Physics Lab",
+  "launcherName": "Math Physics Lab",
+  "display": "standalone",
+  "themeColor": "#000000",
+  "navigationColor": "#000000",
+  "backgroundColor": "#000000",
+  "startUrl": "/",
+  "iconUrl": "https://anirban32129.github.io/icon-512.png",
+  "maskableIconUrl": "https://anirban32129.github.io/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "androidkey"
+  },
+  "appVersionCode": 1,
+  "appVersion": "1.0.0",
+  "webManifestUrl": "https://anirban32129.github.io/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": { "enabled": false },
+  "enableNotifications": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://anirban32129.github.io/",
+  "minSdkVersion": 21
+}
