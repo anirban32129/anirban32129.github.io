@@ -31,7 +31,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "N" | bubblewrap build \
+          printf 'N\n%s\n' "$JAVA_HOME" | bubblewrap build \
             --skipPwaValidation \
             --password="$KEYSTORE_PASSWORD" \
             --key_password="$KEY_PASSWORD"
