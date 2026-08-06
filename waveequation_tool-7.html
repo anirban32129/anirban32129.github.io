@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<style id="ad-reserve-style">
+:root{--vh-adj:1vh}
+body{display:flex !important;flex-direction:column !important;min-height:100% !important}
+.viz-content-wrap{flex:1 1 auto;position:relative;overflow:visible}
+.ad-reserve-bar{flex:0 0 50px;display:flex;align-items:center;justify-content:center;font:11px sans-serif;color:#8892a0;background:rgba(255,255,255,.02);border-top:1px solid rgba(120,130,150,.15);pointer-events:none}
+@media (max-width:700px){.ad-reserve-bar{display:none}}
+</style>
+<script>
+(function(){
+function setVhAdj(){
+  var bar = document.querySelector('.ad-reserve-bar');
+  var reserve = (bar && getComputedStyle(bar).display !== 'none') ? bar.offsetHeight : 0;
+  document.documentElement.style.setProperty('--vh-adj', ((window.innerHeight-reserve)/100)+'px');
+}
+window.addEventListener('resize', setVhAdj);
+window.addEventListener('orientationchange', setVhAdj);
+document.addEventListener('DOMContentLoaded', setVhAdj);
+setVhAdj();
+})();
+</script>
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2305070a'/%3E%3Cg transform='translate(50,50)'%3E%3Cellipse cx='0' cy='0' rx='33' ry='14' fill='none' stroke='%237c5cff' stroke-width='3' transform='rotate(-20)'/%3E%3Cellipse cx='0' cy='0' rx='33' ry='14' fill='none' stroke='%23ffb92e' stroke-width='2.5' stroke-opacity='0.6' transform='rotate(40)'/%3E%3Cpath d='M-31,6 Q-16,-17 0,6 T31,6' fill='none' stroke='%23e8edf4' stroke-width='2.5' stroke-linecap='round' opacity='0.85'/%3E%3Ccircle r='6' fill='%23ffb92e'/%3E%3Ccircle cx='27' cy='-5' r='3.5' fill='%23ff3d81'/%3E%3Ccircle cx='-24' cy='8' r='3' fill='%237c5cff'/%3E%3C/g%3E%3C/svg%3E">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8974374653448358"
+     crossorigin="anonymous"></script>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZR0SHJL6VJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZR0SHJL6VJ');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-adsense-account" content="ca-pub-8974374653448358">
+<title>Wave Equation Explorer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+  :root{
+    --bg:#0a0e1a;--panel:#111827;--border:#1e2d45;
+    --accent:#00e5ff;--accent2:#ff6b35;--accent3:#7fff6e;
+    --text:#e2eaf8;--muted:#6b80a0;--purple:#c084fc;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;min-height:calc(var(--vh-adj) * 100);overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,0.04)1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.04)1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+  /* TAB BAR */
+  .tab-bar{position:relative;z-index:10;display:flex;align-items:flex-end;padding:20px 20px 0;max-width:900px;margin:0 auto;border-bottom:2px solid var(--border);}
+  .tab-btn{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.13em;text-transform:uppercase;padding:9px 18px 11px;border:1px solid var(--border);border-bottom:none;background:var(--bg);color:var(--muted);cursor:pointer;border-radius:6px 6px 0 0;transition:all 0.18s;position:relative;bottom:-2px;display:flex;align-items:center;gap:7px;}
+  .tab-btn+.tab-btn{margin-left:4px;}
+  .tab-btn:hover{color:var(--text);border-color:#2e4060;}
+  .tab-btn.active{background:var(--panel);color:var(--accent);border-color:var(--border);border-bottom:2px solid var(--panel);}
+  .tab-dot{display:inline-block;width:7px;height:7px;border-radius:50%;opacity:0.35;}
+  .tab-btn.active .tab-dot{opacity:1;}
+  .tab-btn:nth-child(1) .tab-dot{background:var(--accent);}
+  .tab-btn:nth-child(2) .tab-dot{background:var(--accent2);}
+  .tab-btn:nth-child(3) .tab-dot{background:var(--purple);}
+  .tab-btn:nth-child(4) .tab-dot{background:#3ddc97;}
+  .tab-btn:nth-child(5) .tab-dot{background:#ff9f4e;}
+  .tab-btn:nth-child(6) .tab-dot{background:#ff5ec4;}
+  .tab-btn:nth-child(7) .tab-dot{background:#ffd23f;}
+  .tab-btn:nth-child(8) .tab-dot{background:#4ecdc4;}
+  .tab-btn:nth-child(9) .tab-dot{background:#8c7bff;}
+
+  .page{display:none;position:relative;z-index:1;}
+  .page.active{display:block;}
+  .container{max-width:900px;margin:0 auto;padding:24px 20px 50px;}
+
+  /* SHARED */
+  .page-title{text-align:center;margin-bottom:20px;}
+  .page-title h1{font-size:clamp(1.2rem,3vw,1.8rem);font-weight:700;letter-spacing:0.05em;color:var(--text);}
+  .eq-badge{display:inline-block;background:linear-gradient(135deg,#0d1f3c,#0a192e);border:1px solid var(--border);border-left:3px solid var(--accent);padding:9px 20px;border-radius:4px;margin-top:10px;font-size:clamp(0.85rem,2vw,1.1rem);color:var(--accent);letter-spacing:0.06em;}
+  .cv-wrap{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;}
+  .cv-label{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  canvas{display:block;width:100%;border-radius:4px;}
+  .ctrl-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+  .mode-btn{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;padding:7px 13px;border-radius:4px;border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer;transition:all 0.18s;}
+  .mode-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .mode-btn.active{background:rgba(0,229,255,0.12);border-color:var(--accent);color:var(--accent);box-shadow:0 0 10px rgba(0,229,255,0.18);}
+  .play-btn{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;padding:7px 16px;border-radius:4px;border:1px solid var(--accent2);background:rgba(255,107,53,0.1);color:var(--accent2);cursor:pointer;transition:all 0.18s;margin-left:auto;}
+  .play-btn:hover{background:rgba(255,107,53,0.22);}
+  .sliders-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px;}
+  .sl-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:13px;}
+  .sl-label{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;}
+  .sl-val{color:var(--accent);}
+  input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);box-shadow:0 0 7px var(--accent);cursor:pointer;transition:transform 0.15s;}
+  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3);}
+  .hud{display:flex;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,#0d1f3c,#0a192e,#0d1f3c);border:1px solid var(--border);border-radius:8px;padding:10px 16px;margin-bottom:14px;}
+  .hud-item{font-size:11px;color:var(--muted);white-space:nowrap;}
+  .hud-item span{color:var(--text);}
+  .hud-sep{color:var(--border);}
+
+  /* TAB 2 */
+  .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:580px){.compare-grid{grid-template-columns:1fr;}}
+  .wt-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .wt-card.trans{border-top:3px solid var(--accent);}
+  .wt-card.long{border-top:3px solid var(--accent2);}
+  .wt-head{padding:12px 16px 8px;display:flex;justify-content:space-between;align-items:baseline;}
+  .wt-name{font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;}
+  .wt-card.trans .wt-name{color:var(--accent);}
+  .wt-card.long .wt-name{color:var(--accent2);}
+  .wt-sub{font-size:10px;color:var(--muted);letter-spacing:0.07em;}
+  .wt-cv{padding:0 12px 12px;}
+
+  /* ══ GAME TAB ══ */
+  .game-wrap{background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;}
+
+  .game-topbar{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+  .game-stat{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+  .game-stat span{color:var(--text);font-size:14px;}
+  .stat-sep{color:var(--border);}
+
+  .game-canvas-wrap{padding:14px;cursor:crosshair;position:relative;}
+  #gameCanvas{display:block;width:100%;border-radius:4px;cursor:crosshair;}
+
+  .game-hint{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);text-align:center;padding:8px 14px 14px;}
+
+  /* bottom row */
+  .game-bottom{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+  .g-btn{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;padding:9px 18px;border-radius:5px;border:1px solid;cursor:pointer;transition:all 0.18s;}
+  .g-btn-primary{border-color:var(--purple);background:rgba(192,132,252,0.1);color:var(--purple);}
+  .g-btn-primary:hover{background:rgba(192,132,252,0.22);}
+  .g-btn-reveal{border-color:var(--accent2);background:rgba(255,107,53,0.08);color:var(--accent2);}
+  .g-btn-reveal:hover{background:rgba(255,107,53,0.2);}
+  .g-btn-next{border-color:var(--accent3);background:rgba(127,255,110,0.08);color:var(--accent3);}
+  .g-btn-next:hover{background:rgba(127,255,110,0.18);}
+
+  /* difficulty */
+  .diff-row{display:flex;gap:6px;align-items:center;margin-left:auto;}
+  .diff-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+  .diff-btn{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:5px 12px;border-radius:4px;border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer;transition:all 0.15s;}
+  .diff-btn:hover{border-color:var(--purple);color:var(--purple);}
+  .diff-btn.active{border-color:var(--purple);color:var(--purple);background:rgba(192,132,252,0.1);}
+
+  /* result banner */
+  .result-banner{display:none;text-align:center;padding:14px 20px;border-radius:8px;margin-bottom:14px;font-size:13px;letter-spacing:0.08em;line-height:1.7;}
+  .result-banner.show{display:block;}
+  .result-banner.win{background:rgba(127,255,110,0.1);border:1px solid rgba(127,255,110,0.3);color:var(--accent3);}
+  .result-banner.lose{background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.25);color:var(--accent2);}
+  .result-banner.partial{background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);color:var(--accent);}
+
+  /* score history */
+  .score-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .score-pip{width:18px;height:18px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;}
+  .score-pip.hit{background:rgba(127,255,110,0.25);border-color:var(--accent3);color:var(--accent3);}
+  .score-pip.miss{background:rgba(255,107,53,0.15);border-color:var(--accent2);color:var(--accent2);}
+
+  /* n selector */
+  .n-row{display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .n-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
+  .n-btn{font-size:11px;font-weight:700;width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--panel);color:var(--muted);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;}
+  .n-btn:hover{border-color:var(--purple);color:var(--purple);}
+  .n-btn.active{border-color:var(--purple);background:rgba(192,132,252,0.15);color:var(--purple);box-shadow:0 0 8px rgba(192,132,252,0.3);}
+
+  /* 2D heatmap legend */
+  .legend-row{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:10px;color:var(--muted);letter-spacing:0.08em;}
+  .legend-bar{flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,#ff6b35,#0a0e1a,#00e5ff);}
+
+  /* axis label row for 2D controls */
+  .axis-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .axis-tag{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-right:2px;}
+
+  /* 3D mounts */
+  .three-mount{width:100%;height:380px;border-radius:4px;overflow:hidden;touch-action:none;background:#05070c;position:relative;}
+  .three-mount canvas{display:block;}
+  .three-mount.compare3{height:260px;}
+  .three-mount.game3{height:300px;cursor:crosshair;}
+  .three-hint{font-size:10px;letter-spacing:0.08em;color:var(--muted);margin-top:6px;text-align:center;}
+</style>
+<link rel="stylesheet" href="ask-question.css">
+<style>
+body{background:radial-gradient(ellipse at 50% -10%, #0a2e33 0%, #040d0f 65%) !important;background-attachment:fixed !important;position:relative !important;}
+body::before,body::after{content:'';position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(clamp(22px,6vw,50px));will-change:transform;}
+body::before{width:min(60vmax,600px);height:min(60vmax,600px);top:-18%;left:-12%;background:radial-gradient(circle,#00e5ff4d 0%,transparent 70%);animation:bgDriftA 24s ease-in-out infinite alternate;}
+body::after{width:min(55vmax,540px);height:min(55vmax,540px);bottom:-20%;right:-10%;background:radial-gradient(circle,#22d3ee40 0%,transparent 70%);animation:bgDriftB 30s ease-in-out infinite alternate;}
+@keyframes bgDriftA{0%{transform:translate(0,0) scale(1);}100%{transform:translate(6vw,5vh) scale(1.12);}}
+@keyframes bgDriftB{0%{transform:translate(0,0) scale(1);}100%{transform:translate(-5vw,-6vh) scale(1.08);}}
+@media (max-width:700px){
+  body::before,body::after{filter:blur(clamp(16px,8vw,32px));}
+  body::before{width:85vmax;height:85vmax;}
+  body::after{width:78vmax;height:78vmax;}
+}
+@media (prefers-reduced-motion:reduce){
+  body::before,body::after{animation:none !important;}
+}
+</style>
+<style>
+body{background:radial-gradient(ellipse at 50% -10%, #0a2e33 0%, #040d0f 65%) !important;background-attachment:fixed !important;position:relative !important;}
+body::before,body::after{content:'';position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(clamp(22px,6vw,50px));will-change:transform;}
+body::before{width:min(60vmax,600px);height:min(60vmax,600px);top:-18%;left:-12%;background:radial-gradient(circle,#00e5ff4d 0%,transparent 70%);animation:bgDriftA 24s ease-in-out infinite alternate;}
+body::after{width:min(55vmax,540px);height:min(55vmax,540px);bottom:-20%;right:-10%;background:radial-gradient(circle,#22d3ee40 0%,transparent 70%);animation:bgDriftB 30s ease-in-out infinite alternate;}
+@keyframes bgDriftA{0%{transform:translate(0,0) scale(1);}100%{transform:translate(6vw,5vh) scale(1.12);}}
+@keyframes bgDriftB{0%{transform:translate(0,0) scale(1);}100%{transform:translate(-5vw,-6vh) scale(1.08);}}
+@media (max-width:700px){
+  body::before,body::after{filter:blur(clamp(16px,8vw,32px));}
+  body::before{width:85vmax;height:85vmax;}
+  body::after{width:78vmax;height:78vmax;}
+}
+@media (prefers-reduced-motion:reduce){
+  body::before,body::after{animation:none !important;}
+}
+</style>
+<style>body{background:radial-gradient(ellipse at 50% -10%, #0a2e33 0%, #040d0f 65%) !important;background-attachment:fixed !important;}</style>
+</head>
+<body>
+<div class="viz-content-wrap">
+<a href="index.html" style="position:fixed;top:10px;left:10px;z-index:99999;background:rgba(10,12,18,0.85);color:#ffb92e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;text-decoration:none;padding:7px 12px;border:1px solid rgba(255,185,46,0.4);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.35);">&larr; Home</a>
+
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab(0)"><span class="tab-dot"></span>Wave Equation</button>
+  <button class="tab-btn" onclick="switchTab(1)"><span class="tab-dot"></span>Transversal vs Longitudinal</button>
+  <button class="tab-btn" onclick="switchTab(2)"><span class="tab-dot"></span>🎯 Node Hunt</button>
+  <button class="tab-btn" onclick="switchTab(3)"><span class="tab-dot"></span>2D Wave Equation</button>
+  <button class="tab-btn" onclick="switchTab(4)"><span class="tab-dot"></span>2D Transversal vs Longitudinal</button>
+  <button class="tab-btn" onclick="switchTab(5)"><span class="tab-dot"></span>🎯 2D Node Hunt</button>
+  <button class="tab-btn" onclick="switchTab(6)"><span class="tab-dot"></span>3D Wave Equation</button>
+  <button class="tab-btn" onclick="switchTab(7)"><span class="tab-dot"></span>3D Transversal vs Longitudinal</button>
+  <button class="tab-btn" onclick="switchTab(8)"><span class="tab-dot"></span>🎯 3D Node Hunt</button>
+</div>
+
+<!-- ═══ PAGE 0: WAVE EQUATION ═══ -->
+<div class="page active" id="page0">
+<div class="container">
+  <div class="page-title">
+    <h1>1D Wave Equation</h1>
+    <div class="eq-badge">∂²u/∂t² = c² · ∂²u/∂x²</div>
+  </div>
+  <div class="hud">
+    <div class="hud-item">c = <span id="c-display">1.00</span> m/s</div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">A = <span id="A-display">1.00</span></div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">λ = <span id="lambda-display">—</span></div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">f = <span id="freq-display">—</span> Hz</div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">T = <span id="period-display">—</span> s</div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">n = <span id="n-display">1</span></div>
+  </div>
+  <div class="ctrl-row">
+    <button class="mode-btn active" onclick="setMode('traveling',this)">▶ Traveling</button>
+    <button class="mode-btn" onclick="setMode('standing',this)">◈ Standing</button>
+    <button class="mode-btn" onclick="setMode('superposition',this)">⊕ Superposition</button>
+    <button class="mode-btn" onclick="setMode('pulse',this)">⚡ Pulse</button>
+    <button class="play-btn" id="playBtn" onclick="togglePlay()">⏸ Pause</button>
+  </div>
+  <div class="cv-wrap">
+    <div class="cv-label" id="canvas-title">u(x,t) = A·sin(kx − ωt)</div>
+    <canvas id="waveCanvas" height="220"></canvas>
+  </div>
+  <div class="cv-wrap">
+    <div class="cv-label">Kinetic (cyan) · Potential (orange) · Total (green)</div>
+    <canvas id="energyCanvas" height="80"></canvas>
+  </div>
+  <div class="sliders-grid">
+    <div class="sl-card"><div class="sl-label">Wave Speed c <span class="sl-val" id="cVal">1.0</span></div><input type="range" id="speedSlider" min="0.2" max="3" step="0.05" value="1.0" oninput="updateParams()"></div>
+    <div class="sl-card"><div class="sl-label">Amplitude A <span class="sl-val" id="aVal">1.0</span></div><input type="range" id="ampSlider" min="0.1" max="2" step="0.05" value="1.0" oninput="updateParams()"></div>
+    <div class="sl-card"><div class="sl-label">Mode n <span class="sl-val" id="nVal">1</span></div><input type="range" id="modeSlider" min="1" max="8" step="1" value="1" oninput="updateParams()"></div>
+    <div class="sl-card"><div class="sl-label">Time Speed <span class="sl-val" id="tsVal">1.0×</span></div><input type="range" id="timeSlider" min="0.1" max="3" step="0.1" value="1.0" oninput="updateParams()"></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PAGE 1: TRANS vs LONG ═══ -->
+<div class="page" id="page1">
+<div class="container">
+  <div class="page-title"><h1>Transversal vs Longitudinal</h1></div>
+  <div class="compare-grid">
+    <div class="wt-card trans">
+      <div class="wt-head"><div><div class="wt-name">Transversal</div><div class="wt-sub">displacement ⊥ propagation</div></div><div class="wt-sub" style="color:var(--accent)">light · string · S-wave</div></div>
+      <div class="wt-cv"><canvas id="transCanvas" height="180"></canvas></div>
+    </div>
+    <div class="wt-card long">
+      <div class="wt-head"><div><div class="wt-name">Longitudinal</div><div class="wt-sub">displacement ∥ propagation</div></div><div class="wt-sub" style="color:var(--accent2)">sound · P-wave · spring</div></div>
+      <div class="wt-cv"><canvas id="longCanvas" height="180"></canvas></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PAGE 2: NODE HUNT GAME ═══ -->
+<div class="page" id="page2">
+<div class="container">
+
+  <div class="page-title">
+    <h1>🎯 Node Hunt</h1>
+  </div>
+
+  <!-- Difficulty & n selector -->
+  <div class="n-row">
+    <span class="n-label">Harmonic n:</span>
+    <button class="n-btn active" onclick="setGameN(1,this)">1</button>
+    <button class="n-btn" onclick="setGameN(2,this)">2</button>
+    <button class="n-btn" onclick="setGameN(3,this)">3</button>
+    <button class="n-btn" onclick="setGameN(4,this)">4</button>
+    <button class="n-btn" onclick="setGameN(5,this)">5</button>
+    <button class="n-btn" onclick="setGameN(6,this)">6</button>
+
+    <div class="diff-row">
+      <span class="diff-label">Tolerance:</span>
+      <button class="diff-btn active" onclick="setDiff('easy',this)">Easy</button>
+      <button class="diff-btn" onclick="setDiff('medium',this)">Medium</button>
+      <button class="diff-btn" onclick="setDiff('hard',this)">Hard</button>
+    </div>
+  </div>
+
+  <!-- Game canvas -->
+  <div class="game-wrap">
+    <div class="game-topbar">
+      <div class="game-stat">Score <span id="gScore">0</span></div>
+      <div class="stat-sep">|</div>
+      <div class="game-stat">Round <span id="gRound">1</span></div>
+      <div class="stat-sep">|</div>
+      <div class="game-stat">Nodes to find <span id="gNodesLeft">—</span></div>
+      <div class="stat-sep">|</div>
+      <div class="game-stat">Taps <span id="gTaps">0</span></div>
+    </div>
+    <div class="game-canvas-wrap">
+      <canvas id="gameCanvas" height="260"></canvas>
+    </div>
+    <div class="game-hint" id="gameHint">👆 Tap where you think the nodes are (points of zero displacement)</div>
+  </div>
+
+  <!-- Result banner -->
+  <div class="result-banner" id="resultBanner"></div>
+
+  <!-- Score history -->
+  <div class="score-row" id="scoreRow"></div>
+
+  <!-- Buttons -->
+  <div class="game-bottom">
+    <button class="g-btn g-btn-primary" onclick="startGame()">↺ New Round</button>
+    <button class="g-btn g-btn-reveal" onclick="revealNodes()">👁 Reveal Nodes</button>
+    <button class="g-btn g-btn-next" id="nextBtn" onclick="nextRound()" style="display:none">Next Round →</button>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══ PAGE 3: 2D WAVE EQUATION ═══ -->
+<div class="page" id="page3">
+<div class="container">
+  <div class="page-title">
+    <h1>2D Wave Equation</h1>
+    <div class="eq-badge">∂²u/∂t² = c² · (∂²u/∂x² + ∂²u/∂y²)</div>
+  </div>
+  <div class="hud">
+    <div class="hud-item">c = <span id="c2-display">1.00</span> m/s</div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">A = <span id="A2-display">1.00</span></div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">f = <span id="freq2-display">—</span> Hz</div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">T = <span id="period2-display">—</span> s</div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">(nx,ny) = <span id="n2-display">1,1</span></div>
+  </div>
+  <div class="ctrl-row">
+    <button class="mode-btn active" onclick="setMode2D('traveling',this)">▶ Traveling</button>
+    <button class="mode-btn" onclick="setMode2D('standing',this)">◈ Standing</button>
+    <button class="mode-btn" onclick="setMode2D('superposition',this)">⊕ Superposition</button>
+    <button class="mode-btn" onclick="setMode2D('pulse',this)">⚡ Pulse</button>
+    <button class="play-btn" id="playBtn2" onclick="togglePlay2D()">⏸ Pause</button>
+  </div>
+  <div class="cv-wrap">
+    <div class="cv-label" id="canvas2-title">u(x,y,t) = A·sin(kx·x + ky·y − ωt)</div>
+    <canvas id="wave2Canvas" height="300"></canvas>
+    <div class="legend-row"><span>−A</span><div class="legend-bar"></div><span>+A</span></div>
+  </div>
+  <div class="cv-wrap">
+    <div class="cv-label">Cross-section along y = 0.5 (dashed line on map above)</div>
+    <canvas id="slice2Canvas" height="70"></canvas>
+  </div>
+  <div class="sliders-grid">
+    <div class="sl-card"><div class="sl-label">Wave Speed c <span class="sl-val" id="c2Val">1.0</span></div><input type="range" id="speedSlider2" min="0.2" max="3" step="0.05" value="1.0" oninput="updateParams2D()"></div>
+    <div class="sl-card"><div class="sl-label">Amplitude A <span class="sl-val" id="a2Val">1.0</span></div><input type="range" id="ampSlider2" min="0.1" max="2" step="0.05" value="1.0" oninput="updateParams2D()"></div>
+    <div class="sl-card"><div class="sl-label">Mode nx <span class="sl-val" id="nx2Val">1</span></div><input type="range" id="nxSlider2" min="1" max="6" step="1" value="1" oninput="updateParams2D()"></div>
+    <div class="sl-card"><div class="sl-label">Mode ny <span class="sl-val" id="ny2Val">1</span></div><input type="range" id="nySlider2" min="1" max="6" step="1" value="1" oninput="updateParams2D()"></div>
+    <div class="sl-card"><div class="sl-label">Time Speed <span class="sl-val" id="ts2Val">1.0×</span></div><input type="range" id="timeSlider2" min="0.1" max="3" step="0.1" value="1.0" oninput="updateParams2D()"></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PAGE 4: 2D TRANS vs LONG ═══ -->
+<div class="page" id="page4">
+<div class="container">
+  <div class="page-title"><h1>2D Transversal vs Longitudinal</h1></div>
+  <div class="compare-grid">
+    <div class="wt-card trans">
+      <div class="wt-head"><div><div class="wt-name">Transversal (ripple)</div><div class="wt-sub">displacement ⊥ propagation plane</div></div><div class="wt-sub" style="color:var(--accent)">water surface · membrane</div></div>
+      <div class="wt-cv"><canvas id="trans2Canvas" height="240"></canvas></div>
+    </div>
+    <div class="wt-card long">
+      <div class="wt-head"><div><div class="wt-name">Longitudinal (compression)</div><div class="wt-sub">particles oscillate radially, ∥ propagation</div></div><div class="wt-sub" style="color:var(--accent2)">sound in a gas</div></div>
+      <div class="wt-cv"><canvas id="long2Canvas" height="240"></canvas></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PAGE 5: 2D NODE HUNT GAME ═══ -->
+<div class="page" id="page5">
+<div class="container">
+
+  <div class="page-title">
+    <h1>🎯 2D Node Hunt</h1>
+  </div>
+
+  <div class="n-row">
+    <span class="n-label">nx:</span>
+    <button class="n2x-btn n-btn active" onclick="setGameNx(1,this)">1</button>
+    <button class="n2x-btn n-btn" onclick="setGameNx(2,this)">2</button>
+    <button class="n2x-btn n-btn" onclick="setGameNx(3,this)">3</button>
+    <button class="n2x-btn n-btn" onclick="setGameNx(4,this)">4</button>
+    <span class="n-label" style="margin-left:10px;">ny:</span>
+    <button class="n2y-btn n-btn active" onclick="setGameNy(1,this)">1</button>
+    <button class="n2y-btn n-btn" onclick="setGameNy(2,this)">2</button>
+    <button class="n2y-btn n-btn" onclick="setGameNy(3,this)">3</button>
+    <button class="n2y-btn n-btn" onclick="setGameNy(4,this)">4</button>
+
+    <div class="diff-row">
+      <span class="diff-label">Tolerance:</span>
+      <button class="diff2-btn diff-btn active" onclick="setDiff2D('easy',this)">Easy</button>
+      <button class="diff2-btn diff-btn" onclick="setDiff2D('medium',this)">Medium</button>
+      <button class="diff2-btn diff-btn" onclick="setDiff2D('hard',this)">Hard</button>
+    </div>
+  </div>
+
+  <div class="game-wrap">
+    <div class="game-topbar">
+      <div class="game-stat">Score <span id="gScore2">0</span></div>
+      <div class="stat-sep">|</div>
+      <div class="game-stat">Round <span id="gRound2">1</span></div>
+      <div class="stat-sep">|</div>
+      <div class="game-stat">Nodal lines to find <span id="gNodesLeft2">—</span></div>
+      <div class="stat-sep">|</div>
+      <div class="game-stat">Taps <span id="gTaps2">0</span></div>
+    </div>
+    <div class="game-canvas-wrap">
+      <canvas id="game2Canvas" height="280"></canvas>
+    </div>
+    <div class="game-hint" id="gameHint2">👆 Tap on the lines you think never move (nodal lines of the membrane)</div>
+  </div>
+
+  <div class="result-banner" id="resultBanner2"></div>
+  <div class="score-row" id="scoreRow2"></div>
+
+  <div class="game-bottom">
+    <button class="g-btn g-btn-primary" onclick="startGame2D()">↺ New Round</button>
+    <button class="g-btn g-btn-reveal" onclick="revealNodes2D()">👁 Reveal Nodes</button>
+    <button class="g-btn g-btn-next" id="nextBtn2" onclick="nextRound2D()" style="display:none">Next Round →</button>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══ PAGE 6: 3D WAVE EQUATION ═══ -->
+<div class="page" id="page6">
+<div class="container">
+  <div class="page-title">
+    <h1>3D Wave Equation</h1>
+    <div class="eq-badge">∂²u/∂t² = c² · (∂²u/∂x² + ∂²u/∂y²)</div>
+  </div>
+  <div class="hud">
+    <div class="hud-item">c = <span id="c3-display">1.00</span> m/s</div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">A = <span id="A3-display">1.00</span></div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">f = <span id="freq3-display">—</span> Hz</div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">T = <span id="period3-display">—</span> s</div>
+    <div class="hud-sep">|</div>
+    <div class="hud-item">(nx,ny) = <span id="n3-display">1,1</span></div>
+  </div>
+  <div class="ctrl-row">
+    <button class="mode-btn active" onclick="setMode3D('traveling',this)">▶ Traveling</button>
+    <button class="mode-btn" onclick="setMode3D('standing',this)">◈ Standing</button>
+    <button class="mode-btn" onclick="setMode3D('superposition',this)">⊕ Superposition</button>
+    <button class="mode-btn" onclick="setMode3D('pulse',this)">⚡ Pulse</button>
+    <button class="play-btn" id="playBtn3" onclick="togglePlay3D()">⏸ Pause</button>
+  </div>
+  <div class="cv-wrap">
+    <div class="cv-label" id="canvas3-title">u(x,y,t) = A·sin(kx·x + ky·y − ωt)</div>
+    <div class="three-mount" id="wave3Mount"></div>
+    <div class="three-hint">drag to rotate · scroll / pinch to zoom</div>
+  </div>
+  <div class="sliders-grid">
+    <div class="sl-card"><div class="sl-label">Wave Speed c <span class="sl-val" id="c3Val">1.0</span></div><input type="range" id="speedSlider3" min="0.2" max="3" step="0.05" value="1.0" oninput="updateParams3D()"></div>
+    <div class="sl-card"><div class="sl-label">Amplitude A <span class="sl-val" id="a3Val">1.0</span></div><input type="range" id="ampSlider3" min="0.1" max="2" step="0.05" value="1.0" oninput="updateParams3D()"></div>
+    <div class="sl-card"><div class="sl-label">Mode nx <span class="sl-val" id="nx3Val">1</span></div><input type="range" id="nxSlider3" min="1" max="6" step="1" value="1" oninput="updateParams3D()"></div>
+    <div class="sl-card"><div class="sl-label">Mode ny <span class="sl-val" id="ny3Val">1</span></div><input type="range" id="nySlider3" min="1" max="6" step="1" value="1" oninput="updateParams3D()"></div>
+    <div class="sl-card"><div class="sl-label">Time Speed <span class="sl-val" id="ts3Val">1.0×</span></div><input type="range" id="timeSlider3" min="0.1" max="3" step="0.1" value="1.0" oninput="updateParams3D()"></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PAGE 7: 3D TRANS vs LONG ═══ -->
+<div class="page" id="page7">
+<div class="container">
+  <div class="page-title"><h1>3D Transversal vs Longitudinal</h1></div>
+  <div class="compare-grid">
+    <div class="wt-card trans">
+      <div class="wt-head"><div><div class="wt-name">Transversal</div><div class="wt-sub">particles oscillate ⊥ to propagation</div></div><div class="wt-sub" style="color:var(--accent)">light · string · S-wave</div></div>
+      <div class="wt-cv"><div class="three-mount compare3" id="trans3Mount"></div></div>
+    </div>
+    <div class="wt-card long">
+      <div class="wt-head"><div><div class="wt-name">Longitudinal</div><div class="wt-sub">particles oscillate ∥ to propagation</div></div><div class="wt-sub" style="color:var(--accent2)">sound · P-wave · spring</div></div>
+      <div class="wt-cv"><div class="three-mount compare3" id="long3Mount"></div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PAGE 8: 3D NODE HUNT GAME ═══ -->
+<div class="page" id="page8">
+<div class="container">
+
+  <div class="page-title">
+    <h1>🎯 3D Node Hunt</h1>
+  </div>
+
+  <div class="n-row">
+    <span class="n-label">nx:</span>
+    <button class="n3x-btn n-btn active" onclick="setGameNx3(1,this)">1</button>
+    <button class="n3x-btn n-btn" onclick="setGameNx3(2,this)">2</button>
+    <button class="n3x-btn n-btn" onclick="setGameNx3(3,this)">3</button>
+    <button class="n3x-btn n-btn" onclick="setGameNx3(4,this)">4</button>
+    <span class="n-label" style="margin-left:10px;">ny:</span>
+    <button class="n3y-btn n-btn active" onclick="setGameNy3(1,this)">1</button>
+    <button class="n3y-btn n-btn" onclick="setGameNy3(2,this)">2</button>
+    <button class="n3y-btn n-btn" onclick="setGameNy3(3,this)">3</button>
+    <button class="n3y-btn n-btn" onclick="setGameNy3(4,this)">4</button>
+
+    <div class="diff-row">
+      <span class="diff-label">Tolerance:</span>
+      <button class="diff3-btn diff-btn active" onclick="setDiff3D('easy',this)">Easy</button>
+      <button class="diff3-btn diff-btn" onclick="setDiff3D('medium',this)">Medium</button>
+      <button class="diff3-btn diff-btn" onclick="setDiff3D('hard',this)">Hard</button>
+    </div>
+  </div>
+
+  <div class="game-wrap">
+    <div class="game-topbar">
+      <div class="game-stat">Score <span id="gScore3">0</span></div>
+      <div class="stat-sep">|</div>
+      <div class="game-stat">Round <span id="gRound3">1</span></div>
+      <div class="stat-sep">|</div>
+      <div class="game-stat">Nodal lines to find <span id="gNodesLeft3">—</span></div>
+      <div class="stat-sep">|</div>
+      <div class="game-stat">Taps <span id="gTaps3">0</span></div>
+    </div>
+    <div class="game-canvas-wrap">
+      <div class="three-mount game3" id="game3Mount"></div>
+    </div>
+    <div class="game-hint" id="gameHint3">👆 Click on the surface where you think the nodal lines are (drag empty space to rotate)</div>
+  </div>
+
+  <div class="result-banner" id="resultBanner3"></div>
+  <div class="score-row" id="scoreRow3"></div>
+
+  <div class="game-bottom">
+    <button class="g-btn g-btn-primary" onclick="startGame3D()">↺ New Round</button>
+    <button class="g-btn g-btn-reveal" onclick="revealNodes3D()">👁 Reveal Nodes</button>
+    <button class="g-btn g-btn-next" id="nextBtn3" onclick="nextRound3D()" style="display:none">Next Round →</button>
+  </div>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// ══════════════════════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════════════════════
+let activeTabIdx=0;
+function switchTab(idx){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('active',i===idx));
+  activeTabIdx=idx;
+  setTimeout(()=>{
+    resize();resizeTC();resizeGame();resize2D();resizeTC2();resizeGame2D();
+    if(idx===6){ if(!wave3.inited) initWave3D(); else resizeThree(wave3); }
+    if(idx===7){ if(!trans3.inited) initTrans3D(); else resizeThree(trans3); if(!long3.inited) initLong3D(); else resizeThree(long3); }
+    if(idx===8){ if(!game3.inited) initGame3D(); else resizeThree(game3); }
+  },20);
+}
+
+// ══════════════════════════════════════════════════════
+// EXPLORER STATE
+// ══════════════════════════════════════════════════════
+let mode='traveling', playing=true, t=0;
+let c=1.0, A=1.0, n=1, ts=1.0;
+const L=1.0;
+
+const wc=document.getElementById('waveCanvas'), wctx=wc.getContext('2d');
+const ec=document.getElementById('energyCanvas'), ectx=ec.getContext('2d');
+
+function resize(){
+  [[wc,220],[ec,80]].forEach(([cv,h])=>{
+    cv.width=cv.offsetWidth*devicePixelRatio; cv.height=h*devicePixelRatio;
+    cv.getContext('2d').scale(devicePixelRatio,devicePixelRatio);
+  });
+}
+window.addEventListener('resize',()=>{
+  resize();resizeTC();resizeGame();
+  if(typeof resize2D==='function'){resize2D();resizeTC2();resizeGame2D();}
+  if(typeof resizeThree==='function'){
+    if(activeTabIdx===6) resizeThree(wave3);
+    if(activeTabIdx===7){resizeThree(trans3);resizeThree(long3);}
+    if(activeTabIdx===8) resizeThree(game3);
+  }
+});
+resize();
+
+function u(x,tt){
+  const k=n*Math.PI/L, om=c*k;
+  if(mode==='traveling') return A*Math.sin(k*x-om*tt);
+  if(mode==='standing')  return A*Math.sin(k*x)*Math.cos(om*tt);
+  if(mode==='superposition') return A*0.6*Math.sin(k*x-om*tt)+A*0.4*Math.sin(2*k*x-2*om*tt+0.5);
+  const x0=(tt*c)%(2*L),s=0.08;
+  return A*Math.exp(-Math.pow(x-x0,2)/(2*s*s))-A*Math.exp(-Math.pow(x-(2*L-x0),2)/(2*s*s));
+}
+
+function drawWave(){
+  const w=wc.offsetWidth, h=wc.offsetHeight, scY=(h/2-18)/2, pts=600;
+  wctx.clearRect(0,0,w,h);
+  wctx.strokeStyle='rgba(30,45,69,0.8)'; wctx.lineWidth=1; wctx.setLineDash([4,6]);
+  wctx.beginPath(); wctx.moveTo(0,h/2); wctx.lineTo(w,h/2); wctx.stroke(); wctx.setLineDash([]);
+  if(mode!=='pulse'){
+    const g=wctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,'rgba(0,229,255,0.08)'); g.addColorStop(0.5,'rgba(0,229,255,0.01)'); g.addColorStop(1,'rgba(0,229,255,0.08)');
+    wctx.fillStyle=g; wctx.beginPath(); wctx.moveTo(0,h/2);
+    for(let i=0;i<=pts;i++){const px=i/pts*w,py=h/2-u(i/pts*L,t)*scY; i?wctx.lineTo(px,py):wctx.moveTo(px,py);}
+    wctx.lineTo(w,h/2); wctx.closePath(); wctx.fill();
+  }
+  if(mode==='traveling'||mode==='superposition'){
+    const ht=Math.PI/(c*n*Math.PI/L);
+    wctx.strokeStyle='rgba(0,229,255,0.15)'; wctx.lineWidth=1.5; wctx.beginPath();
+    for(let i=0;i<=pts;i++){const px=i/pts*w,py=h/2-u(i/pts*L,t-ht)*scY; i?wctx.lineTo(px,py):wctx.moveTo(px,py);}
+    wctx.stroke();
+  }
+  const g2=wctx.createLinearGradient(0,0,w,0);
+  g2.addColorStop(0,'#00e5ff'); g2.addColorStop(0.5,'#00bfff'); g2.addColorStop(1,'#00e5ff');
+  wctx.strokeStyle=g2; wctx.lineWidth=2.5; wctx.shadowColor='#00e5ff'; wctx.shadowBlur=8; wctx.beginPath();
+  for(let i=0;i<=pts;i++){const px=i/pts*w,py=h/2-u(i/pts*L,t)*scY; i?wctx.lineTo(px,py):wctx.moveTo(px,py);}
+  wctx.stroke(); wctx.shadowBlur=0;
+  for(let i=0;i<=20;i++){
+    const x=i/20*L,px=i/20*w,val=u(x,t),py=h/2-val*scY;
+    const vel=(u(x,t+0.001)-val)/0.001, spd=Math.abs(vel);
+    wctx.beginPath(); wctx.arc(px,py,4,0,Math.PI*2);
+    wctx.fillStyle=`rgba(255,107,53,${Math.min(1,0.3+spd*0.5)})`; wctx.shadowColor='#ff6b35'; wctx.shadowBlur=spd>0.5?10:4;
+    wctx.fill(); wctx.shadowBlur=0;
+    if(spd>0.05){const al=Math.min(20,spd*15),dir=vel>0?-1:1; wctx.strokeStyle=`rgba(127,255,110,${Math.min(1,spd)})`; wctx.lineWidth=1.5; wctx.beginPath(); wctx.moveTo(px,py); wctx.lineTo(px,py+dir*al); wctx.stroke();}
+  }
+  if(mode==='standing'){
+    for(let ni=0;ni<=n;ni++){
+      const nx=ni/n*w; wctx.strokeStyle='rgba(255,107,53,0.5)'; wctx.lineWidth=1; wctx.setLineDash([3,5]);
+      wctx.beginPath(); wctx.moveTo(nx,10); wctx.lineTo(nx,h-10); wctx.stroke(); wctx.setLineDash([]);
+      if(ni>0&&ni<n){wctx.fillStyle='rgba(255,107,53,0.65)'; wctx.font="10px 'Space Mono',monospace"; wctx.textAlign='center'; wctx.fillText('N',nx,h-5);}
+    }
+  }
+  wctx.fillStyle='#ff6b35'; [0,w].forEach(px=>{wctx.beginPath();wctx.arc(px,h/2,6,0,Math.PI*2);wctx.fill();});
+  wctx.fillStyle='rgba(107,128,160,0.65)'; wctx.font="10px 'Space Mono',monospace"; wctx.textAlign='left';
+  wctx.fillText(`t = ${t.toFixed(2)} s`,10,h-8);
+}
+
+function drawEnergy(){
+  const w=ec.offsetWidth, h=ec.offsetHeight;
+  ectx.clearRect(0,0,w,h);
+  const pts=300, KE=[],PE=[]; let mx=0.001;
+  for(let i=0;i<=pts;i++){
+    const x=i/pts*L, dt=(u(x,t+0.001)-u(x,t))/0.001, dx=(u(Math.min(L,x+0.001),t)-u(x,t))/0.001;
+    const ke=0.5*dt*dt, pe=0.5*c*c*dx*dx; KE.push(ke); PE.push(pe); mx=Math.max(mx,ke+pe);
+  }
+  const sc=h*0.9;
+  ectx.fillStyle='rgba(0,229,255,0.5)'; ectx.beginPath(); ectx.moveTo(0,h);
+  for(let i=0;i<=pts;i++) ectx.lineTo(i/pts*w,h-KE[i]/mx*sc); ectx.lineTo(w,h); ectx.closePath(); ectx.fill();
+  ectx.fillStyle='rgba(255,107,53,0.4)'; ectx.beginPath(); ectx.moveTo(0,h);
+  for(let i=0;i<=pts;i++) ectx.lineTo(i/pts*w,h-PE[i]/mx*sc); ectx.lineTo(w,h); ectx.closePath(); ectx.fill();
+  ectx.strokeStyle='rgba(127,255,110,0.6)'; ectx.lineWidth=1.5; ectx.beginPath();
+  for(let i=0;i<=pts;i++){const e=(KE[i]+PE[i])/mx*sc; i?ectx.lineTo(i/pts*w,h-e):ectx.moveTo(0,h-e);} ectx.stroke();
+}
+
+// Tab2 canvases
+const tc=document.getElementById('transCanvas'), tctx=tc.getContext('2d');
+const lc=document.getElementById('longCanvas'), lctx=lc.getContext('2d');
+function resizeTC(){
+  [tc,lc].forEach(cv=>{cv.width=cv.offsetWidth*devicePixelRatio; cv.height=180*devicePixelRatio; cv.getContext('2d').scale(devicePixelRatio,devicePixelRatio);});
+}
+resizeTC();
+function drawTransversal(tt){
+  const w=tc.offsetWidth,h=tc.offsetHeight,numP=26,k=2*Math.PI/w*2.5,om=2.5,amp=h*0.3,cy=h/2;
+  tctx.clearRect(0,0,w,h);
+  tctx.strokeStyle='rgba(0,229,255,0.28)'; tctx.lineWidth=1.5; tctx.setLineDash([5,5]); tctx.beginPath(); tctx.moveTo(10,cy); tctx.lineTo(w-10,cy); tctx.stroke(); tctx.setLineDash([]);
+  tctx.fillStyle='rgba(0,229,255,0.45)'; tctx.beginPath(); tctx.moveTo(w-8,cy); tctx.lineTo(w-18,cy-5); tctx.lineTo(w-18,cy+5); tctx.closePath(); tctx.fill();
+  tctx.strokeStyle='rgba(0,229,255,0.18)'; tctx.lineWidth=1.5; tctx.beginPath();
+  for(let i=0;i<=300;i++){const px=i/300*w,py=cy-Math.sin(k*px-om*tt)*amp; i?tctx.lineTo(px,py):tctx.moveTo(px,py);} tctx.stroke();
+  for(let i=0;i<numP;i++){
+    const px=(i+0.5)/numP*w,disp=Math.sin(k*px-om*tt)*amp,py=cy-disp,spd=Math.abs(Math.cos(k*px-om*tt));
+    tctx.strokeStyle='rgba(0,229,255,0.14)'; tctx.lineWidth=1; tctx.beginPath(); tctx.moveTo(px,cy); tctx.lineTo(px,py); tctx.stroke();
+    tctx.beginPath(); tctx.arc(px,py,5,0,Math.PI*2); tctx.fillStyle=`rgba(0,229,255,${0.5+0.5*spd})`; tctx.shadowColor='#00e5ff'; tctx.shadowBlur=spd>0.5?12:3; tctx.fill(); tctx.shadowBlur=0;
+    const vel=-Math.cos(k*px-om*tt)*om;
+    if(Math.abs(vel)>0.3){const al=Math.min(18,Math.abs(vel)*7),s=Math.sign(vel); tctx.strokeStyle='rgba(127,255,110,0.7)'; tctx.lineWidth=1.5; tctx.beginPath(); tctx.moveTo(px,py); tctx.lineTo(px,py-s*al); tctx.stroke(); const ay=py-s*al; tctx.fillStyle='rgba(127,255,110,0.7)'; tctx.beginPath(); tctx.moveTo(px,ay); tctx.lineTo(px-3,ay+s*5); tctx.lineTo(px+3,ay+s*5); tctx.closePath(); tctx.fill();}
+  }
+  tctx.font="10px 'Space Mono',monospace"; tctx.fillStyle='rgba(0,229,255,0.6)'; tctx.textAlign='left'; tctx.fillText('→ wave travels',8,h-8); tctx.fillStyle='rgba(127,255,110,0.6)'; tctx.textAlign='right'; tctx.fillText('↕ particles oscillate',w-8,h-8);
+}
+function drawLongitudinal(tt){
+  const w=lc.offsetWidth,h=lc.offsetHeight,numP=32,k=2*Math.PI/w*2.5,om=2.5,amp=w/numP*0.72,cy=h/2;
+  lctx.clearRect(0,0,w,h);
+  lctx.strokeStyle='rgba(255,107,53,0.28)'; lctx.lineWidth=1.5; lctx.setLineDash([5,5]); lctx.beginPath(); lctx.moveTo(10,cy); lctx.lineTo(w-10,cy); lctx.stroke(); lctx.setLineDash([]);
+  lctx.fillStyle='rgba(255,107,53,0.45)'; lctx.beginPath(); lctx.moveTo(w-8,cy); lctx.lineTo(w-18,cy-5); lctx.lineTo(w-18,cy+5); lctx.closePath(); lctx.fill();
+  for(let i=0;i<=300;i++){const px=i/300*w,comp=(Math.sin(k*px-om*tt)+1)/2; lctx.fillStyle=`rgba(255,107,53,${comp*0.14})`; lctx.fillRect(px,0,w/300+1,h);}
+  for(let i=0;i<numP;i++){
+    const eq=(i+0.5)/numP*w,disp=Math.sin(k*eq-om*tt)*amp,px=eq+disp,spd=Math.abs(Math.cos(k*eq-om*tt));
+    lctx.beginPath(); lctx.arc(px,cy,5,0,Math.PI*2); lctx.fillStyle=`rgba(255,107,53,${0.5+0.5*spd})`; lctx.shadowColor='#ff6b35'; lctx.shadowBlur=spd>0.5?12:3; lctx.fill(); lctx.shadowBlur=0;
+    const vel=Math.cos(k*eq-om*tt)*om;
+    if(Math.abs(vel)>0.3){const al=Math.min(16,Math.abs(vel)*6),s=Math.sign(vel); lctx.strokeStyle='rgba(127,255,110,0.7)'; lctx.lineWidth=1.5; lctx.beginPath(); lctx.moveTo(px,cy); lctx.lineTo(px+s*al,cy); lctx.stroke(); const ax=px+s*al; lctx.fillStyle='rgba(127,255,110,0.7)'; lctx.beginPath(); lctx.moveTo(ax,cy); lctx.lineTo(ax-s*5,cy-3); lctx.lineTo(ax-s*5,cy+3); lctx.closePath(); lctx.fill();}
+  }
+  lctx.font="9px 'Space Mono',monospace"; lctx.textAlign='center';
+  for(let tr=0;tr<5;tr++){const px=(om*tt+Math.PI/2+tr*2*Math.PI)/k; if(px>15&&px<w-15){lctx.fillStyle='rgba(255,107,53,0.6)'; lctx.fillText('C',px,13); break;}}
+  for(let tr=0;tr<5;tr++){const px=(om*tt-Math.PI/2+tr*2*Math.PI)/k; if(px>15&&px<w-15){lctx.fillStyle='rgba(0,229,255,0.5)'; lctx.fillText('R',px,13); break;}}
+  lctx.font="10px 'Space Mono',monospace"; lctx.fillStyle='rgba(255,107,53,0.6)'; lctx.textAlign='left'; lctx.fillText('→ wave travels',8,h-8); lctx.fillStyle='rgba(127,255,110,0.6)'; lctx.textAlign='right'; lctx.fillText('↔ particles oscillate',w-8,h-8);
+}
+
+function updateHUD(){
+  const k=n*Math.PI/L,om=c*k,lam=2*Math.PI/k,freq=om/(2*Math.PI);
+  document.getElementById('c-display').textContent=c.toFixed(2);
+  document.getElementById('A-display').textContent=A.toFixed(2);
+  document.getElementById('lambda-display').textContent=lam.toFixed(3)+' m';
+  document.getElementById('freq-display').textContent=freq.toFixed(3);
+  document.getElementById('period-display').textContent=(1/freq).toFixed(3);
+  document.getElementById('n-display').textContent=n;
+  const titles={traveling:`u(x,t)=A·sin(kx−ωt) [k=${(n*Math.PI/L).toFixed(2)},ω=${(c*n*Math.PI/L).toFixed(2)}]`,standing:`u(x,t)=A·sin(kx)·cos(ωt) [n=${n}]`,superposition:`u=A·sin(kx−ωt)+0.67A·sin(2kx−2ωt+0.5)`,pulse:`u(x,t)=A·exp[−(x−ct)²/2σ²]`};
+  document.getElementById('canvas-title').textContent=titles[mode];
+}
+function updateParams(){
+  c=parseFloat(document.getElementById('speedSlider').value);
+  A=parseFloat(document.getElementById('ampSlider').value);
+  n=parseInt(document.getElementById('modeSlider').value);
+  ts=parseFloat(document.getElementById('timeSlider').value);
+  document.getElementById('cVal').textContent=c.toFixed(2);
+  document.getElementById('aVal').textContent=A.toFixed(2);
+  document.getElementById('nVal').textContent=n;
+  document.getElementById('tsVal').textContent=ts.toFixed(1)+'×';
+  updateHUD();
+}
+function setMode(m,btn){mode=m; document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); updateHUD();}
+function togglePlay(){playing=!playing; document.getElementById('playBtn').textContent=playing?'⏸ Pause':'▶ Play';}
+
+// ══════════════════════════════════════════════════════
+// GAME STATE
+// ══════════════════════════════════════════════════════
+const gc=document.getElementById('gameCanvas'), gctx=gc.getContext('2d');
+let gN=1; // harmonic
+let diffTolerance=0.07; // as fraction of canvas width
+let gScore=0, gRound=1;
+let gGuesses=[]; // [{x:fraction, hit:bool|null}]
+let gRevealed=false;
+let gRoundDone=false;
+let gHistory=[]; // 'hit'|'miss' per round
+let gt=0; // game time (separate from explorer)
+let gAnim=true;
+
+// Node positions as fractions [0..1] — internal nodes only (not endpoints)
+function nodePositions(nVal){
+  const pos=[];
+  for(let i=1;i<nVal;i++) pos.push(i/nVal);
+  return pos;
+}
+
+function setGameN(val,btn){
+  gN=val;
+  document.querySelectorAll('.n-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  startGame();
+}
+
+function setDiff(d,btn){
+  if(d==='easy') diffTolerance=0.08;
+  else if(d==='medium') diffTolerance=0.05;
+  else diffTolerance=0.03;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function resizeGame(){
+  gc.width=gc.offsetWidth*devicePixelRatio;
+  gc.height=260*devicePixelRatio;
+  gc.getContext('2d').scale(devicePixelRatio,devicePixelRatio);
+}
+resizeGame();
+
+function startGame(){
+  gGuesses=[];
+  gRevealed=false;
+  gRoundDone=false;
+  document.getElementById('nextBtn').style.display='none';
+  document.getElementById('resultBanner').className='result-banner';
+  document.getElementById('resultBanner').textContent='';
+  const nodes=nodePositions(gN);
+  document.getElementById('gNodesLeft').textContent=nodes.length===0?'none (n=1)':nodes.length;
+  document.getElementById('gTaps').textContent='0';
+  document.getElementById('gameHint').textContent=
+    nodes.length===0
+    ? '⚠️ n=1 has no internal nodes — endpoints are fixed. Try n ≥ 2!'
+    : `👆 Tap where you think the ${nodes.length} node${nodes.length>1?'s are':' is'} (zero-displacement point${nodes.length>1?'s':''})`;
+}
+
+// Tap handler
+function getCanvasX(e){
+  const rect=gc.getBoundingClientRect();
+  const clientX=e.touches?e.touches[0].clientX:e.clientX;
+  return (clientX-rect.left)/rect.width; // fraction
+}
+
+gc.addEventListener('click',onGameTap);
+gc.addEventListener('touchstart',onGameTap,{passive:true});
+
+function onGameTap(e){
+  if(gRoundDone) return;
+  const nodes=nodePositions(gN);
+  if(nodes.length===0) return;
+  const xf=getCanvasX(e);
+  if(xf<0||xf>1) return;
+
+  // Don't allow tapping too close to existing guess
+  for(const g of gGuesses){
+    if(Math.abs(g.xf-xf)<0.025) return;
+  }
+
+  // check hit
+  let hit=false;
+  for(const npos of nodes){
+    if(Math.abs(xf-npos)<diffTolerance){ hit=true; break; }
+  }
+
+  // ripple effect data
+  gGuesses.push({xf, hit, ripple:1.0, time:performance.now()});
+  document.getElementById('gTaps').textContent=gGuesses.length;
+
+  // auto-evaluate when enough correct guesses found
+  const correctHits=gGuesses.filter(g=>g.hit);
+  const uniqueHits=countUniqueHits(gGuesses,nodes);
+  if(uniqueHits>=nodes.length && nodes.length>0){
+    setTimeout(()=>evaluateRound(),400);
+  }
+}
+
+function countUniqueHits(guesses, nodes){
+  const claimed=new Set();
+  for(const g of guesses){
+    if(!g.hit) continue;
+    for(let i=0;i<nodes.length;i++){
+      if(!claimed.has(i)&&Math.abs(g.xf-nodes[i])<diffTolerance){claimed.add(i); break;}
+    }
+  }
+  return claimed.size;
+}
+
+function evaluateRound(){
+  if(gRoundDone) return;
+  gRoundDone=true;
+  gRevealed=true;
+  const nodes=nodePositions(gN);
+  const hits=countUniqueHits(gGuesses,nodes);
+  const misses=gGuesses.filter(g=>!g.hit).length;
+  const total=nodes.length;
+  const banner=document.getElementById('resultBanner');
+  let pts=0;
+
+  if(hits===total && misses===0){
+    pts=total*10; gScore+=pts;
+    banner.className='result-banner win show';
+    banner.innerHTML=`🎉 Perfect! All ${total} node${total>1?'s':''} found with no wrong taps!<br>+${pts} points`;
+    gHistory.push('hit');
+  } else if(hits===total){
+    pts=total*5; gScore+=pts;
+    banner.className='result-banner partial show';
+    banner.innerHTML=`✅ Found all nodes (${misses} wrong tap${misses>1?'s':''}).<br>+${pts} points`;
+    gHistory.push('hit');
+  } else if(hits>0){
+    pts=hits*3; gScore+=pts;
+    banner.className='result-banner partial show';
+    banner.innerHTML=`🔵 Found ${hits}/${total} nodes.<br>+${pts} points`;
+    gHistory.push('miss');
+  } else {
+    banner.className='result-banner lose show';
+    banner.innerHTML=`❌ No nodes found! The wave has ${total} node${total>1?'s':''} at equal intervals.`;
+    gHistory.push('miss');
+  }
+
+  document.getElementById('gScore').textContent=gScore;
+  document.getElementById('nextBtn').style.display='inline-block';
+  renderHistory();
+}
+
+function revealNodes(){
+  gRevealed=true;
+  gRoundDone=true;
+  document.getElementById('nextBtn').style.display='inline-block';
+  document.getElementById('gameHint').textContent='Nodes revealed — they are the points that never move!';
+}
+
+function nextRound(){
+  gRound++;
+  document.getElementById('gRound').textContent=gRound;
+  // randomly pick new n between 2 and 6
+  const newN=Math.floor(Math.random()*5)+2;
+  gN=newN;
+  document.querySelectorAll('.n-btn').forEach((b,i)=>{b.classList.toggle('active',parseInt(b.textContent)===gN);});
+  startGame();
+}
+
+function renderHistory(){
+  const row=document.getElementById('scoreRow');
+  row.innerHTML='';
+  gHistory.forEach((r,i)=>{
+    const d=document.createElement('div');
+    d.className=`score-pip ${r}`;
+    d.textContent=r==='hit'?'✓':'✗';
+    d.title=`Round ${i+1}`;
+    row.appendChild(d);
+  });
+}
+
+// ── GAME DRAW ─────────────────────────────────────────
+function drawGame(){
+  const w=gc.offsetWidth, h=gc.offsetHeight;
+  gctx.clearRect(0,0,w,h);
+  const cy=h/2, amp=h*0.36, pts=600;
+  const kG=gN*Math.PI, omG=kG*0.8;
+
+  // Grid bg
+  gctx.strokeStyle='rgba(30,45,69,0.5)'; gctx.lineWidth=1; gctx.setLineDash([3,7]);
+  gctx.beginPath(); gctx.moveTo(0,cy); gctx.lineTo(w,cy); gctx.stroke(); gctx.setLineDash([]);
+
+  // Standing wave fill
+  const gf=gctx.createLinearGradient(0,0,0,h);
+  gf.addColorStop(0,'rgba(192,132,252,0.07)'); gf.addColorStop(0.5,'rgba(192,132,252,0.01)'); gf.addColorStop(1,'rgba(192,132,252,0.07)');
+  gctx.fillStyle=gf; gctx.beginPath(); gctx.moveTo(0,cy);
+  for(let i=0;i<=pts;i++){
+    const xf=i/pts, px=xf*w;
+    const py=cy-Math.sin(kG*xf)*Math.cos(omG*gt)*amp;
+    i?gctx.lineTo(px,py):gctx.moveTo(px,py);
+  }
+  gctx.lineTo(w,cy); gctx.closePath(); gctx.fill();
+
+  // Wave line — purple gradient
+  const wg=gctx.createLinearGradient(0,0,w,0);
+  wg.addColorStop(0,'#c084fc'); wg.addColorStop(0.5,'#a855f7'); wg.addColorStop(1,'#c084fc');
+  gctx.strokeStyle=wg; gctx.lineWidth=2.8; gctx.shadowColor='#c084fc'; gctx.shadowBlur=10; gctx.beginPath();
+  for(let i=0;i<=pts;i++){
+    const xf=i/pts, px=xf*w, py=cy-Math.sin(kG*xf)*Math.cos(omG*gt)*amp;
+    i?gctx.lineTo(px,py):gctx.moveTo(px,py);
+  }
+  gctx.stroke(); gctx.shadowBlur=0;
+
+  // Second phase (ghost)
+  gctx.strokeStyle='rgba(192,132,252,0.18)'; gctx.lineWidth=1.5; gctx.beginPath();
+  for(let i=0;i<=pts;i++){
+    const xf=i/pts, px=xf*w, py=cy-Math.sin(kG*xf)*Math.cos(omG*gt+Math.PI/2)*amp;
+    i?gctx.lineTo(px,py):gctx.moveTo(px,py);
+  }
+  gctx.stroke();
+
+  // Endpoint pins
+  gctx.fillStyle='#c084fc'; [0,w].forEach(px=>{gctx.beginPath();gctx.arc(px,cy,7,0,Math.PI*2);gctx.fill();});
+
+  // Revealed node lines
+  if(gRevealed){
+    const nodes=nodePositions(gN);
+    nodes.forEach(nf=>{
+      const nx=nf*w;
+      gctx.strokeStyle='rgba(255,107,53,0.7)'; gctx.lineWidth=2; gctx.setLineDash([]);
+      gctx.shadowColor='#ff6b35'; gctx.shadowBlur=10;
+      gctx.beginPath(); gctx.moveTo(nx,20); gctx.lineTo(nx,h-20); gctx.stroke();
+      gctx.shadowBlur=0;
+      // Node dot
+      gctx.beginPath(); gctx.arc(nx,cy,9,0,Math.PI*2);
+      gctx.fillStyle='rgba(255,107,53,0.9)'; gctx.shadowColor='#ff6b35'; gctx.shadowBlur=14; gctx.fill(); gctx.shadowBlur=0;
+      gctx.fillStyle='#0a0e1a'; gctx.font="bold 9px 'Space Mono',monospace"; gctx.textAlign='center'; gctx.textBaseline='middle';
+      gctx.fillText('N',nx,cy); gctx.textBaseline='alphabetic';
+      // Label above
+      gctx.fillStyle='rgba(255,107,53,0.8)'; gctx.font="10px 'Space Mono',monospace"; gctx.textAlign='center';
+      gctx.fillText('node',nx,14);
+    });
+    gctx.setLineDash([]);
+  }
+
+  // Player guesses
+  const now=performance.now();
+  gGuesses.forEach(g=>{
+    const px=g.xf*w;
+    const age=(now-g.time)/1000;
+    const col=g.hit?'0,229,255':'255,107,53';
+
+    // Ripple
+    if(age<1.2){
+      const r=age*50, alpha=Math.max(0,0.6-age*0.5);
+      gctx.strokeStyle=`rgba(${col},${alpha})`; gctx.lineWidth=2;
+      gctx.beginPath(); gctx.arc(px,cy,r,0,Math.PI*2); gctx.stroke();
+    }
+
+    // Pin marker
+    gctx.strokeStyle=`rgba(${col},0.9)`; gctx.lineWidth=2;
+    gctx.beginPath(); gctx.moveTo(px,cy-amp*0.6); gctx.lineTo(px,cy+amp*0.6); gctx.stroke();
+
+    // Pin head
+    gctx.beginPath(); gctx.arc(px,cy-amp*0.6,8,0,Math.PI*2);
+    gctx.fillStyle=`rgba(${col},0.9)`; gctx.shadowColor=`rgb(${col})`; gctx.shadowBlur=10; gctx.fill(); gctx.shadowBlur=0;
+    gctx.fillStyle='#0a0e1a'; gctx.font="bold 9px 'Space Mono',monospace"; gctx.textAlign='center'; gctx.textBaseline='middle';
+    gctx.fillText(g.hit?'✓':'✗',px,cy-amp*0.6); gctx.textBaseline='alphabetic';
+  });
+
+  // n label
+  gctx.fillStyle='rgba(192,132,252,0.5)'; gctx.font="11px 'Space Mono',monospace"; gctx.textAlign='left';
+  gctx.fillText(`n = ${gN}  |  ${nodePositions(gN).length} internal node${nodePositions(gN).length!==1?'s':''}`,10,h-8);
+}
+
+// ══════════════════════════════════════════════════════
+// 2D WAVE EXPLORER
+// ══════════════════════════════════════════════════════
+let mode2='traveling', playing2=true, t2=0;
+let c2=1.0, A2=1.0, nx2=1, ny2=1, ts2=1.0;
+
+const w2c=document.getElementById('wave2Canvas'), w2ctx=w2c.getContext('2d');
+const s2c=document.getElementById('slice2Canvas'), s2ctx=s2c.getContext('2d');
+const GRID_W=80, GRID_H=50;
+const offCv=document.createElement('canvas'); offCv.width=GRID_W; offCv.height=GRID_H;
+const offCtx=offCv.getContext('2d');
+const imgData=offCtx.createImageData(GRID_W,GRID_H);
+
+function resize2D(){
+  [[w2c,300],[s2c,70]].forEach(([cv,h])=>{
+    cv.width=cv.offsetWidth*devicePixelRatio; cv.height=h*devicePixelRatio;
+    cv.getContext('2d').scale(devicePixelRatio,devicePixelRatio);
+  });
+}
+resize2D();
+
+function u2(x,y,tt){
+  const kx=nx2*Math.PI, ky=ny2*Math.PI, k=Math.sqrt(kx*kx+ky*ky), om=c2*k;
+  if(mode2==='traveling') return A2*Math.sin(kx*x+ky*y-om*tt);
+  if(mode2==='standing')  return A2*Math.sin(kx*x)*Math.sin(ky*y)*Math.cos(om*tt);
+  if(mode2==='superposition') return A2*0.6*Math.sin(kx*x+ky*y-om*tt)+A2*0.4*Math.sin(2*kx*x-2*om*tt+0.5);
+  // pulse: circular ripple expanding from center
+  const dx=x-0.5, dy=y-0.5, r=Math.sqrt(dx*dx+dy*dy), s=0.06;
+  const rt=(c2*tt)%1.0;
+  return A2*Math.exp(-Math.pow(r-rt,2)/(2*s*s));
+}
+
+function ampToColor(v,amp){
+  // v in [-amp,amp] -> orange(neg) .. dark .. cyan(pos)
+  const f=Math.max(-1,Math.min(1,v/(amp||1)));
+  let r,g,b;
+  if(f>=0){ r=Math.round(10+f*(-10+0));  g=Math.round(14+f*(229-14)); b=Math.round(26+f*(255-26)); }
+  else{ const m=-f; r=Math.round(10+m*(255-10)); g=Math.round(14+m*(107-14)); b=Math.round(26+m*(53-26)); }
+  return [r,g,b];
+}
+
+function draw2DWave(){
+  const w=w2c.offsetWidth,h=w2c.offsetHeight;
+  const data=imgData.data;
+  for(let j=0;j<GRID_H;j++){
+    const yf=j/(GRID_H-1);
+    for(let i=0;i<GRID_W;i++){
+      const xf=i/(GRID_W-1);
+      const v=u2(xf,yf,t2);
+      const [r,g,b]=ampToColor(v,A2);
+      const idx=(j*GRID_W+i)*4;
+      data[idx]=r; data[idx+1]=g; data[idx+2]=b; data[idx+3]=255;
+    }
+  }
+  offCtx.putImageData(imgData,0,0);
+  w2ctx.imageSmoothingEnabled=true;
+  w2ctx.clearRect(0,0,w,h);
+  w2ctx.drawImage(offCv,0,0,w,h);
+
+  // dashed cross-section line
+  w2ctx.strokeStyle='rgba(255,255,255,0.35)'; w2ctx.lineWidth=1.2; w2ctx.setLineDash([4,5]);
+  w2ctx.beginPath(); w2ctx.moveTo(0,h/2); w2ctx.lineTo(w,h/2); w2ctx.stroke(); w2ctx.setLineDash([]);
+
+  // nodal lines for standing mode
+  if(mode2==='standing'){
+    w2ctx.strokeStyle='rgba(255,255,255,0.55)'; w2ctx.lineWidth=1.3; w2ctx.setLineDash([2,4]);
+    for(let i=1;i<nx2;i++){const px=i/nx2*w; w2ctx.beginPath(); w2ctx.moveTo(px,0); w2ctx.lineTo(px,h); w2ctx.stroke();}
+    for(let j=1;j<ny2;j++){const py=j/ny2*h; w2ctx.beginPath(); w2ctx.moveTo(0,py); w2ctx.lineTo(w,py); w2ctx.stroke();}
+    w2ctx.setLineDash([]);
+  }
+  w2ctx.fillStyle='rgba(226,234,248,0.7)'; w2ctx.font="10px 'Space Mono',monospace"; w2ctx.textAlign='left';
+  w2ctx.fillText(`t = ${t2.toFixed(2)} s`,8,h-8);
+}
+
+function draw2DSlice(){
+  const w=s2c.offsetWidth,h=s2c.offsetHeight,cy=h/2,amp=h*0.42,pts=200;
+  s2ctx.clearRect(0,0,w,h);
+  s2ctx.strokeStyle='rgba(30,45,69,0.8)'; s2ctx.lineWidth=1; s2ctx.setLineDash([4,6]);
+  s2ctx.beginPath(); s2ctx.moveTo(0,cy); s2ctx.lineTo(w,cy); s2ctx.stroke(); s2ctx.setLineDash([]);
+  const g2=s2ctx.createLinearGradient(0,0,w,0);
+  g2.addColorStop(0,'#00e5ff'); g2.addColorStop(0.5,'#00bfff'); g2.addColorStop(1,'#00e5ff');
+  s2ctx.strokeStyle=g2; s2ctx.lineWidth=2.2; s2ctx.shadowColor='#00e5ff'; s2ctx.shadowBlur=7; s2ctx.beginPath();
+  for(let i=0;i<=pts;i++){const xf=i/pts,px=xf*w,py=cy-u2(xf,0.5,t2)/(A2||1)*amp*(A2||1); i?s2ctx.lineTo(px,py):s2ctx.moveTo(px,py);}
+  s2ctx.stroke(); s2ctx.shadowBlur=0;
+}
+
+function updateHUD2D(){
+  const kx=nx2*Math.PI, ky=ny2*Math.PI, k=Math.sqrt(kx*kx+ky*ky), om=c2*k, freq=om/(2*Math.PI);
+  document.getElementById('c2-display').textContent=c2.toFixed(2);
+  document.getElementById('A2-display').textContent=A2.toFixed(2);
+  document.getElementById('freq2-display').textContent=freq.toFixed(3);
+  document.getElementById('period2-display').textContent=(1/freq).toFixed(3);
+  document.getElementById('n2-display').textContent=`${nx2},${ny2}`;
+  const titles={traveling:'u(x,y,t) = A·sin(kx·x + ky·y − ωt)',standing:`u(x,y,t) = A·sin(kx·x)·sin(ky·y)·cos(ωt) [nx=${nx2}, ny=${ny2}]`,superposition:'u = A·sin(kx·x+ky·y−ωt) + 0.67A·sin(2kx·x−2ωt+0.5)',pulse:'u(x,y,t) = A·exp[−(r−ct)²/2σ²]  (r = √((x−0.5)²+(y−0.5)²))'};
+  document.getElementById('canvas2-title').textContent=titles[mode2];
+}
+function updateParams2D(){
+  c2=parseFloat(document.getElementById('speedSlider2').value);
+  A2=parseFloat(document.getElementById('ampSlider2').value);
+  nx2=parseInt(document.getElementById('nxSlider2').value);
+  ny2=parseInt(document.getElementById('nySlider2').value);
+  ts2=parseFloat(document.getElementById('timeSlider2').value);
+  document.getElementById('c2Val').textContent=c2.toFixed(2);
+  document.getElementById('a2Val').textContent=A2.toFixed(2);
+  document.getElementById('nx2Val').textContent=nx2;
+  document.getElementById('ny2Val').textContent=ny2;
+  document.getElementById('ts2Val').textContent=ts2.toFixed(1)+'×';
+  updateHUD2D();
+}
+function setMode2D(m,btn){
+  mode2=m;
+  const grp=btn.closest('.ctrl-row');
+  grp.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  updateHUD2D();
+}
+function togglePlay2D(){playing2=!playing2; document.getElementById('playBtn2').textContent=playing2?'⏸ Pause':'▶ Play';}
+
+// ══════════════════════════════════════════════════════
+// 2D TRANS vs LONG
+// ══════════════════════════════════════════════════════
+const t2c=document.getElementById('trans2Canvas'), t2ctx=t2c.getContext('2d');
+const l2c=document.getElementById('long2Canvas'), l2ctx=l2c.getContext('2d');
+function resizeTC2(){
+  [t2c,l2c].forEach(cv=>{cv.width=cv.offsetWidth*devicePixelRatio; cv.height=240*devicePixelRatio; cv.getContext('2d').scale(devicePixelRatio,devicePixelRatio);});
+}
+resizeTC2();
+
+function draw2DTrans(tt){
+  const w=t2c.offsetWidth,h=t2c.offsetHeight,cx=w/2,cy=h/2,maxR=Math.min(w,h)*0.46,k=2*Math.PI/maxR*2.2,om=2.2;
+  t2ctx.clearRect(0,0,w,h);
+  // concentric ripple rings colored by height (out-of-plane)
+  for(let r=maxR;r>2;r-=3){
+    const disp=Math.sin(k*r-om*tt);
+    const [rr,gg,bb]=ampToColor(disp,1);
+    t2ctx.strokeStyle=`rgba(${rr},${gg},${bb},0.55)`; t2ctx.lineWidth=2.4;
+    t2ctx.beginPath(); t2ctx.arc(cx,cy,r,0,Math.PI*2); t2ctx.stroke();
+  }
+  // radial sample dots showing height via color + small vertical bob marker
+  const numRings=7, perRing=14;
+  for(let ri=1;ri<=numRings;ri++){
+    const r=ri/numRings*maxR;
+    for(let a=0;a<perRing;a++){
+      const ang=a/perRing*Math.PI*2;
+      const disp=Math.sin(k*r-om*tt);
+      const px=cx+Math.cos(ang)*r, py=cy+Math.sin(ang)*r;
+      const [rr,gg,bb]=ampToColor(disp,1);
+      t2ctx.beginPath(); t2ctx.arc(px,py,3.2,0,Math.PI*2);
+      t2ctx.fillStyle=`rgba(${rr},${gg},${bb},0.9)`; t2ctx.shadowColor=`rgb(${rr},${gg},${bb})`; t2ctx.shadowBlur=Math.abs(disp)>0.6?8:0;
+      t2ctx.fill(); t2ctx.shadowBlur=0;
+    }
+  }
+  t2ctx.fillStyle='#00e5ff'; t2ctx.beginPath(); t2ctx.arc(cx,cy,5,0,Math.PI*2); t2ctx.fill();
+  t2ctx.font="10px 'Space Mono',monospace"; t2ctx.fillStyle='rgba(0,229,255,0.6)'; t2ctx.textAlign='left';
+  t2ctx.fillText('◉ source, rings ripple outward',8,h-22);
+  t2ctx.fillStyle='rgba(127,255,110,0.65)';
+  t2ctx.fillText('color = displacement out of the page (⊥ radius)',8,h-8);
+}
+
+function draw2DLong(tt){
+  const w=l2c.offsetWidth,h=l2c.offsetHeight,cx=w/2,cy=h/2,maxR=Math.min(w,h)*0.46,om=2.2,lam=maxR/3.2,k=2*Math.PI/lam;
+  l2ctx.clearRect(0,0,w,h);
+  const rings=8, perRing=16;
+  for(let ri=1;ri<=rings;ri++){
+    const eqR=ri/rings*maxR;
+    const disp=Math.sin(k*eqR-om*tt)*(maxR/rings)*0.55;
+    const r=eqR+disp;
+    const comp=(Math.cos(k*eqR-om*tt)+1)/2; // 1 = compressed (dense), 0 = rarefied
+    for(let a=0;a<perRing;a++){
+      const ang=a/perRing*Math.PI*2 + (ri%2?0.15:0);
+      const px=cx+Math.cos(ang)*r, py=cy+Math.sin(ang)*r;
+      l2ctx.beginPath(); l2ctx.arc(px,py,3+comp*1.6,0,Math.PI*2);
+      l2ctx.fillStyle=`rgba(255,107,53,${0.35+comp*0.55})`;
+      l2ctx.shadowColor='#ff6b35'; l2ctx.shadowBlur=comp>0.7?8:0;
+      l2ctx.fill(); l2ctx.shadowBlur=0;
+    }
+  }
+  l2ctx.fillStyle='#ff6b35'; l2ctx.beginPath(); l2ctx.arc(cx,cy,5,0,Math.PI*2); l2ctx.fill();
+  l2ctx.font="10px 'Space Mono',monospace"; l2ctx.fillStyle='rgba(255,107,53,0.65)'; l2ctx.textAlign='left';
+  l2ctx.fillText('◉ source, particles bunch/spread radially',8,h-22);
+  l2ctx.fillStyle='rgba(127,255,110,0.65)';
+  l2ctx.fillText('dense ring = compression, sparse = rarefaction',8,h-8);
+}
+
+// ══════════════════════════════════════════════════════
+// 2D GAME STATE (Chladni-style node hunt)
+// ══════════════════════════════════════════════════════
+const g2c=document.getElementById('game2Canvas'), g2ctx=g2c.getContext('2d');
+let gNx2=1, gNy2=1;
+let diffTolerance2=0.07;
+let gScore2=0, gRound2=1;
+let gGuesses2=[]; // [{xf,yf,hit,time}]
+let gRevealed2=false, gRoundDone2=false, gHistory2=[];
+
+function nodalLines2D(nx,ny){
+  // returns {v:[xf...], h:[yf...]}
+  const v=[],h2=[];
+  for(let i=1;i<nx;i++) v.push(i/nx);
+  for(let j=1;j<ny;j++) h2.push(j/ny);
+  return {v,h:h2};
+}
+
+function setGameNx(val,btn){
+  gNx2=val;
+  document.querySelectorAll('.n2x-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  startGame2D();
+}
+function setGameNy(val,btn){
+  gNy2=val;
+  document.querySelectorAll('.n2y-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  startGame2D();
+}
+function setDiff2D(d,btn){
+  if(d==='easy') diffTolerance2=0.08;
+  else if(d==='medium') diffTolerance2=0.05;
+  else diffTolerance2=0.03;
+  document.querySelectorAll('.diff2-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function resizeGame2D(){
+  g2c.width=g2c.offsetWidth*devicePixelRatio;
+  g2c.height=280*devicePixelRatio;
+  g2c.getContext('2d').scale(devicePixelRatio,devicePixelRatio);
+}
+resizeGame2D();
+
+function startGame2D(){
+  gGuesses2=[];
+  gRevealed2=false;
+  gRoundDone2=false;
+  document.getElementById('nextBtn2').style.display='none';
+  document.getElementById('resultBanner2').className='result-banner';
+  document.getElementById('resultBanner2').textContent='';
+  const {v,h}=nodalLines2D(gNx2,gNy2);
+  const total=v.length+h.length;
+  document.getElementById('gNodesLeft2').textContent=total===0?'none (1,1)':total;
+  document.getElementById('gTaps2').textContent='0';
+  document.getElementById('gameHint2').textContent=
+    total===0
+    ? '⚠️ Mode (1,1) has no internal nodal lines — try increasing nx or ny!'
+    : `👆 Tap on the ${total} nodal line${total>1?'s':''} (points that never move)`;
+}
+
+function getCanvasXY(e){
+  const rect=g2c.getBoundingClientRect();
+  const clientX=e.touches?e.touches[0].clientX:e.clientX;
+  const clientY=e.touches?e.touches[0].clientY:e.clientY;
+  return [(clientX-rect.left)/rect.width,(clientY-rect.top)/rect.height];
+}
+
+g2c.addEventListener('click',onGameTap2D);
+g2c.addEventListener('touchstart',onGameTap2D,{passive:true});
+
+function onGameTap2D(e){
+  if(gRoundDone2) return;
+  const {v,h}=nodalLines2D(gNx2,gNy2);
+  const total=v.length+h.length;
+  if(total===0) return;
+  const [xf,yf]=getCanvasXY(e);
+  if(xf<0||xf>1||yf<0||yf>1) return;
+
+  for(const g of gGuesses2){
+    if(Math.abs(g.xf-xf)<0.025 && Math.abs(g.yf-yf)<0.025) return;
+  }
+
+  // distance to nearest nodal line (vertical or horizontal)
+  let minD=Infinity;
+  v.forEach(nx=>{minD=Math.min(minD,Math.abs(xf-nx));});
+  h.forEach(ny=>{minD=Math.min(minD,Math.abs(yf-ny));});
+  const hit=minD<diffTolerance2;
+
+  gGuesses2.push({xf,yf,hit,time:performance.now()});
+  document.getElementById('gTaps2').textContent=gGuesses2.length;
+
+  const uniqueHits=countUniqueHits2D(gGuesses2,v,h);
+  if(uniqueHits>=total && total>0){
+    setTimeout(()=>evaluateRound2D(),400);
+  }
+}
+
+function countUniqueHits2D(guesses,v,h){
+  const claimedV=new Set(), claimedH=new Set();
+  for(const g of guesses){
+    if(!g.hit) continue;
+    let done=false;
+    for(let i=0;i<v.length;i++){
+      if(!claimedV.has(i) && Math.abs(g.xf-v[i])<diffTolerance2){claimedV.add(i); done=true; break;}
+    }
+    if(done) continue;
+    for(let j=0;j<h.length;j++){
+      if(!claimedH.has(j) && Math.abs(g.yf-h[j])<diffTolerance2){claimedH.add(j); break;}
+    }
+  }
+  return claimedV.size+claimedH.size;
+}
+
+function evaluateRound2D(){
+  if(gRoundDone2) return;
+  gRoundDone2=true;
+  gRevealed2=true;
+  const {v,h}=nodalLines2D(gNx2,gNy2);
+  const total=v.length+h.length;
+  const hits=countUniqueHits2D(gGuesses2,v,h);
+  const misses=gGuesses2.filter(g=>!g.hit).length;
+  const banner=document.getElementById('resultBanner2');
+  let pts=0;
+
+  if(hits===total && misses===0){
+    pts=total*10; gScore2+=pts;
+    banner.className='result-banner win show';
+    banner.innerHTML=`🎉 Perfect! All ${total} nodal line${total>1?'s':''} found with no wrong taps!<br>+${pts} points`;
+    gHistory2.push('hit');
+  } else if(hits===total){
+    pts=total*5; gScore2+=pts;
+    banner.className='result-banner partial show';
+    banner.innerHTML=`✅ Found all nodal lines (${misses} wrong tap${misses>1?'s':''}).<br>+${pts} points`;
+    gHistory2.push('hit');
+  } else if(hits>0){
+    pts=hits*3; gScore2+=pts;
+    banner.className='result-banner partial show';
+    banner.innerHTML=`🔵 Found ${hits}/${total} nodal lines.<br>+${pts} points`;
+    gHistory2.push('miss');
+  } else {
+    banner.className='result-banner lose show';
+    banner.innerHTML=`❌ No nodal lines found! Mode (${gNx2},${gNy2}) has ${total} nodal line${total>1?'s':''}.`;
+    gHistory2.push('miss');
+  }
+
+  document.getElementById('gScore2').textContent=gScore2;
+  document.getElementById('nextBtn2').style.display='inline-block';
+  renderHistory2D();
+}
+
+function revealNodes2D(){
+  gRevealed2=true;
+  gRoundDone2=true;
+  document.getElementById('nextBtn2').style.display='inline-block';
+  document.getElementById('gameHint2').textContent='Nodal lines revealed — they are the lines that never move!';
+}
+
+function nextRound2D(){
+  gRound2++;
+  document.getElementById('gRound2').textContent=gRound2;
+  const newNx=Math.floor(Math.random()*4)+1, newNy=Math.floor(Math.random()*4)+1;
+  gNx2=newNx; gNy2=newNy;
+  document.querySelectorAll('.n2x-btn').forEach((b,i)=>{b.classList.toggle('active',(i+1)===gNx2);});
+  document.querySelectorAll('.n2y-btn').forEach((b,i)=>{b.classList.toggle('active',(i+1)===gNy2);});
+  startGame2D();
+}
+
+function renderHistory2D(){
+  const row=document.getElementById('scoreRow2');
+  row.innerHTML='';
+  gHistory2.forEach((r,i)=>{
+    const d=document.createElement('div');
+    d.className=`score-pip ${r}`;
+    d.textContent=r==='hit'?'✓':'✗';
+    d.title=`Round ${i+1}`;
+    row.appendChild(d);
+  });
+}
+
+function drawGame2D(){
+  const w=g2c.offsetWidth,h=g2c.offsetHeight;
+  const data=imgDataGame.data;
+  const kx=gNx2*Math.PI, ky=gNy2*Math.PI, k=Math.sqrt(kx*kx+ky*ky), om=k*0.8;
+  for(let j=0;j<GRID_H;j++){
+    const yf=j/(GRID_H-1);
+    for(let i=0;i<GRID_W;i++){
+      const xf=i/(GRID_W-1);
+      const v=Math.sin(kx*xf)*Math.sin(ky*yf)*Math.cos(om*gt);
+      const [r,g,b]=ampToColor(v,1);
+      const idx=(j*GRID_W+i)*4;
+      data[idx]=r; data[idx+1]=g; data[idx+2]=b; data[idx+3]=255;
+    }
+  }
+  offCtxGame.putImageData(imgDataGame,0,0);
+  g2ctx.imageSmoothingEnabled=true;
+  g2ctx.clearRect(0,0,w,h);
+  g2ctx.globalAlpha=0.85;
+  g2ctx.drawImage(offCvGame,0,0,w,h);
+  g2ctx.globalAlpha=1;
+
+  // revealed node lines
+  if(gRevealed2){
+    const {v,h:hl}=nodalLines2D(gNx2,gNy2);
+    g2ctx.strokeStyle='rgba(255,107,53,0.85)'; g2ctx.lineWidth=2.2; g2ctx.shadowColor='#ff6b35'; g2ctx.shadowBlur=8;
+    v.forEach(nx=>{const px=nx*w; g2ctx.beginPath(); g2ctx.moveTo(px,0); g2ctx.lineTo(px,h); g2ctx.stroke();});
+    hl.forEach(ny=>{const py=ny*h; g2ctx.beginPath(); g2ctx.moveTo(0,py); g2ctx.lineTo(w,py); g2ctx.stroke();});
+    g2ctx.shadowBlur=0;
+  }
+
+  // player guesses
+  const now=performance.now();
+  gGuesses2.forEach(g=>{
+    const px=g.xf*w, py=g.yf*h;
+    const age=(now-g.time)/1000;
+    const col=g.hit?'0,229,255':'255,107,53';
+    if(age<1.2){
+      const r=age*45, alpha=Math.max(0,0.6-age*0.5);
+      g2ctx.strokeStyle=`rgba(${col},${alpha})`; g2ctx.lineWidth=2;
+      g2ctx.beginPath(); g2ctx.arc(px,py,r,0,Math.PI*2); g2ctx.stroke();
+    }
+    g2ctx.beginPath(); g2ctx.arc(px,py,8,0,Math.PI*2);
+    g2ctx.fillStyle=`rgba(${col},0.9)`; g2ctx.shadowColor=`rgb(${col})`; g2ctx.shadowBlur=10; g2ctx.fill(); g2ctx.shadowBlur=0;
+    g2ctx.fillStyle='#0a0e1a'; g2ctx.font="bold 9px 'Space Mono',monospace"; g2ctx.textAlign='center'; g2ctx.textBaseline='middle';
+    g2ctx.fillText(g.hit?'✓':'✗',px,py); g2ctx.textBaseline='alphabetic';
+  });
+
+  const {v,h:hl}=nodalLines2D(gNx2,gNy2);
+  g2ctx.fillStyle='rgba(192,132,252,0.6)'; g2ctx.font="11px 'Space Mono',monospace"; g2ctx.textAlign='left';
+  g2ctx.fillText(`(nx,ny) = (${gNx2},${gNy2})  |  ${v.length+hl.length} nodal line${(v.length+hl.length)!==1?'s':''}`,10,h-8);
+}
+const offCvGame=document.createElement('canvas'); offCvGame.width=GRID_W; offCvGame.height=GRID_H;
+const offCtxGame=offCvGame.getContext('2d');
+const imgDataGame=offCtxGame.createImageData(GRID_W,GRID_H);
+
+// ══════════════════════════════════════════════════════
+// 3D WAVE EXPLORER (Three.js)
+// ══════════════════════════════════════════════════════
+let mode3='traveling', playing3=true, t3=0;
+let c3=1.0, A3=1.0, nx3=1, ny3=1, ts3=1.0;
+const SEG_X3=42, SEG_Y3=28;
+let wave3={inited:false}, trans3={inited:false}, long3={inited:false}, game3={inited:false};
+
+function ampToColorF(v,amp){
+  const f=Math.max(-1,Math.min(1,v/(amp||1)));
+  if(f>=0) return {r:0.039+f*(-0.039), g:0.055+f*(0.9-0.055), b:0.102+f*(1.0-0.102)};
+  const m=-f; return {r:0.039+m*(1.0-0.039), g:0.055+m*(0.42-0.055), b:0.102+m*(0.208-0.102)};
+}
+
+function buildGridGeometry(segX,segY,size){
+  const nX=segX+1, nY=segY+1;
+  const positions=new Float32Array(nX*nY*3);
+  const colors=new Float32Array(nX*nY*3);
+  for(let j=0;j<nY;j++){
+    const yf=j/segY;
+    for(let i=0;i<nX;i++){
+      const xf=i/segX, idx=(j*nX+i)*3;
+      positions[idx]=(xf-0.5)*size; positions[idx+1]=0; positions[idx+2]=(yf-0.5)*size;
+    }
+  }
+  const indices=[];
+  for(let j=0;j<segY;j++){
+    for(let i=0;i<segX;i++){
+      const a=j*nX+i,b=j*nX+i+1,c=(j+1)*nX+i,d=(j+1)*nX+i+1;
+      indices.push(a,c,b, b,c,d);
+    }
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  geo.setIndex(indices);
+  return geo;
+}
+
+function makeThreeBase(mount){
+  const w=mount.clientWidth||300, h=mount.clientHeight||300;
+  const scene=new THREE.Scene(); scene.background=new THREE.Color(0x05070c);
+  const camera=new THREE.PerspectiveCamera(42,w/h,0.05,50);
+  const renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(w,h); renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+  mount.innerHTML=''; mount.appendChild(renderer.domElement);
+  const controls=new THREE.OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true; controls.dampingFactor=0.08;
+  return {scene,camera,renderer,controls,mount,inited:true};
+}
+
+function resizeThree(obj){
+  if(!obj||!obj.inited) return;
+  const w=obj.mount.clientWidth||300, h=obj.mount.clientHeight||300;
+  obj.camera.aspect=w/h; obj.camera.updateProjectionMatrix();
+  obj.renderer.setSize(w,h);
+}
+
+function u3(x,y,tt){
+  const kx=nx3*Math.PI, ky=ny3*Math.PI, k=Math.sqrt(kx*kx+ky*ky), om=c3*k;
+  if(mode3==='traveling') return A3*Math.sin(kx*x+ky*y-om*tt);
+  if(mode3==='standing')  return A3*Math.sin(kx*x)*Math.sin(ky*y)*Math.cos(om*tt);
+  if(mode3==='superposition') return A3*0.6*Math.sin(kx*x+ky*y-om*tt)+A3*0.4*Math.sin(2*kx*x-2*om*tt+0.5);
+  const dx=x-0.5, dy=y-0.5, r=Math.sqrt(dx*dx+dy*dy), s=0.06;
+  const rt=(c3*tt)%1.0;
+  return A3*Math.exp(-Math.pow(r-rt,2)/(2*s*s));
+}
+
+function initWave3D(){
+  const mount=document.getElementById('wave3Mount');
+  Object.assign(wave3,makeThreeBase(mount));
+  wave3.camera.position.set(1.5,1.3,1.6);
+  wave3.controls.target.set(0,0,0); wave3.controls.update();
+
+  wave3.geo=buildGridGeometry(SEG_X3,SEG_Y3,1.4);
+  const mat=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide});
+  wave3.mesh=new THREE.Mesh(wave3.geo,mat);
+  wave3.scene.add(wave3.mesh);
+
+  const grid=new THREE.GridHelper(1.4,14,0x1e2d45,0x16223a); grid.position.y=-0.001;
+  wave3.scene.add(grid);
+
+  wave3.nodalGroup=new THREE.Group();
+  wave3.scene.add(wave3.nodalGroup);
+  updateHUD3D();
+}
+
+function updateWave3DMesh(){
+  if(!wave3.inited) return;
+  const pos=wave3.geo.attributes.position, col=wave3.geo.attributes.color, scaleY=0.35, nX=SEG_X3+1;
+  for(let j=0;j<=SEG_Y3;j++){
+    const yf=j/SEG_Y3;
+    for(let i=0;i<=SEG_X3;i++){
+      const xf=i/SEG_X3, idx=j*nX+i;
+      const v=u3(xf,yf,t3);
+      pos.setY(idx,v*scaleY);
+      const c=ampToColorF(v,A3);
+      col.setXYZ(idx,c.r,c.g,c.b);
+    }
+  }
+  pos.needsUpdate=true; col.needsUpdate=true;
+  // Nodal lines only depend on mode/nx3/ny3, not on time — rebuilt via
+  // rebuildWaveNodalLines() whenever those change, never per-frame.
+}
+
+function disposeGroupChildren(group){
+  while(group.children.length){
+    const obj=group.children[0];
+    group.remove(obj);
+    if(obj.geometry) obj.geometry.dispose();
+    if(obj.material) obj.material.dispose();
+  }
+}
+
+function rebuildWaveNodalLines(){
+  if(!wave3.inited) return;
+  disposeGroupChildren(wave3.nodalGroup);
+  if(mode3!=='standing') return;
+  const matL=new THREE.LineBasicMaterial({color:0xff6b35});
+  for(let i=1;i<nx3;i++){
+    const xf=i/nx3, pts=[];
+    for(let j=0;j<=SEG_Y3;j++){const yf=j/SEG_Y3; pts.push(new THREE.Vector3((xf-0.5)*1.4,0.004,(yf-0.5)*1.4));}
+    wave3.nodalGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),matL));
+  }
+  for(let j=1;j<ny3;j++){
+    const yf=j/ny3, pts=[];
+    for(let i=0;i<=SEG_X3;i++){const xf=i/SEG_X3; pts.push(new THREE.Vector3((xf-0.5)*1.4,0.004,(yf-0.5)*1.4));}
+    wave3.nodalGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),matL));
+  }
+}
+
+function updateHUD3D(){
+  const kx=nx3*Math.PI, ky=ny3*Math.PI, k=Math.sqrt(kx*kx+ky*ky), om=c3*k, freq=om/(2*Math.PI);
+  document.getElementById('c3-display').textContent=c3.toFixed(2);
+  document.getElementById('A3-display').textContent=A3.toFixed(2);
+  document.getElementById('freq3-display').textContent=freq.toFixed(3);
+  document.getElementById('period3-display').textContent=(1/freq).toFixed(3);
+  document.getElementById('n3-display').textContent=`${nx3},${ny3}`;
+  const titles={traveling:'u(x,y,t) = A·sin(kx·x + ky·y − ωt)',standing:`u(x,y,t) = A·sin(kx·x)·sin(ky·y)·cos(ωt) [nx=${nx3}, ny=${ny3}]`,superposition:'u = A·sin(kx·x+ky·y−ωt) + 0.67A·sin(2kx·x−2ωt+0.5)',pulse:'u(x,y,t) = A·exp[−(r−ct)²/2σ²]'};
+  document.getElementById('canvas3-title').textContent=titles[mode3];
+}
+function updateParams3D(){
+  c3=parseFloat(document.getElementById('speedSlider3').value);
+  A3=parseFloat(document.getElementById('ampSlider3').value);
+  const prevNx=nx3, prevNy=ny3;
+  nx3=parseInt(document.getElementById('nxSlider3').value);
+  ny3=parseInt(document.getElementById('nySlider3').value);
+  ts3=parseFloat(document.getElementById('timeSlider3').value);
+  document.getElementById('c3Val').textContent=c3.toFixed(2);
+  document.getElementById('a3Val').textContent=A3.toFixed(2);
+  document.getElementById('nx3Val').textContent=nx3;
+  document.getElementById('ny3Val').textContent=ny3;
+  document.getElementById('ts3Val').textContent=ts3.toFixed(1)+'×';
+  updateHUD3D();
+  if(nx3!==prevNx || ny3!==prevNy) rebuildWaveNodalLines();
+}
+function setMode3D(m,btn){
+  mode3=m;
+  const grp=btn.closest('.ctrl-row');
+  grp.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  updateHUD3D();
+  rebuildWaveNodalLines();
+}
+function togglePlay3D(){playing3=!playing3; document.getElementById('playBtn3').textContent=playing3?'⏸ Pause':'▶ Play';}
+
+// ══════════════════════════════════════════════════════
+// 3D TRANS vs LONG
+// ══════════════════════════════════════════════════════
+function initTrans3D(){
+  const mount=document.getElementById('trans3Mount');
+  Object.assign(trans3,makeThreeBase(mount));
+  trans3.camera.position.set(0,0.85,1.5);
+  trans3.controls.target.set(0,0,0); trans3.controls.update();
+
+  const numP=22;
+  trans3.spheres=[];
+  const sphGeo=new THREE.SphereGeometry(0.035,12,10);
+  const mat=new THREE.MeshBasicMaterial({color:0x00e5ff});
+  for(let i=0;i<numP;i++){
+    const sph=new THREE.Mesh(sphGeo,mat);
+    trans3.scene.add(sph); trans3.spheres.push(sph);
+  }
+  const linePts=new Float32Array(121*3);
+  const lineGeo=new THREE.BufferGeometry();
+  lineGeo.setAttribute('position',new THREE.BufferAttribute(linePts,3));
+  trans3.line=new THREE.Line(lineGeo,new THREE.LineBasicMaterial({color:0x00e5ff,transparent:true,opacity:0.35}));
+  trans3.scene.add(trans3.line);
+
+  const axisGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.8,0,0),new THREE.Vector3(0.8,0,0)]);
+  trans3.scene.add(new THREE.Line(axisGeo,new THREE.LineBasicMaterial({color:0x1e2d45})));
+}
+
+function updateTrans3D(tt){
+  if(!trans3.inited) return;
+  const numP=trans3.spheres.length, k=2*Math.PI/1.6*2.2, om=2.2, amp=0.28;
+  trans3.spheres.forEach((sph,i)=>{
+    const x=(i+0.5)/numP*1.6-0.8, y=Math.sin(k*x-om*tt)*amp;
+    sph.position.set(x,y,0);
+  });
+  const pos=trans3.line.geometry.attributes.position;
+  for(let i=0;i<=120;i++){
+    const x=i/120*1.6-0.8, y=Math.sin(k*x-om*tt)*amp;
+    pos.setXYZ(i,x,y,0);
+  }
+  pos.needsUpdate=true;
+}
+
+function initLong3D(){
+  const mount=document.getElementById('long3Mount');
+  Object.assign(long3,makeThreeBase(mount));
+  long3.camera.position.set(0,0.85,1.5);
+  long3.controls.target.set(0,0,0); long3.controls.update();
+
+  const numP=28;
+  long3.spheres=[];
+  const sphGeo=new THREE.SphereGeometry(0.032,12,10);
+  for(let i=0;i<numP;i++){
+    const mat=new THREE.MeshBasicMaterial({color:0xff6b35});
+    const sph=new THREE.Mesh(sphGeo,mat);
+    long3.scene.add(sph); long3.spheres.push(sph);
+  }
+  const axisGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.85,0,0),new THREE.Vector3(0.85,0,0)]);
+  long3.scene.add(new THREE.Line(axisGeo,new THREE.LineBasicMaterial({color:0x1e2d45})));
+}
+
+function updateLong3D(tt){
+  if(!long3.inited) return;
+  const numP=long3.spheres.length, k=2*Math.PI/1.7*2.2, om=2.2, amp=1.7/numP*0.7;
+  long3.spheres.forEach((sph,i)=>{
+    const eq=(i+0.5)/numP*1.7-0.85, disp=Math.sin(k*eq-om*tt)*amp, comp=(Math.cos(k*eq-om*tt)+1)/2;
+    sph.position.set(eq+disp,0,0);
+    sph.scale.setScalar(0.75+comp*0.6);
+    sph.material.color.setRGB(1,0.42-comp*0.15,0.21-comp*0.1);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// 3D NODE HUNT GAME
+// ══════════════════════════════════════════════════════
+let gNx3=1, gNy3=1, diffTolerance3=0.07, gScore3=0, gRound3=1, gt3=0;
+let gGuesses3=[], gRevealed3=false, gRoundDone3=false, gHistory3=[];
+const SEG_X3G=38, SEG_Y3G=24, GAME3_SIZE=1.3;
+
+function initGame3D(){
+  const mount=document.getElementById('game3Mount');
+  Object.assign(game3,makeThreeBase(mount));
+  game3.camera.position.set(1.25,1.05,1.35);
+  game3.controls.target.set(0,0,0); game3.controls.update();
+
+  game3.geo=buildGridGeometry(SEG_X3G,SEG_Y3G,GAME3_SIZE);
+  const mat=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide,transparent:true,opacity:0.92});
+  game3.mesh=new THREE.Mesh(game3.geo,mat);
+  game3.scene.add(game3.mesh);
+
+  game3.nodalGroup=new THREE.Group(); game3.scene.add(game3.nodalGroup);
+  game3.markerGroup=new THREE.Group(); game3.scene.add(game3.markerGroup);
+
+  game3.raycaster=new THREE.Raycaster();
+  game3.mouse=new THREE.Vector2();
+  game3.dragStart=null;
+  game3.renderer.domElement.addEventListener('pointerdown',e=>{game3.dragStart=[e.clientX,e.clientY];});
+  game3.renderer.domElement.addEventListener('click',onGame3DClick);
+}
+
+function updateGame3DMesh(){
+  if(!game3.inited) return;
+  const kx=gNx3*Math.PI, ky=gNy3*Math.PI, k=Math.sqrt(kx*kx+ky*ky), om=k*0.8, nX=SEG_X3G+1;
+  const pos=game3.geo.attributes.position, col=game3.geo.attributes.color;
+  for(let j=0;j<=SEG_Y3G;j++){
+    const yf=j/SEG_Y3G;
+    for(let i=0;i<=SEG_X3G;i++){
+      const xf=i/SEG_X3G, idx=j*nX+i;
+      const v=Math.sin(kx*xf)*Math.sin(ky*yf)*Math.cos(om*gt3);
+      pos.setY(idx,v*0.3);
+      const c=ampToColorF(v,1);
+      col.setXYZ(idx,c.r,c.g,c.b);
+    }
+  }
+  pos.needsUpdate=true; col.needsUpdate=true;
+}
+
+function buildNodalLines3D(){
+  disposeGroupChildren(game3.nodalGroup);
+  const {v,h}=nodalLines2D(gNx3,gNy3);
+  const matL=new THREE.LineBasicMaterial({color:0xff6b35});
+  v.forEach(nx=>{
+    const pts=[]; for(let j=0;j<=SEG_Y3G;j++){const yf=j/SEG_Y3G; pts.push(new THREE.Vector3((nx-0.5)*GAME3_SIZE,0.01,(yf-0.5)*GAME3_SIZE));}
+    game3.nodalGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),matL));
+  });
+  h.forEach(ny=>{
+    const pts=[]; for(let i=0;i<=SEG_X3G;i++){const xf=i/SEG_X3G; pts.push(new THREE.Vector3((xf-0.5)*GAME3_SIZE,0.01,(ny-0.5)*GAME3_SIZE));}
+    game3.nodalGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),matL));
+  });
+}
+
+function setGameNx3(val,btn){gNx3=val; document.querySelectorAll('.n3x-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); startGame3D();}
+function setGameNy3(val,btn){gNy3=val; document.querySelectorAll('.n3y-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); startGame3D();}
+function setDiff3D(d,btn){
+  if(d==='easy') diffTolerance3=0.08; else if(d==='medium') diffTolerance3=0.05; else diffTolerance3=0.03;
+  document.querySelectorAll('.diff3-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function startGame3D(){
+  gGuesses3=[]; gRevealed3=false; gRoundDone3=false;
+  document.getElementById('nextBtn3').style.display='none';
+  document.getElementById('resultBanner3').className='result-banner';
+  document.getElementById('resultBanner3').textContent='';
+  const {v,h}=nodalLines2D(gNx3,gNy3);
+  const total=v.length+h.length;
+  document.getElementById('gNodesLeft3').textContent=total===0?'none (1,1)':total;
+  document.getElementById('gTaps3').textContent='0';
+  document.getElementById('gameHint3').textContent=
+    total===0
+    ? '⚠️ Mode (1,1) has no internal nodal lines — try increasing nx or ny!'
+    : `👆 Tap on the surface where the ${total} nodal line${total>1?'s':''} lie`;
+  if(game3.inited){
+    disposeGroupChildren(game3.markerGroup);
+    disposeGroupChildren(game3.nodalGroup);
+  }
+}
+
+function onGame3DClick(e){
+  if(gRoundDone3) return;
+  if(game3.dragStart){
+    const dx=e.clientX-game3.dragStart[0], dy=e.clientY-game3.dragStart[1];
+    if(Math.sqrt(dx*dx+dy*dy)>6) return;
+  }
+  const rect=game3.renderer.domElement.getBoundingClientRect();
+  game3.mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+  game3.mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  game3.raycaster.setFromCamera(game3.mouse,game3.camera);
+  const hits=game3.raycaster.intersectObject(game3.mesh);
+  if(!hits.length) return;
+  const p=hits[0].point;
+  const xf=p.x/GAME3_SIZE+0.5, yf=p.z/GAME3_SIZE+0.5;
+  registerGame3DTap(xf,yf);
+}
+
+function countUniqueHits3D(guesses,v,h){
+  const claimedV=new Set(), claimedH=new Set();
+  for(const g of guesses){
+    if(!g.hit) continue;
+    let done=false;
+    for(let i=0;i<v.length;i++){ if(!claimedV.has(i)&&Math.abs(g.xf-v[i])<diffTolerance3){claimedV.add(i); done=true; break;} }
+    if(done) continue;
+    for(let j=0;j<h.length;j++){ if(!claimedH.has(j)&&Math.abs(g.yf-h[j])<diffTolerance3){claimedH.add(j); break;} }
+  }
+  return claimedV.size+claimedH.size;
+}
+
+function registerGame3DTap(xf,yf){
+  if(gRoundDone3) return;
+  if(xf<0||xf>1||yf<0||yf>1) return;
+  const {v,h}=nodalLines2D(gNx3,gNy3);
+  const total=v.length+h.length;
+  if(total===0) return;
+  for(const g of gGuesses3){ if(Math.abs(g.xf-xf)<0.025 && Math.abs(g.yf-yf)<0.025) return; }
+
+  let minD=Infinity;
+  v.forEach(nx=>{minD=Math.min(minD,Math.abs(xf-nx));});
+  h.forEach(ny=>{minD=Math.min(minD,Math.abs(yf-ny));});
+  const hit=minD<diffTolerance3;
+
+  gGuesses3.push({xf,yf,hit});
+  document.getElementById('gTaps3').textContent=gGuesses3.length;
+
+  const markGeo=new THREE.SphereGeometry(0.026,10,8);
+  const markMat=new THREE.MeshBasicMaterial({color:hit?0x00e5ff:0xff6b35});
+  const mk=new THREE.Mesh(markGeo,markMat);
+  mk.position.set((xf-0.5)*GAME3_SIZE,0.06,(yf-0.5)*GAME3_SIZE);
+  game3.markerGroup.add(mk);
+
+  const uniqueHits=countUniqueHits3D(gGuesses3,v,h);
+  if(uniqueHits>=total && total>0) setTimeout(()=>evaluateRound3D(),400);
+}
+
+function evaluateRound3D(){
+  if(gRoundDone3) return;
+  gRoundDone3=true; gRevealed3=true;
+  buildNodalLines3D();
+  const {v,h}=nodalLines2D(gNx3,gNy3);
+  const total=v.length+h.length;
+  const hits=countUniqueHits3D(gGuesses3,v,h);
+  const misses=gGuesses3.filter(g=>!g.hit).length;
+  const banner=document.getElementById('resultBanner3');
+  let pts=0;
+  if(hits===total&&misses===0){
+    pts=total*10; gScore3+=pts;
+    banner.className='result-banner win show';
+    banner.innerHTML=`🎉 Perfect! All ${total} nodal line${total>1?'s':''} found with no wrong taps!<br>+${pts} points`;
+    gHistory3.push('hit');
+  } else if(hits===total){
+    pts=total*5; gScore3+=pts;
+    banner.className='result-banner partial show';
+    banner.innerHTML=`✅ Found all nodal lines (${misses} wrong tap${misses>1?'s':''}).<br>+${pts} points`;
+    gHistory3.push('hit');
+  } else if(hits>0){
+    pts=hits*3; gScore3+=pts;
+    banner.className='result-banner partial show';
+    banner.innerHTML=`🔵 Found ${hits}/${total} nodal lines.<br>+${pts} points`;
+    gHistory3.push('miss');
+  } else {
+    banner.className='result-banner lose show';
+    banner.innerHTML=`❌ No nodal lines found! Mode (${gNx3},${gNy3}) has ${total} nodal line${total>1?'s':''}.`;
+    gHistory3.push('miss');
+  }
+  document.getElementById('gScore3').textContent=gScore3;
+  document.getElementById('nextBtn3').style.display='inline-block';
+  renderHistory3D();
+}
+
+function revealNodes3D(){
+  gRevealed3=true; gRoundDone3=true;
+  buildNodalLines3D();
+  document.getElementById('nextBtn3').style.display='inline-block';
+  document.getElementById('gameHint3').textContent='Nodal lines revealed — they are the lines that never move!';
+}
+
+function nextRound3D(){
+  gRound3++;
+  document.getElementById('gRound3').textContent=gRound3;
+  const newNx=Math.floor(Math.random()*4)+1, newNy=Math.floor(Math.random()*4)+1;
+  gNx3=newNx; gNy3=newNy;
+  document.querySelectorAll('.n3x-btn').forEach((b,i)=>{b.classList.toggle('active',(i+1)===gNx3);});
+  document.querySelectorAll('.n3y-btn').forEach((b,i)=>{b.classList.toggle('active',(i+1)===gNy3);});
+  startGame3D();
+}
+
+function renderHistory3D(){
+  const row=document.getElementById('scoreRow3');
+  row.innerHTML='';
+  gHistory3.forEach((r,i)=>{
+    const d=document.createElement('div');
+    d.className=`score-pip ${r}`;
+    d.textContent=r==='hit'?'✓':'✗';
+    d.title=`Round ${i+1}`;
+    row.appendChild(d);
+  });
+}
+
+// ── 3D LOOP ─────────────────────────────────────────
+let last3=null;
+function loop3D(tt){
+  if(last3!==null){
+    const dt=Math.min((tt-last3)/1000,0.05);
+    if(activeTabIdx===6 && playing3) t3+=dt*ts3;
+    if(activeTabIdx===7) t3+=dt;
+    if(activeTabIdx===8) gt3+=dt;
+  }
+  last3=tt;
+  if(activeTabIdx===6 && wave3.inited){
+    updateWave3DMesh(); wave3.controls.update(); wave3.renderer.render(wave3.scene,wave3.camera);
+  }
+  if(activeTabIdx===7){
+    if(trans3.inited){ updateTrans3D(t3); trans3.controls.update(); trans3.renderer.render(trans3.scene,trans3.camera); }
+    if(long3.inited){ updateLong3D(t3); long3.controls.update(); long3.renderer.render(long3.scene,long3.camera); }
+  }
+  if(activeTabIdx===8 && game3.inited){
+    updateGame3DMesh(); game3.controls.update(); game3.renderer.render(game3.scene,game3.camera);
+  }
+  requestAnimationFrame(loop3D);
+}
+
+// ── MAIN LOOP ─────────────────────────────────────────
+let last=null;
+function loop(tt){
+  if(last!==null){
+    const dt=Math.min((tt-last)/1000,0.05);
+    if(playing){ t+=dt*ts; }
+    gt+=dt;
+    if(playing2){ t2+=dt*ts2; }
+  }
+  last=tt;
+  // Only draw the canvases belonging to the currently visible tab —
+  // drawing all of them every frame regardless of tab was the main cause of lag.
+  switch(activeTabIdx){
+    case 0: drawWave(); drawEnergy(); break;
+    case 1: drawTransversal(t); drawLongitudinal(t); break;
+    case 2: drawGame(); break;
+    case 3: draw2DWave(); draw2DSlice(); break;
+    case 4: draw2DTrans(t2); draw2DLong(t2); break;
+    case 5: drawGame2D(); break;
+  }
+  requestAnimationFrame(loop);
+}
+
+updateParams();
+updateParams2D();
+updateParams3D();
+startGame();
+startGame2D();
+startGame3D();
+requestAnimationFrame(loop);
+requestAnimationFrame(loop3D);
+</script>
+</div>
+<div class="ad-reserve-bar"></div>
+<script src="ask-question.js"></script>
+</body>
+</html>
