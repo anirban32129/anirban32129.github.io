@@ -19,10 +19,25 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Set up TWA project
+      - name: Pre-configure Bubblewrap toolchain
         run: |
-          mkdir -p twa
-          cp twa-manifest.json twa/twa-manifest.json
+          mkdir -p ~/.bubblewrap
+          cat > ~/.bubblewrap/config.json << EOF
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_HOME"
+          }
+          EOF
+
+      - name: Init TWA project
+        run: |
+          yes "" | bubblewrap init \
+            --manifest https://anirban32129.github.io/manifest.json \
+            --directory ./twa \
+            --skipPwaValidation
+
+      - name: Restore custom keystore
+        run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > twa/android.keystore
 
       - name: Build signed AAB
@@ -31,8 +46,10 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          printf 'N\n%s\n' "$JAVA_HOME" | bubblewrap build \
+          yes "" | bubblewrap build \
             --skipPwaValidation \
+            --signingKeyPath ./android.keystore \
+            --signingKeyAlias androidkey \
             --password="$KEYSTORE_PASSWORD" \
             --key_password="$KEY_PASSWORD"
 
