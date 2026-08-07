@@ -1,0 +1,2985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Optics Bench — Mirrors &amp; Lenses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d12;
+    --panel:#11161d;
+    --panel2:#161d26;
+    --line:#232b36;
+    --text:#dfe6ee;
+    --dim:#7c8896;
+    --amber:#ffb454;
+    --cyan:#5fd0e0;
+    --violet:#c792ea;
+    --green:#67e08a;
+    --red:#ff6b7a;
+    --accent:#ffb454;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:'Space Grotesk',system-ui,sans-serif;overflow:hidden;overscroll-behavior:none;}
+  #app{position:relative;width:100vw;height:100vh;height:100dvh;display:flex;}
+  #viewport{flex:1;position:relative;min-width:0;}
+  #canvas-host{position:absolute;inset:0;}
+  #canvas-host canvas{display:block;width:100%;height:100%;touch-action:none;}
+
+  /* ---- Free-label "cardboard sign" overlay: selection box + rotate/resize/
+     reset handles for any pick-uppable text label (P, F, C, IMAGE, etc). Sits
+     above the canvas; only the handle elements themselves are interactive —
+     everything else (including empty overlay space) passes pointer events
+     straight through to the 3D scene underneath. ---- */
+  #labelOverlay{position:absolute;inset:0;width:100%;height:100%;z-index:6;
+    pointer-events:none;display:none;touch-action:none;}
+  #labelOverlay .lbl-selbox{fill:rgba(255,180,84,.08);stroke:#ffb454;
+    stroke-width:1.5;stroke-dasharray:4 3;pointer-events:none;}
+  #labelOverlay .lbl-selbox.draggable{pointer-events:auto;cursor:move;}
+  #labelOverlay .lbl-rotline{stroke:#ffb454;stroke-width:1.2;pointer-events:none;}
+  #labelOverlay .lbl-handle{pointer-events:auto;}
+  #labelOverlay .lbl-rot-handle{fill:#ffb454;stroke:#0a0d12;stroke-width:1.5;cursor:grab;}
+  #labelOverlay .lbl-resize-handle{fill:#5fd0e0;stroke:#0a0d12;stroke-width:1.5;cursor:nwse-resize;}
+  #labelOverlay .lbl-reset-handle{cursor:pointer;}
+  #labelOverlay .lbl-reset-handle circle{fill:#ff6b7a;stroke:#0a0d12;stroke-width:1.5;}
+  #labelOverlay .lbl-reset-handle path{stroke:#0a0d12;stroke-width:1.6;stroke-linecap:round;}
+
+  .brand{
+    position:absolute;top:14px;left:16px;z-index:5;pointer-events:none;
+  }
+  .brand .kicker{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;}
+  .brand h1{margin:2px 0 0;font-size:19px;font-weight:600;letter-spacing:.01em;color:var(--text);}
+  .brand h1 span{color:var(--amber);}
+
+  #hud{
+    position:absolute;bottom:14px;left:16px;z-index:5;
+    background:rgba(17,22,29,.86);backdrop-filter:blur(6px);
+    border:1px solid var(--line);border-radius:10px;
+    padding:12px 16px;min-width:230px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+    transition:padding .18s, min-width .18s;
+  }
+  #hud .hud-head{display:flex;align-items:center;justify-content:space-between;gap:14px;}
+  #hud.collapsed{padding:8px 12px;min-width:0;cursor:pointer;}
+  #hud.collapsed .hud-body{display:none;}
+  #hud.collapsed .hud-head{gap:0;}
+  #hudCollapseBtn{
+    background:none;border:none;color:var(--dim);cursor:pointer;padding:2px 4px;
+    font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1;flex-shrink:0;
+  }
+  #hudCollapseBtn:hover{color:var(--text);}
+  #hud .hud-title{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+    display:none;}
+  #hud.collapsed .hud-title{display:inline;}
+  #hud .row{display:flex;justify-content:space-between;gap:18px;padding:2px 0;color:var(--dim);}
+  #hud .row b{color:var(--text);font-weight:500;}
+  #hud .verdict{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);
+    font-size:12.5px;line-height:1.5;color:var(--text);}
+  #hud .tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;
+    letter-spacing:.04em;margin-right:5px;font-weight:600;text-transform:uppercase;}
+  .tag.real{background:rgba(103,224,138,.15);color:var(--green);border:1px solid rgba(103,224,138,.35);}
+  .tag.virtual{background:rgba(199,146,234,.15);color:var(--violet);border:1px solid rgba(199,146,234,.35);}
+  .tag.up{background:rgba(95,208,224,.15);color:var(--cyan);border:1px solid rgba(95,208,224,.35);}
+  .tag.inv{background:rgba(255,107,122,.15);color:var(--red);border:1px solid rgba(255,107,122,.35);}
+
+  #viewbtns{position:absolute;top:14px;right:16px;z-index:5;display:flex;gap:6px;}
+  #viewbtns button{
+    background:rgba(17,22,29,.86);border:1px solid var(--line);color:var(--dim);
+    font-family:'JetBrains Mono',monospace;font-size:11px;padding:7px 10px;border-radius:8px;
+    cursor:pointer;transition:.15s;
+  }
+  #viewbtns button:hover{color:var(--text);border-color:#38434f;}
+  #viewbtns button#btnZoomIn, #viewbtns button#btnZoomOut{width:32px;font-size:15px;font-weight:600;padding:7px 0;}
+
+  #panel{
+    width:308px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--line);
+    overflow-y:auto;padding:18px 16px 90px;z-index:6;
+    transition:width .18s;
+  }
+  #app.panel-collapsed #panel{width:0;padding-left:0;padding-right:0;overflow:hidden;border-left:none;}
+  #panelCollapseBtn{
+    position:absolute;top:14px;right:308px;z-index:20;
+    width:28px;height:28px;border-radius:50%;
+    background:var(--panel);border:1px solid var(--line);color:var(--dim);
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-size:13px;line-height:1;transition:right .18s,.15s color,.15s border-color;
+  }
+  #app.panel-collapsed #panelCollapseBtn{right:0;}
+  #panelCollapseBtn:hover{color:var(--text);border-color:#38434f;}
+  #panel::-webkit-scrollbar{width:6px;}
+  #panel::-webkit-scrollbar-thumb{background:#2a333e;border-radius:4px;}
+
+  .section{margin-bottom:20px;}
+  .section-title{
+    font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--dim);margin-bottom:10px;display:flex;align-items:center;gap:8px;
+  }
+  .section-title::after{content:"";flex:1;height:1px;background:var(--line);}
+
+  .mode-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+  .mode-btn{
+    background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+    padding:9px 6px;border-radius:8px;font-size:12px;cursor:pointer;text-align:center;
+    font-family:'Space Grotesk',sans-serif;transition:.15s;line-height:1.25;
+  }
+  .mode-btn:hover{border-color:#38434f;color:var(--text);}
+  .mode-btn.active{background:rgba(255,180,84,.1);border-color:var(--amber);color:var(--amber);font-weight:600;}
+  .bend-caption{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);
+    font-family:'JetBrains Mono',monospace;letter-spacing:.04em;margin-top:-3px;margin-bottom:2px;}
+  .bend-caption .mid{color:#4a5563;}
+
+  .field{margin-bottom:12px;}
+  .field label{
+    display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:5px;
+  }
+  .field label b{color:var(--text);font-family:'JetBrains Mono',monospace;font-weight:500;}
+  .field select{
+    width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    padding:8px 10px;border-radius:8px;font-family:'Space Grotesk',sans-serif;font-size:12.5px;
+    outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;
+    background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
+    background-position:calc(100% - 16px) center,calc(100% - 11px) center;background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+  }
+  .field select:hover{border-color:#38434f;}
+  .field-row{display:flex;gap:8px;}
+  .field-row .field{flex:1;}
+  input[type=range]{
+    width:100%;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--line);outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--amber);
+    cursor:pointer;border:2px solid #0a0d12;box-shadow:0 0 0 1px var(--amber);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:15px;height:15px;border-radius:50%;background:var(--amber);cursor:pointer;border:2px solid #0a0d12;
+  }
+
+  .toggles{display:flex;flex-direction:column;gap:9px;}
+  .toggle{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--text);}
+  .switch{position:relative;width:34px;height:19px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider-ui{position:absolute;inset:0;background:#26303b;border-radius:20px;transition:.15s;cursor:pointer;}
+  .slider-ui::before{content:"";position:absolute;width:14px;height:14px;left:2.5px;top:2.5px;
+    background:#8a97a6;border-radius:50%;transition:.15s;}
+  .switch input:checked + .slider-ui{background:rgba(255,180,84,.25);}
+  .switch input:checked + .slider-ui::before{transform:translateX(15px);background:var(--amber);}
+
+  .subtypes{display:flex;gap:6px;margin-bottom:10px;}
+  .subtypes button{
+    flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+    padding:6px 4px;border-radius:7px;font-size:11px;cursor:pointer;
+  }
+  .subtypes button.active{border-color:var(--cyan);color:var(--cyan);}
+
+  .lens-block{border:1px solid var(--line);border-radius:10px;padding:10px 10px 2px;margin-bottom:10px;background:#0d1218;}
+  .lens-block .lb-title{font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-bottom:8px;letter-spacing:.06em;}
+
+  .hint{font-size:11.5px;color:var(--dim);line-height:1.5;margin-top:6px;}
+  .legend{display:flex;flex-direction:column;gap:6px;font-size:11.5px;color:var(--dim);}
+  .legend .sw{display:inline-block;width:16px;height:2px;margin-right:8px;vertical-align:middle;}
+
+  #dragTip{
+    position:absolute;z-index:5;left:50%;top:14px;transform:translateX(-50%);
+    background:rgba(17,22,29,.86);border:1px solid var(--line);border-radius:20px;
+    padding:6px 14px;font-size:11.5px;color:var(--dim);font-family:'JetBrains Mono',monospace;
+    pointer-events:none;opacity:.9;
+  }
+  #dragTip b{color:var(--amber);}
+
+  @media (max-width:760px){
+    #app{flex-direction:column;height:100vh;height:100dvh;}
+    /* Viewport keeps a fixed, guaranteed-visible share of the screen; the
+       panel takes the rest and scrolls internally, so on short screens or
+       when the mobile browser chrome shrinks the viewport, controls at the
+       bottom are always reachable by scrolling rather than being clipped
+       off-screen. */
+    #viewport{height:44vh;min-height:230px;flex:0 0 auto;order:1;}
+    #panel{
+      width:100%;flex:1 1 auto;min-height:0;order:2;
+      border-left:none;border-top:1px solid var(--line);
+      overflow-y:auto;-webkit-overflow-scrolling:touch;
+      padding-bottom:max(28px, env(safe-area-inset-bottom, 0px) + 16px);
+    }
+    .brand{padding-top:env(safe-area-inset-top, 0px);}
+    .brand h1{font-size:16px;}
+    #hud{font-size:11px;min-width:200px;max-width:calc(100vw - 32px);}
+    #viewbtns{top:max(14px, env(safe-area-inset-top, 0px));}
+    #dragTip{max-width:calc(100vw - 32px);white-space:normal;text-align:center;}
+
+    /* On mobile the panel stacks below the viewport and its height is
+       content-driven, not a fixed width — so collapsing it means collapsing
+       height, and the toggle tab relocates from "floating on the panel's
+       left edge" to "sitting on the seam between viewport and panel". The
+       viewport's height is fixed (44vh) whether or not the panel is
+       collapsed, so the seam position never moves — only the arrow glyph
+       (set in JS) flips to show direction. */
+    #panelCollapseBtn{
+      position:absolute;top:44vh;bottom:auto;left:50%;right:auto;
+      transform:translate(-50%, -50%);
+    }
+    #app.panel-collapsed #panelCollapseBtn{right:auto;}
+    #app.panel-collapsed #panel{
+      width:100%;flex:0 0 0;min-height:0;max-height:0;
+      padding-top:0;padding-bottom:0;overflow:hidden;border-top:none;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="viewport">
+    <div id="canvas-host"></div>
+    <svg id="labelOverlay">
+      <polygon id="lblSelBox" class="lbl-selbox"></polygon>
+      <line id="lblRotLine" class="lbl-rotline"></line>
+      <rect id="lblResizeHandle" class="lbl-handle lbl-resize-handle" width="14" height="14" rx="3"></rect>
+      <circle id="lblRotHandle" class="lbl-handle lbl-rot-handle" r="9"></circle>
+      <g id="lblResetBtn" class="lbl-handle lbl-reset-handle">
+        <circle r="9"></circle>
+        <path d="M-4,-4 L4,4 M4,-4 L-4,4"></path>
+      </g>
+    </svg>
+    <div class="brand">
+      <div class="kicker">Ray Optics // Interactive Bench</div>
+      <h1>Mirrors &amp; Lenses<span>.</span></h1>
+    </div>
+    <div id="dragTip">Drag the <b>amber arrow</b> to move the object · scroll/drag canvas to orbit</div>
+    <div id="viewbtns">
+      <button id="btnZoomIn" title="Zoom in">+</button>
+      <button id="btnZoomOut" title="Zoom out">–</button>
+      <button id="btnSide">Side View</button>
+      <button id="btnOrbit">Free Orbit</button>
+      <button id="btnObjectView">Object View</button>
+    </div>
+    <div id="hud">
+      <div class="hud-head">
+        <span class="hud-title">Stats</span>
+        <button id="hudCollapseBtn" title="Collapse stats">−</button>
+      </div>
+      <div class="hud-body">
+        <div class="row"><span>object distance u</span><b id="valU">—</b></div>
+        <div class="row"><span>image distance v</span><b id="valV">—</b></div>
+        <div class="row"><span>focal length f</span><b id="valF">—</b></div>
+        <div class="row"><span>magnification m</span><b id="valM">—</b></div>
+        <div class="verdict" id="verdict">Move the object to form an image.</div>
+      </div>
+    </div>
+  </div>
+
+  <button id="panelCollapseBtn" title="Collapse controls">›</button>
+  <div id="panel">
+    <div class="section">
+      <div class="section-title">Optical element</div>
+      <div class="mode-grid">
+        <button class="mode-btn" data-mode="mirror">Mirror</button>
+        <button class="mode-btn" data-mode="lens">Lens</button>
+        <button class="mode-btn" data-mode="combo">2-Lens<br>System</button>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label>Element size (aperture) &nbsp;<b id="sizeLabel">100</b>%</label>
+        <input type="range" id="sizeSlider" min="40" max="130" value="100" step="1">
+      </div>
+      <div class="hint">Scales the physical height of the mirror or lens itself (not the object) — a bigger element catches more of the rays around it.</div>
+      <div class="field" style="margin-top:12px;">
+        <label>Thickness &nbsp;<b id="thicknessLabel">100</b>%</label>
+        <input type="range" id="thicknessSlider" min="30" max="220" value="100" step="1">
+      </div>
+      <div class="hint">Scales how deep the mirror's backing or the lens's body is — purely cosmetic, it never touches the reflecting/refracting surface itself, so the optics (focal length, image position) don't change.</div>
+    </div>
+
+    <div class="section" id="singleParams">
+      <div class="section-title">Curvature</div>
+      <div class="field">
+        <label>Bend &nbsp;<b id="bendLabel">-40</b></label>
+        <div class="bend-caption"><span>◀ convex</span><span class="mid">flat</span><span>concave ▶</span></div>
+        <input type="range" id="bendSlider" min="-100" max="100" value="-40" step="1">
+      </div>
+      <div class="hint" id="fDerivedHint">Drag from 0 (flat) outward either way — the surface morphs continuously and the focal length updates live.</div>
+    </div>
+
+    <div class="section" id="comboParams" style="display:none;">
+      <div class="section-title">Lens system</div>
+      <div class="lens-block">
+        <div class="lb-title">LENS 1</div>
+        <div class="field">
+          <label>Bend &nbsp;<b id="bend1Label">45</b></label>
+          <div class="bend-caption"><span>◀ convex</span><span class="mid">flat</span><span>concave ▶</span></div>
+          <input type="range" id="bend1Slider" min="-100" max="100" value="45" step="1">
+        </div>
+      </div>
+      <div class="lens-block">
+        <div class="lb-title">LENS 2</div>
+        <div class="field">
+          <label>Bend &nbsp;<b id="bend2Label">-35</b></label>
+          <div class="bend-caption"><span>◀ convex</span><span class="mid">flat</span><span>concave ▶</span></div>
+          <input type="range" id="bend2Slider" min="-100" max="100" value="-35" step="1">
+        </div>
+      </div>
+      <div class="field">
+        <label>Separation &nbsp;<b id="sepLabel">70</b> units</label>
+        <input type="range" id="sep" min="20" max="220" value="70" step="1">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Object</div>
+      <div class="field-row" id="objectTypeRow">
+        <div class="field">
+          <label>Object</label>
+          <select id="objectTypeSelect">
+            <option value="candle">Candle</option>
+            <option value="letter">Letter</option>
+            <option value="number">Number</option>
+          </select>
+        </div>
+        <div class="field" id="objectGlyphField" style="display:none;">
+          <label>Character</label>
+          <select id="objectGlyphSelect"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Distance from element &nbsp;<b id="oxLabel">-140</b></label>
+        <input type="range" id="oxSlider" min="-260" max="260" value="-140" step="1">
+      </div>
+      <div class="field">
+        <label>Height &nbsp;<b id="ohLabel">42</b></label>
+        <input type="range" id="ohSlider" min="-90" max="90" value="42" step="1">
+      </div>
+      <div class="toggle" id="snapAxisRow" style="display:none;">Snap to principal axis
+        <label class="switch"><input type="checkbox" id="toggleSnapAxis"><span class="slider-ui"></span></label>
+      </div>
+      <div class="hint" id="placementHint" style="display:none;">The object can only stand on the reflective (front) side of the mirror — it can't be dragged through the glass.</div>
+    </div>
+
+    <div class="section" id="mirrorLabSection" style="display:none;">
+      <div class="section-title">Ray sectors</div>
+      <div class="mode-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="toggle">Upper Left
+          <label class="switch"><input type="checkbox" id="toggleQuadUL" checked><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle">Upper Right
+          <label class="switch"><input type="checkbox" id="toggleQuadUR" checked><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle">Lower Left
+          <label class="switch"><input type="checkbox" id="toggleQuadLL" checked><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle">Lower Right
+          <label class="switch"><input type="checkbox" id="toggleQuadLR" checked><span class="slider-ui"></span></label>
+        </div>
+      </div>
+      <div class="hint" style="margin-bottom:8px;">Every point on the flame emits light in all directions — these switches just choose which slice of that light you're watching. Image formation always uses the complete ray set underneath.</div>
+      <div class="subtypes" style="flex-wrap:wrap;row-gap:6px;">
+        <button data-preset="all">Show All</button>
+        <button data-preset="none">Hide All</button>
+        <button data-preset="principal">Principal Only</button>
+        <button data-preset="multi">Multiple Rays</button>
+        <button data-preset="physical">All Physical</button>
+      </div>
+
+      <div class="section-title" style="margin-top:16px;">Projection screen</div>
+      <div class="toggle">Show screen
+        <label class="switch"><input type="checkbox" id="toggleScreen"><span class="slider-ui"></span></label>
+      </div>
+      <div class="field" id="screenXField" style="display:none;">
+        <label>Position along axis &nbsp;<b id="screenXLabel">-40</b></label>
+        <input type="range" id="screenXSlider" min="-255" max="-5" value="-40" step="1">
+      </div>
+      <div class="field" id="screenYField" style="display:none;">
+        <label>Vertical offset &nbsp;<b id="screenYLabel">0</b></label>
+        <input type="range" id="screenYSlider" min="-40" max="40" value="0" step="1">
+      </div>
+      <div class="field" id="screenSizeField" style="display:none;">
+        <label>Screen size &nbsp;<b id="screenSizeLabel">90</b></label>
+        <input type="range" id="screenSizeSlider" min="50" max="160" value="90" step="1">
+      </div>
+      <div class="hint" id="screenHint" style="display:none;">Slide the screen to where the rays actually converge — that's the only place a real image sharpens into focus. Virtual images never land on it.</div>
+
+      <div class="section-title" style="margin-top:16px;">Labels</div>
+      <div class="toggle">Pole (P) &amp; principal axis
+        <label class="switch"><input type="checkbox" id="toggleLabels" checked><span class="slider-ui"></span></label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Display</div>
+      <div class="toggles">
+        <div class="toggle">Object
+          <label class="switch"><input type="checkbox" id="toggleObject" checked><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle">Ray lines
+          <label class="switch"><input type="checkbox" id="toggleRays" checked><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle">Light as particles
+          <label class="switch"><input type="checkbox" id="toggleRayParticles"><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle">Rays that miss the element
+          <label class="switch"><input type="checkbox" id="toggleMissed" checked><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle" id="toggleOnlyPrincipalRow">5 rays <span style="opacity:.55;font-weight:400">hide fan</span>
+          <label class="switch"><input type="checkbox" id="toggleOnlyPrincipal"><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle" id="toggleSelfReflectionRow">See yourself in the mirror
+          <label class="switch"><input type="checkbox" id="toggleSelfReflection" checked><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle">Accurate point-source rays
+          <label class="switch"><input type="checkbox" id="toggleAccurate"><span class="slider-ui"></span></label>
+        </div>
+        <div class="hint" style="margin-top:-6px;">Every point on the object emits light in all directions, not just straight across — with this on, a fan of rays at many angles is traced from the object tip, and the image is drawn at its full computed height even when the element is smaller than the object. Off, the display uses a simpler shortcut that clips the image to the element's size (dimmer/narrower framing, not the underlying optics).</div>
+        <div class="toggle">Parallel-ray focus demo
+          <label class="switch"><input type="checkbox" id="toggleParallel"><span class="slider-ui"></span></label>
+        </div>
+        <div class="field" id="beamRadiusField" style="display:none;margin-top:-2px;">
+          <label>Beam radius &nbsp;<b id="beamRadiusLabel">40</b></label>
+          <input type="range" id="beamRadiusSlider" min="8" max="46" value="40" step="1">
+        </div>
+        <div class="field" id="beamTiltYField" style="display:none;margin-top:-2px;">
+          <label>Tilt ↕ vertical &nbsp;<b id="beamTiltYLabel">0</b>°</label>
+          <input type="range" id="beamTiltYSlider" min="-30" max="30" value="0" step="1">
+        </div>
+        <div class="field" id="beamTiltZField" style="display:none;margin-top:-2px;">
+          <label>Tilt ↔ horizontal &nbsp;<b id="beamTiltZLabel">0</b>°</label>
+          <input type="range" id="beamTiltZSlider" min="-30" max="30" value="0" step="1">
+        </div>
+        <div class="toggle">F &nbsp;<span style="opacity:.55;font-weight:400">focal plane(s)</span>
+          <label class="switch"><input type="checkbox" id="toggleF"><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle" id="toggleCRow">C &nbsp;<span style="opacity:.55;font-weight:400">centre of curvature</span>
+          <label class="switch"><input type="checkbox" id="toggleC"><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle">Image arrow <span style="opacity:.55;font-weight:400">+ axis point</span>
+          <label class="switch"><input type="checkbox" id="toggleImage" checked><span class="slider-ui"></span></label>
+        </div>
+        <div class="toggle">Solid black grid
+          <label class="switch"><input type="checkbox" id="toggleSolidGrid"><span class="slider-ui"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Ray key</div>
+      <div class="legend">
+        <div><span class="sw" style="background:#ffb454"></span>parallel → through focus</div>
+        <div><span class="sw" style="background:#5fd0e0"></span>through focus → parallel</div>
+        <div><span class="sw" style="background:#c792ea"></span>through centre / pole — undeviated</div>
+        <div><span class="sw" style="background:#67e08a"></span>to pole — reflects at equal angle (mirrors)</div>
+        <div><span class="sw" style="background:#f2f5f9"></span>object's foot, along the axis — foot maps to foot</div>
+        <div><span class="sw" style="background:#3a4553"></span>principal axis — the reference line every angle is measured against</div>
+        <div><span class="sw" style="background:#ff6b7a;opacity:.8;border-top:2px dotted #ff6b7a;height:0"></span>red dotted = virtual-image extension</div>
+      </div>
+      <div class="hint">Real physics: image position and size follow the mirror equation 1/v + 1/u = 1/f and lens equation 1/v − 1/u = 1/f (Cartesian sign convention), magnification computed exactly — not illustrative.</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ---- Self-contained orbit control (no external CDN dependency — avoids
+   the flaky OrbitControls.js loads that were breaking this page). Supports
+   drag-to-orbit, wheel/pinch zoom, and damping, matching the small subset
+   of the THREE.OrbitControls API this app actually uses. ---- */
+class MiniOrbitControls{
+  constructor(camera, dom){
+    this.camera = camera; this.dom = dom;
+    this.target = new THREE.Vector3(0,0,0);
+    this.enabled = true; this.enableDamping = true; this.dampingFactor = 0.08;
+    this.minDistance = 1; this.maxDistance = Infinity;
+    this._spherical = new THREE.Spherical();
+    this._sphericalDelta = new THREE.Spherical();
+    this._zoomFactor = 1;
+    const off = new THREE.Vector3().subVectors(camera.position, this.target);
+    this._spherical.setFromVector3(off);
+
+    this._pointers = new Map(); // pointerId -> {x,y}
+    this._pinchDist = null;
+    this._zoomHoldDir = 0; // set by startZoom/stopZoom for press-and-hold button zoom
+
+    const dist = ()=>{
+      const pts = [...this._pointers.values()];
+      return Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    };
+
+    this._onDown = (e)=>{
+      if(!this.enabled) return;
+      this._pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      if(dom.setPointerCapture){ try{ dom.setPointerCapture(e.pointerId); }catch(err){} }
+      if(this._pointers.size===2) this._pinchDist = dist();
+    };
+    this._onMove = (e)=>{
+      if(!this.enabled || !this._pointers.has(e.pointerId)) return;
+      const prev = this._pointers.get(e.pointerId);
+      const cur = {x:e.clientX, y:e.clientY};
+      if(this._pointers.size===2){
+        this._pointers.set(e.pointerId, cur);
+        const d = dist();
+        if(this._pinchDist){ this._spherical.radius *= this._pinchDist/d; }
+        this._pinchDist = d;
+        return;
+      }
+      const dx = cur.x-prev.x, dy = cur.y-prev.y;
+      this._pointers.set(e.pointerId, cur);
+      this._sphericalDelta.theta -= dx * 0.006;
+      this._sphericalDelta.phi -= dy * 0.006;
+    };
+    this._endDrag = (e)=>{
+      if(e) this._pointers.delete(e.pointerId);
+      else this._pointers.clear();
+      this._pinchDist = null;
+      // Dropping from 2 fingers to 1 shouldn't jump-rotate using stale
+      // coordinates — resync the remaining pointer's reference position.
+      if(this._pointers.size===1 && e){
+        // nothing stored yet for a fresh single-drag baseline; next move sets it
+      }
+    };
+    this._onWheel = (e)=>{
+      if(!this.enabled) return;
+      e.preventDefault();
+      this._spherical.radius *= (1 + Math.sign(e.deltaY)*0.08);
+    };
+    dom.addEventListener('pointerdown', this._onDown);
+    dom.addEventListener('pointermove', this._onMove);
+    dom.addEventListener('pointerup', this._endDrag);
+    dom.addEventListener('pointercancel', this._endDrag);
+    dom.addEventListener('lostpointercapture', this._endDrag);
+    dom.addEventListener('wheel', this._onWheel, {passive:false});
+  }
+  zoomBy(factor){ this._spherical.radius *= factor; }
+  startZoom(dir){ this._zoomHoldDir = dir; } // dir: -1 zoom in, +1 zoom out
+  stopZoom(){ this._zoomHoldDir = 0; }
+  setView(position, target){
+    if(target) this.target.copy(target);
+    const off = new THREE.Vector3().subVectors(position, this.target);
+    this._spherical.setFromVector3(off);
+    this._sphericalDelta.set(0,0,0);
+    this.update();
+  }
+  update(){
+    this._spherical.theta += this._sphericalDelta.theta;
+    this._spherical.phi += this._sphericalDelta.phi;
+    this._spherical.phi = Math.max(0.001, Math.min(Math.PI-0.001, this._spherical.phi));
+    if(this._zoomHoldDir) this._spherical.radius *= (1 + this._zoomHoldDir*0.028);
+    this._spherical.radius = Math.max(this.minDistance, Math.min(this.maxDistance, this._spherical.radius));
+    if(this.enableDamping){
+      this._sphericalDelta.theta *= (1-this.dampingFactor);
+      this._sphericalDelta.phi *= (1-this.dampingFactor);
+    } else {
+      this._sphericalDelta.theta = 0; this._sphericalDelta.phi = 0;
+    }
+    const off = new THREE.Vector3().setFromSpherical(this._spherical);
+    this.camera.position.copy(this.target).add(off);
+    this.camera.lookAt(this.target);
+    return true;
+  }
+}
+// Alias so the rest of the app can keep referring to THREE.OrbitControls.
+THREE.OrbitControls = MiniOrbitControls;
+</script>
+<script>
+/* ============================== STATE ============================== */
+const state = {
+  mode: 'mirror',       // mirror | lens | combo
+  mirrorBend: -40,      // negative = concave, positive = convex, 0 = flat
+  lensBend: 45,
+  bend1: 45, bend2: -35,
+  sep: 70,
+  objX: -140, objH: 42,
+  showRays: true, showRayParticles: false, showF: false, showC: false, showImage: true, accuratePointSource: false, onlyPrincipalRays: false, mirrorSelfReflection: true,
+  showMissedRays: true, showObject: true, showParallel: false, beamRadius: 40,
+  beamTiltY: 0, beamTiltZ: 0,
+  // ---- mirror-lab additions ----
+  snapAxis: false,
+  rayQuadrants: {ul:true, ur:true, ll:true, lr:true},
+  rayDensity: 12,           // number of extra flame-fan rays sampled around 360°, on top of the 3 principal rays
+  screenOn: false, screenX: -40, screenY: 0, screenSize: 90,
+  showLabels: true, solidGrid: false,
+  sizeScale: 1, // scales the physical aperture of the mirror/lens element itself
+  thicknessScale: 1, // scales the mirror's backing depth / lens's centre thickness — cosmetic only
+  objectType: 'candle', // candle | letter | number — what stands in for the object in Mirror mode
+  objectGlyph: 'F'       // which letter/number, when objectType isn't 'candle'
+};
+// Curvature (bend, -100..100) -> signed focal length. bend=0 -> effectively flat (huge f).
+function bendToF(bend){
+  if(Math.abs(bend) < 0.5) return 1e6;
+  return 4000/bend;
+}
+
+/* ============================== THREE SETUP ============================== */
+const host = document.getElementById('canvas-host');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0d12);
+scene.fog = new THREE.Fog(0x0a0d12, 900, 2600);
+
+const camera = new THREE.PerspectiveCamera(42, host.clientWidth/host.clientHeight, 1, 3000);
+const DEFAULT_FOV = camera.fov; // restored whenever Object View isn't actively widening it
+const SIDE_POS = new THREE.Vector3(0, 20, 480);
+camera.position.copy(SIDE_POS);
+camera.lookAt(0,0,0);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(host.clientWidth, host.clientHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+host.appendChild(renderer.domElement);
+
+/* ------ small procedural environment (no external HDR) so glass/mirror
+   surfaces get real specular highlights + reflections via scene.environment,
+   instead of reading as flat colored blobs. Built once, reused forever. ------ */
+function buildStudioEnvironment(){
+  const envScene = new THREE.Scene();
+  const skyGeo = new THREE.SphereGeometry(500, 24, 24);
+  const pos = skyGeo.attributes.position;
+  const top = new THREE.Color(0x9fd0e6), bot = new THREE.Color(0x0a0d12);
+  const colors = [];
+  for(let i=0;i<pos.count;i++){
+    const t = THREE.MathUtils.clamp((pos.getY(i)+500)/1000, 0, 1);
+    const c = bot.clone().lerp(top, t);
+    colors.push(c.r, c.g, c.b);
+  }
+  skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors,3));
+  envScene.add(new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({vertexColors:true, side:THREE.BackSide})));
+  const panel = (w,h,color,x,y,z)=>{
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({color}));
+    m.position.set(x,y,z); m.lookAt(0,0,0); envScene.add(m);
+  };
+  panel(260,160, 0xffffff, 180, 240, 220);
+  panel(180,120, 0xbfe4f2, -220, -60, -200);
+  panel(140,90,  0xffdca8, 0, -260, 260);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  pmrem.compileEquirectangularShader();
+  const rt = pmrem.fromScene(envScene, 0.035, 0.1, 800);
+  pmrem.dispose();
+  skyGeo.dispose();
+  return rt.texture;
+}
+scene.environment = buildStudioEnvironment();
+
+// ------ live reflection probe for the mirror's silvered face ------
+// scene.environment above is a fixed, pre-baked backdrop, so a purely
+// metallic material only ever reflects that static studio — never the actual
+// object arrow. A real mirror shows what's really in front of it, so we
+// capture the live scene into a small cube render target each frame and use
+// THAT as the silvered material's envMap, overriding the static one just for
+// this mesh. The mirror itself is hidden for the instant of that capture so
+// it doesn't reflect itself.
+const mirrorCubeRT = new THREE.WebGLCubeRenderTarget(128, {
+  format: THREE.RGBAFormat, generateMipmaps:true, minFilter: THREE.LinearMipmapLinearFilter
+});
+const mirrorCubeCamera = new THREE.CubeCamera(1, 2400, mirrorCubeRT);
+scene.add(mirrorCubeCamera);
+function updateMirrorReflection(){
+  if(state.mode!=='mirror') return;
+  mirrorCubeCamera.position.set(0,0,0);
+  // Only a clean, undistorted studio backdrop shows up in the mirror's live
+  // reflection by default. The candle sits close to the mirror, so at this
+  // range a low-res cubemap capture can render it as a warped, blurry
+  // double hovering behind the real candle — so by default the object (and
+  // every diagram overlay) is excluded from the capture. Flip the "See
+  // yourself in the mirror" toggle to include it anyway, the way a real
+  // mirror always shows whatever's standing in front of it.
+  const toHide = [elementGroup, rayGroup, planeGroup, particleGroup, beamSourceGroup, screenGroup, gridSubtle, gridSolid, imageGroup];
+  if(!state.mirrorSelfReflection) toHide.push(objectGroup);
+  const prevVisible = toHide.map(g=>g.visible);
+  toHide.forEach(g=> g.visible = false);
+  mirrorCubeCamera.update(renderer, scene);
+  toHide.forEach((g,i)=> g.visible = prevVisible[i]);
+}
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(0,0,0);
+controls.minDistance = 80;
+controls.maxDistance = 2800;
+
+scene.add(new THREE.AmbientLight(0x8899aa, 0.65));
+const key = new THREE.DirectionalLight(0xffffff, 0.9);
+key.position.set(120,180,220);
+key.castShadow = true;
+key.shadow.mapSize.set(1024,1024);
+key.shadow.camera.near = 10;
+key.shadow.camera.far = 900;
+key.shadow.camera.left = -320;
+key.shadow.camera.right = 320;
+key.shadow.camera.top = 320;
+key.shadow.camera.bottom = -320;
+key.shadow.bias = -0.0015;
+key.shadow.radius = 3; // soft-edged shadows (PCFSoftShadowMap)
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x5fd0e0, 0.35);
+rim.position.set(-150,-80,-200);
+scene.add(rim);
+
+// ------ Sun: a visible background light source for when the object doesn't
+// carry its own light (the candle's flame does; the Letter/Number plaques
+// don't) — see updateSunVisibility(), called from recompute(). A plain
+// emissive sphere plus a soft additive glow sprite reads as a distant sun
+// sitting in the studio backdrop; the actual illumination comes from the
+// paired DirectionalLight aimed back at the scene from the same direction. ------
+function buildSunGlowTexture(){
+  const cvs = document.createElement('canvas');
+  cvs.width = cvs.height = 256;
+  const ctx = cvs.getContext('2d');
+  const grad = ctx.createRadialGradient(128,128,0,128,128,128);
+  grad.addColorStop(0, 'rgba(255,246,220,0.95)');
+  grad.addColorStop(0.35, 'rgba(255,222,150,0.35)');
+  grad.addColorStop(1, 'rgba(255,222,150,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,256,256);
+  return new THREE.CanvasTexture(cvs);
+}
+const SUN_POS = new THREE.Vector3(560, 420, -680);
+const sunMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(46, 24, 24),
+  new THREE.MeshBasicMaterial({color:0xfff4d8, fog:false})
+);
+sunMesh.position.copy(SUN_POS);
+scene.add(sunMesh);
+const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: buildSunGlowTexture(), transparent:true, depthWrite:false, fog:false
+}));
+sunGlow.scale.set(340,340,1);
+sunMesh.add(sunGlow);
+const sunLight = new THREE.DirectionalLight(0xffe6b0, 0);
+sunLight.position.copy(SUN_POS);
+scene.add(sunLight);
+// The candle's flame is the only object with a built-in light source; every
+// other object (letter/number plaques, or no object shown at all) needs the
+// sun standing in for it instead.
+function updateSunVisibility(){
+  const hasFlame = state.mode==='mirror' && state.objectType==='candle' && state.showObject;
+  const on = !hasFlame;
+  sunMesh.visible = on;
+  sunLight.intensity = on ? 0.55 : 0;
+}
+
+// ------ subtle shadow-catching floor (separate from the on-axis reference
+// grid below) — keeps a sense of "ground" and lets soft shadows read, without
+// competing visually with the grid that now sits on the principal axis. ------
+const shadowFloor = new THREE.Mesh(
+  new THREE.PlaneGeometry(2000,2000),
+  new THREE.ShadowMaterial({opacity:0.28})
+);
+shadowFloor.rotation.x = -Math.PI/2;
+shadowFloor.position.y = -95;
+shadowFloor.receiveShadow = true;
+scene.add(shadowFloor);
+
+/* ------ reference grid — lies flat in the plane of the principal axis (y=0),
+   so it reads as a measuring grid for the optical bench rather than a floor.
+   Two variants (subtle atmospheric / solid black) toggled from the panel. ------ */
+const gridSubtle = new THREE.GridHelper(1000, 40, 0x2a3542, 0x1b232c);
+gridSubtle.material.transparent = true;
+gridSubtle.material.opacity = 0.55;
+const gridSolid = new THREE.GridHelper(1000, 40, 0x000000, 0x000000);
+[gridSubtle, gridSolid].forEach(g=>{ g.position.y = 0; scene.add(g); });
+function refreshGridStyle(){
+  gridSubtle.visible = !state.solidGrid;
+  gridSolid.visible = state.solidGrid;
+}
+
+/* ------ principal axis ------ */
+const axisMat = new THREE.LineBasicMaterial({color:0x3a4553});
+const axisGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1000,0,0), new THREE.Vector3(1000,0,0)]);
+scene.add(new THREE.Line(axisGeo, axisMat));
+// tick marks every 20 units
+const tickPts = [];
+for(let x=-800;x<=800;x+=20){ tickPts.push(new THREE.Vector3(x,-3,0), new THREE.Vector3(x,3,0)); }
+const ticks = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(tickPts), new THREE.LineBasicMaterial({color:0x1e2733}));
+scene.add(ticks);
+
+/* ============================== GROUPS ============================== */
+const elementGroup = new THREE.Group(); scene.add(elementGroup);
+const rayGroup = new THREE.Group(); scene.add(rayGroup);
+const planeGroup = new THREE.Group(); scene.add(planeGroup);
+const objectGroup = new THREE.Group(); scene.add(objectGroup);
+const imageGroup = new THREE.Group(); scene.add(imageGroup);
+const labelGroup = new THREE.Group(); scene.add(labelGroup);
+const particleGroup = new THREE.Group(); scene.add(particleGroup);
+const beamSourceGroup = new THREE.Group(); scene.add(beamSourceGroup);
+const screenGroup = new THREE.Group(); scene.add(screenGroup);
+const clock = new THREE.Clock();
+let activeRayPaths = [];
+const particleGeo = new THREE.SphereGeometry(2.6, 8, 8);
+
+/* ============================== HELPERS ============================== */
+function sag(r,R){ const rr=Math.min(Math.abs(r), R*0.995); return R - Math.sqrt(Math.max(R*R-rr*rr,0)); }
+
+// Frees GPU geometry/material memory for a group's children before removing
+// them, then empties the group. Rebuilt-every-frame groups (element, focal
+// planes, rays) would otherwise leak VRAM and eventually cause context loss.
+function disposeGroup(group){
+  group.traverse(obj=>{
+    if(obj.geometry) obj.geometry.dispose();
+    if(obj.material){
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      mats.forEach(m=>{
+        if(m.map) m.map.dispose();
+        m.dispose();
+      });
+    }
+  });
+  group.clear();
+}
+
+function makeArrow(color, opacity=1, dashedOutline=false, emissiveIntensity=.18){
+  const g = new THREE.Group();
+  const shaftGeo = new THREE.CylinderGeometry(1.6,1.6,1,10);
+  shaftGeo.translate(0,0.5,0);
+  const mat = new THREE.MeshStandardMaterial({color, transparent: opacity<1, opacity, roughness:.35, metalness:0, emissive:color, emissiveIntensity});
+  const shaft = new THREE.Mesh(shaftGeo, mat);
+  g.add(shaft);
+  const coneGeo = new THREE.ConeGeometry(5.4,15,14);
+  const cone = new THREE.Mesh(coneGeo, mat);
+  g.add(cone);
+  g.userData.shaft = shaft; g.userData.cone = cone; g.userData.mat = mat;
+  return g;
+}
+function setArrow(group, height){
+  const h = Math.max(Math.abs(height), 0.001);
+  group.userData.shaft.scale.set(1, Math.max(h-12,0.001), 1);
+  group.userData.shaft.position.set(0,0,0);
+  group.userData.cone.position.set(0, Math.max(h-6,6), 0);
+  group.rotation.z = height>=0? 0 : Math.PI;
+}
+
+// A realistic-ish candle + flame, replacing the plain arrow as the object
+// for Mirror mode. Always stands upright on the principal axis; only its
+// height (flame position) and left/right position change. userData exposes
+// the parts that need to be rescaled/animated.
+function buildCandle(){
+  const g = new THREE.Group();
+  const waxMat = new THREE.MeshStandardMaterial({color:0xf1e4c8, roughness:.5, metalness:.02, emissive:0x2a2010, emissiveIntensity:.15});
+  const wax = new THREE.Mesh(new THREE.CylinderGeometry(5.4,5.9,1,22), waxMat);
+  wax.castShadow = true; wax.receiveShadow = true;
+  g.add(wax);
+  const rimMat = new THREE.MeshPhysicalMaterial({color:0xfff6e2, roughness:.35, clearcoat:.5, clearcoatRoughness:.3});
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(5.4,0.7,8,22), rimMat);
+  rim.rotation.x = Math.PI/2;
+  rim.castShadow = true;
+  g.add(rim);
+  // A couple of small wax drips running down the side — cheap, but it's the
+  // detail that reads as "real candle" rather than "cylinder with a flame".
+  // (r128 has no CapsuleGeometry, so each drip is a thin cylinder capped
+  // with a sphere.)
+  const dripMat = new THREE.MeshPhysicalMaterial({color:0xf6ead0, roughness:.4, clearcoat:.4, clearcoatRoughness:.3});
+  function makeDrip(len, rad){
+    const grp = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(rad,rad,len,8), dripMat);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(rad,8,8), dripMat);
+    cap.position.y = -len/2;
+    grp.add(body, cap);
+    return grp;
+  }
+  const drip1 = makeDrip(3.2, 0.55);
+  drip1.rotation.z = Math.PI/2 + 0.15;
+  drip1.position.set(4.9, 0, 1.5);
+  const drip2 = makeDrip(2.1, 0.4);
+  drip2.rotation.z = Math.PI/2 - 0.1;
+  drip2.position.set(-4.7, 0, -1.8);
+  const dripGroup = new THREE.Group();
+  dripGroup.add(drip1, drip2);
+  g.add(dripGroup);
+  const wickMat = new THREE.MeshStandardMaterial({color:0x241d16, roughness:.9});
+  const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.65,6,8), wickMat);
+  wick.castShadow = true;
+  g.add(wick);
+  const flameGroup = new THREE.Group();
+  const outerMat = new THREE.MeshStandardMaterial({color:0xff8c42, emissive:0xff7a2e, emissiveIntensity:1.6, transparent:true, opacity:.82, roughness:.35});
+  const outer = new THREE.Mesh(new THREE.ConeGeometry(3.3,13,14), outerMat);
+  outer.position.y = 6.5;
+  const innerMat = new THREE.MeshStandardMaterial({color:0xfff3c0, emissive:0xfff0b0, emissiveIntensity:2.4, transparent:true, opacity:.92});
+  const inner = new THREE.Mesh(new THREE.ConeGeometry(1.5,7,10), innerMat);
+  inner.position.y = 4.5;
+  flameGroup.add(outer, inner);
+  g.add(flameGroup);
+  const flameLight = new THREE.PointLight(0xffb26b, 0.85, 160, 2);
+  flameGroup.add(flameLight);
+  g.userData = {wax, rim, wick, flameGroup, outer, inner, flameLight, dripGroup};
+  return g;
+}
+// Scales the candle so its flame sits at `height` above the axis. The candle
+// itself never flips or tilts — a real candle always stands upright — so a
+// negative height is simply treated as its magnitude (mirror-mode height
+// input is kept non-negative at the slider level for the same reason).
+function setCandle(group, height){
+  const h = Math.max(Math.abs(height), 7);
+  const waxH = Math.max(h*0.62, 5);
+  group.userData.wax.scale.set(1, waxH, 1);
+  group.userData.wax.position.set(0, waxH/2, 0);
+  group.userData.rim.position.set(0, waxH, 0);
+  group.userData.dripGroup.position.set(0, waxH*0.62, 0);
+  group.userData.wick.position.set(0, waxH+3, 0);
+  group.userData.flameGroup.position.set(0, waxH+2.5, 0);
+  group.rotation.z = 0;
+}
+
+function textSprite(text, color){
+  const cvs = document.createElement('canvas');
+  const ctx = cvs.getContext('2d');
+  const scale = 6;
+  cvs.width = 256*scale/ (scale/2); cvs.width=256; cvs.height=64;
+  ctx.font = '600 26px Space Grotesk, sans-serif';
+  ctx.fillStyle = color;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(text, 128, 32);
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false});
+  const spr = new THREE.Sprite(mat);
+  spr.scale.set(34,8.5,1);
+  spr.renderOrder = 10;
+  return spr;
+}
+
+// A bigger, higher-contrast label with its own dark pill background —
+// unlike the bare textSprite() used for tiny axis labels (P/F/C), this one
+// needs to read clearly against a bright, busy mirror/lens surface from
+// across the whole scene, so plain colored text on transparent isn't enough.
+function pillLabelSprite(text, color){
+  const cvs = document.createElement('canvas');
+  const ctx = cvs.getContext('2d');
+  cvs.width = 512; cvs.height = 96;
+  ctx.font = '700 40px Space Grotesk, sans-serif';
+  const textW = ctx.measureText(text).width;
+  const padX = 28;
+  const pillW = Math.min(cvs.width, textW + padX*2);
+  const pillX = (cvs.width - pillW)/2;
+  const r = 24;
+  ctx.fillStyle = 'rgba(10,14,20,0.82)';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(pillX+r, 8);
+  ctx.arcTo(pillX+pillW, 8, pillX+pillW, 88, r);
+  ctx.arcTo(pillX+pillW, 88, pillX, 88, r);
+  ctx.arcTo(pillX, 88, pillX, 8, r);
+  ctx.arcTo(pillX, 8, pillX+pillW, 8, r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, cvs.width/2, 48);
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false});
+  const spr = new THREE.Sprite(mat);
+  spr.scale.set(46,8.6,1);
+  spr.renderOrder = 12;
+  return spr;
+}
+
+/* ============================== ELEMENT SURFACES (particle grids) ============================== */
+// Builds one curved cap as a grid of evenly-spaced dots (equal arc-length rings + meridian guides).
+// profileFn(r) -> axial offset for radius r. Returns a group positioned relative to its own local origin.
+function buildParticleCap(profileFn, aperture, color, ringCount, dotSize){
+  ringCount = ringCount || 7;
+  dotSize = dotSize || 3.2;
+  const group = new THREE.Group();
+  const dotPositions = [profileFn(0), 0, 0];
+  const spacing = Math.max(5, (aperture/ringCount) * 0.95);
+  const meridianCount = 10;
+  const meridianAngles = [];
+  for(let a=0; a<meridianCount; a++) meridianAngles.push(a/meridianCount*Math.PI*2);
+
+  for(let ri=1; ri<=ringCount; ri++){
+    const r = aperture*ri/ringCount;
+    const xoff = profileFn(r);
+    const n = Math.max(6, Math.round(2*Math.PI*r/spacing));
+    for(let a=0; a<n; a++){
+      const th = a/n*Math.PI*2;
+      dotPositions.push(xoff, r*Math.cos(th), r*Math.sin(th));
+    }
+    const ringPts = [];
+    for(let a=0; a<=n; a++){ const th=a/n*Math.PI*2; ringPts.push(new THREE.Vector3(xoff, r*Math.cos(th), r*Math.sin(th))); }
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPts), new THREE.LineBasicMaterial({color, transparent:true, opacity:0.2})));
+  }
+  meridianAngles.forEach(th=>{
+    const pts = [];
+    for(let ri=0; ri<=ringCount; ri++){
+      const r = aperture*ri/ringCount;
+      pts.push(new THREE.Vector3(profileFn(r), r*Math.cos(th), r*Math.sin(th)));
+    }
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color, transparent:true, opacity:0.2})));
+  });
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(dotPositions, 3));
+  const mat = new THREE.PointsMaterial({color, size:dotSize, sizeAttenuation:true});
+  group.add(new THREE.Points(geo, mat));
+  return group;
+}
+
+// Revolves a radius->axial-offset profile into a solid THREE.Mesh, oriented
+// so the lathe's "height" axis lands on world X (the optical axis).
+function revolveProfile(points, segments){
+  const geo = new THREE.LatheGeometry(points, segments);
+  geo.rotateZ(-Math.PI/2);
+  return geo;
+}
+
+function buildMirrorSurface(profileFn, aperture){
+  const segs = 32;
+  // Silvered cap: the true reflecting surface, exactly at profileFn(r) — this
+  // is what all optics (ray hits, object clamping) are measured against.
+  const capPts = [];
+  for(let i=0; i<=segs; i++){
+    const r = aperture*i/segs;
+    capPts.push(new THREE.Vector2(r, profileFn(r)));
+  }
+  const capGeo = revolveProfile(capPts, 64);
+  const silverMat = new THREE.MeshPhysicalMaterial({
+    color:0xf4f8fb, metalness:1, roughness:0.07,
+    clearcoat:0.7, clearcoatRoughness:0.05,
+    envMap: mirrorCubeRT.texture, envMapIntensity:0.9, side:THREE.FrontSide
+  });
+  const silverMesh = new THREE.Mesh(capGeo, silverMat);
+
+  // Solid backing slab: a real mirror has physical depth, not a paper-thin
+  // shell — so the back face sits a real THICK units behind the silvered
+  // cap (a tiny eps further back still, so the two surfaces never z-fight),
+  // revolved into a proper watertight solid the same way a lens is built.
+  // The back/rim material is flat, non-reflective, and a distinct warm
+  // color specifically so it reads unmistakably as "opaque backing", never
+  // as more mirror or a see-through surface.
+  const THICK = Math.max(11, aperture*0.24) * state.thicknessScale;
+  const eps = 0.15;
+  const bodyFront = [], bodyBack = [];
+  for(let i=0; i<=segs; i++){
+    const r = aperture*i/segs;
+    const fx = profileFn(r) + eps;
+    bodyFront.push(new THREE.Vector2(r, fx));
+    bodyBack.push(new THREE.Vector2(r, fx + THICK));
+  }
+  const bodyOutline = bodyFront.concat(bodyBack.slice().reverse());
+  const bodyGeo = revolveProfile(bodyOutline, 64);
+  const backMat = new THREE.MeshStandardMaterial({
+    color:0x8a3a24, roughness:0.8, metalness:0.1,
+    transparent:true, opacity:0.55
+  });
+  const bodyMesh = new THREE.Mesh(bodyGeo, backMat);
+
+  const grp = new THREE.Group();
+  bodyMesh.receiveShadow = true; bodyMesh.castShadow = true;
+  silverMesh.receiveShadow = true; silverMesh.castShadow = true;
+  grp.add(bodyMesh);
+  grp.add(silverMesh);
+  return grp;
+}
+
+function buildMirror(Lx, f){
+  const type = f >= 0 ? 'convex' : 'concave';
+  const R = Math.max(2*Math.abs(f), 46);
+  const aperture = Math.min(46*state.sizeScale, R*0.94);
+  const profileFn = r => (type==='concave') ? sag(r,R) : -sag(r,R);
+  const grp = new THREE.Group();
+  grp.add(buildMirrorSurface(profileFn, aperture));
+  grp.position.x = Lx;
+  return {grp, aperture};
+}
+
+// Builds a single watertight lens solid by walking the front profile out to
+// the rim and back along the back profile, then revolving that closed
+// outline. Edge thickness is clamped so strongly-curved lenses never pinch
+// into a self-intersecting sliver at the rim.
+function buildLensSurface(frontFn, backFn, aperture){
+  const segs = 28, minHalfGap = 0.9;
+  const front = [], back = [];
+  for(let i=0; i<=segs; i++){
+    const r = aperture*i/segs;
+    let fv = frontFn(r), bv = backFn(r);
+    if(bv - fv < minHalfGap*2){ const mid = (bv+fv)/2; fv = mid - minHalfGap; bv = mid + minHalfGap; }
+    front.push(new THREE.Vector2(r, fv));
+    back.push(new THREE.Vector2(r, bv));
+  }
+  const outline = front.concat(back.slice().reverse());
+  const geo = revolveProfile(outline, 64);
+  const mat = new THREE.MeshPhysicalMaterial({
+    color:0xfbfeff, metalness:0, roughness:0.015,
+    transmission:1, ior:1.52,
+    clearcoat:0.9, clearcoatRoughness:0.02,
+    envMapIntensity:1.6, side:THREE.DoubleSide, transparent:true
+  });
+  return new THREE.Mesh(geo, mat);
+}
+
+function buildLens(Lx, f){
+  const type = f >= 0 ? 'convexLens' : 'concaveLens';
+  const curveR = Math.max(2*Math.abs(f)*0.55, 70);
+  const aperture = 42*state.sizeScale;
+  let tc, frontFn, backFn;
+  if(type==='convexLens'){
+    tc = 9 * state.thicknessScale;
+    frontFn = r => -tc + sag(r,curveR);
+    backFn  = r =>  tc - sag(r,curveR);
+  } else {
+    tc = 3.2 * state.thicknessScale;
+    frontFn = r => -tc - sag(r,curveR);
+    backFn  = r =>  tc + sag(r,curveR);
+  }
+  const grp = new THREE.Group();
+  grp.add(buildLensSurface(frontFn, backFn, aperture));
+  grp.position.x = Lx;
+  return {grp, aperture};
+}
+
+/* ============================== FOCAL PLANES ============================== */
+function makeFocalPlane(x, label, color){
+  const g = new THREE.Group();
+  const planeSize = 100; // wide enough in depth (Z) to actually read as a plane, not a sliver
+  const geo = new THREE.PlaneGeometry(planeSize, 130, 6, 8);
+  const mat = new THREE.MeshBasicMaterial({color, transparent:true, opacity:0.16, side:THREE.DoubleSide});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.y = Math.PI/2;
+  g.add(mesh);
+  // wireframe grid so the plane still reads clearly at grazing/side-on angles
+  const wire = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color, wireframe:true, transparent:true, opacity:.28}));
+  wire.rotation.y = Math.PI/2;
+  g.add(wire);
+  const half = planeSize/2;
+  const edgePts = [
+    new THREE.Vector3(0,-65,-half), new THREE.Vector3(0,65,-half),
+    new THREE.Vector3(0,65,-half), new THREE.Vector3(0,65,half),
+    new THREE.Vector3(0,65,half), new THREE.Vector3(0,-65,half),
+    new THREE.Vector3(0,-65,half), new THREE.Vector3(0,-65,-half),
+    new THREE.Vector3(0,-65,0), new THREE.Vector3(0,65,0)
+  ];
+  const edge = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(edgePts), new THREE.LineDashedMaterial({color, dashSize:3, gapSize:2, transparent:true, opacity:.7}));
+  edge.computeLineDistances();
+  g.add(edge);
+  const spr = textSprite(label, '#'+color.toString(16).padStart(6,'0'));
+  spr.position.set(0,72,0);
+  g.add(spr);
+  g.position.x = x;
+  placeFreeLabel(spr, 'foc-'+label);
+  return g;
+}
+
+/* ============================== RAYS ============================== */
+function rayLine(points, color, dashed=false, dotted=false){
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = dashed
+    ? new THREE.LineDashedMaterial(dotted
+        ? {color, dashSize:0.6, gapSize:3.4, linewidth:1, transparent:true, opacity:.9, depthTest:false}
+        : {color, dashSize:4, gapSize:2.6, linewidth:1, transparent:true, opacity:.85})
+    : new THREE.LineBasicMaterial({color, linewidth:2});
+  const line = new THREE.Line(geo, mat);
+  if(dashed) line.computeLineDistances();
+  // Dotted lines are always the non-physical virtual-image construction —
+  // they must stay visible even where they pass behind the now-opaque
+  // mirror body, so they render last and ignore the depth buffer.
+  if(dotted) line.renderOrder = 999;
+  return line;
+}
+const COL_A = 0xffb454; // parallel -> focus
+const COL_B = 0xc792ea; // through centre/pole
+const COL_C = 0x5fd0e0; // through focus -> parallel
+const COL_D = 0x67e08a; // to the pole -> reflects at equal angle to the axis (mirrors only, 4th principal ray)
+const COL_E = 0xf2f5f9; // from the object's foot, straight along the axis, through the pole/centre (5th ray — foot-to-foot)
+const COL_VIRTUAL = 0xff6b7a; // virtual-image construction extensions — always red + dotted
+const COL_MISS = 0x4a5a6a; // rays that miss the element's physical aperture — dim grey, undeviated
+const EXT = 1500; // how far to extend rays for visualization — well past the camera's usual framing
+
+// legs: [{points:[Vector3,...], dashed:bool, branch:bool}]. branch legs are the
+// non-physical virtual-image construction extensions (e.g. behind a convex mirror,
+// or back through a diverging lens). They're drawn as red dotted lines, get their
+// own red particle stream when "light as particles" is on, and are excluded from
+// the real/physical ray's particle travel path.
+function emitRay(legs, color){
+  if(state.showRays){
+    legs.forEach(leg=> rayGroup.add(rayLine(leg.points, leg.branch?COL_VIRTUAL:color, leg.branch?true:!!leg.dashed, !!leg.branch)));
+  }
+  const full = [];
+  legs.filter(l=>!l.branch).forEach(leg=>{
+    leg.points.forEach(p=>{
+      if(full.length===0 || full[full.length-1].distanceToSquared(p) > 1e-6) full.push(p);
+    });
+  });
+  if(full.length>=2) activeRayPaths.push({points:full, color});
+
+  legs.filter(l=>l.branch).forEach(leg=>{
+    if(leg.points.length>=2) activeRayPaths.push({points:leg.points.slice(), color:COL_VIRTUAL});
+  });
+}
+
+function computePathCum(path){
+  let total=0; const cum=[0];
+  for(let i=1;i<path.points.length;i++){ total += path.points[i].distanceTo(path.points[i-1]); cum.push(total); }
+  path._cum = cum; path._total = total;
+}
+function pointAtFrac(path, frac){
+  if(!path._cum) computePathCum(path);
+  const target = frac*path._total;
+  const cum = path._cum, pts = path.points;
+  for(let i=1;i<cum.length;i++){
+    if(target<=cum[i] || i===cum.length-1){
+      const segLen = (cum[i]-cum[i-1]) || 1e-6;
+      const t = Math.min(1, Math.max(0, (target-cum[i-1])/segLen));
+      return pts[i-1].clone().lerp(pts[i], t);
+    }
+  }
+  return pts[pts.length-1].clone();
+}
+function rebuildParticleMeshes(){
+  disposeGroup(particleGroup);
+  if(!state.showRayParticles) return;
+  const PER_RAY = 4;
+  activeRayPaths.forEach(path=>{
+    path._meshes = [];
+    for(let i=0;i<PER_RAY;i++){
+      const m = new THREE.Mesh(particleGeo, new THREE.MeshBasicMaterial({color:path.color}));
+      particleGroup.add(m);
+      path._meshes.push(m);
+    }
+  });
+}
+
+/* -------- LENS / COMBO ray tracing via paraxial (h,theta) transfer -------- */
+// elements: array of {x:number, f:number}
+function traceThroughLenses(elements, startX, h0, theta0, ignoreAperture=false){
+  // returns array of {x,h} waypoints, plus final (x,h,theta) state going forward.
+  // If a ray's height at some element exceeds the physical aperture, it misses that
+  // element (and everything after it) — tracing stops there and `missed` is set so
+  // the caller can draw the rest as an undeviated straight continuation. Pass
+  // ignoreAperture=true for the idealized principal-ray construction (A/B/C),
+  // which — like a textbook diagram — assumes an imaginary large-enough lens
+  // and should always trace all the way through; only the "accurate fan" of
+  // real light rays needs the physical cutoff.
+  const waypoints = [{x:startX, h:h0}];
+  let x = startX, h = h0, th = theta0, missed = false;
+  const sorted = elements.slice().sort((a,b)=>a.x-b.x);
+  for(const el of sorted){
+    if(el.x <= x + 1e-6) continue;
+    h = h + th*(el.x - x);
+    x = el.x;
+    waypoints.push({x,h});
+    if(!ignoreAperture && Math.abs(h) > currentAperture){ missed = true; break; }
+    th = th - h/el.f;
+  }
+  return {waypoints, x, h, theta: th, missed};
+}
+
+function buildLensRays(elements, objX, objH){
+  const firstX = elements[0].x;
+  const rays = [];
+  // Ray A: parallel to axis
+  rays.push({color:COL_A, theta0:0});
+  // Ray B: through centre of first lens (undeviated at that lens ideally; using theta aim)
+  rays.push({color:COL_B, theta0:(0-objH)/(firstX-objX)});
+  // Ray C: through front focal point of first lens
+  const Ffront = firstX - elements[0].f;
+  rays.push({color:COL_C, theta0:(0-objH)/(Ffront-objX)});
+  // Ray E: from the object's foot (on the axis) straight along the axis
+  // through the lens's optical centre -> arrives dead-on-axis so it's
+  // undeviated the whole way through, same as the mirror's foot ray. Shows
+  // that the base of every real object/image pair sits on the axis.
+  rays.push({color:COL_E, theta0:0, isFoot:true});
+
+  let imagePt = null;
+  rays.forEach(r=>{
+    const res = traceThroughLenses(elements, objX, r.isFoot?0:objH, r.theta0, true);
+    const pts = res.waypoints.map(w=>new THREE.Vector3(w.x, w.h, 0));
+    pts.push(new THREE.Vector3(res.x, res.h, 0));
+    // extend forward
+    const farX = res.x + EXT;
+    const farH = res.h + res.theta*EXT;
+    pts.push(new THREE.Vector3(farX, farH, 0));
+    emitRay([{points:pts, dashed:false, branch:false}], r.color);
+    if(r.color===COL_B){
+      // find axis crossing for reference (image point) using this ray's forward trajectory
+      if(Math.abs(res.theta) > 1e-9){
+        const xCross = res.x + (0-res.h)/res.theta;
+        imagePt = xCross;
+      }
+    }
+  });
+  return imagePt;
+}
+
+// "Accurate point-source" mode: every point on the object actually radiates
+// in every direction, not just the 3 textbook construction rays — so even a
+// lens/mirror much smaller than the object still catches *some* of those
+// rays from every object point and forms the full image, just dimmer. This
+// traces a fan of extra rays aimed at evenly-spaced heights across the
+// element's current aperture (so, unlike the 3 principal rays, they're
+// guaranteed to actually hit it) purely to make that visible — the image
+// height itself no longer gets clipped to the aperture in this mode either
+// (see updateImageVisual).
+const FAN_COLOR = 0x5a7a94;
+function buildLensRayFan(elements, objX, objH){
+  const firstX = elements[0].x;
+  const n = Math.max(8, state.rayDensity || 12);
+  const halfRange = currentAperture * 0.94;
+  for(let i=0; i<n; i++){
+    const frac = n>1 ? (i/(n-1))*2-1 : 0; // -1..1 across the aperture
+    const hTarget = frac*halfRange;
+    const theta0 = (hTarget - objH)/(firstX - objX);
+    const res = traceThroughLenses(elements, objX, objH, theta0);
+    if(res.missed){
+      if(!state.showMissedRays) continue;
+      const pts = res.waypoints.map(w=>new THREE.Vector3(w.x, w.h, 0));
+      pts.push(new THREE.Vector3(res.x + EXT, res.h + res.theta*EXT, 0));
+      emitRay([{points:pts, dashed:true}], COL_MISS);
+      continue;
+    }
+    const pts = res.waypoints.map(w=>new THREE.Vector3(w.x, w.h, 0));
+    pts.push(new THREE.Vector3(res.x, res.h, 0));
+    const farX = res.x + EXT;
+    const farH = res.h + res.theta*EXT;
+    pts.push(new THREE.Vector3(farX, farH, 0));
+    emitRay([{points:pts, dashed:false, branch:false}], FAN_COLOR);
+  }
+}
+
+/* -------- MIRROR ray tracing (geometric F / C construction) -------- */
+// Straight, undeviated continuation for a ray that sails past the mirror's aperture.
+function missLeg(p1, p2){
+  const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+  return [p1, p2, p2.clone().addScaledVector(dir, EXT)];
+}
+
+// Where the *true* curved surface sits at a given height h — the paraxial
+// construction below still uses the flat-pole math to find F, C and the
+// physical (u,v,f,m) readout, but every ray is drawn bending exactly at the
+// real surface point (not the imaginary flat pole), so with the mirror now
+// modeled as a real solid, no reflected ray is ever drawn appearing to pass
+// through its body.
+function mirrorSurfaceX(Lx, h){
+  if(!currentMirrorProfile) return Lx;
+  const r = Math.min(Math.abs(h), currentMirrorProfile.aperture);
+  return Lx + currentMirrorProfile.fn(r);
+}
+
+function buildMirrorRays(Lx, f, objX, objH){
+  const F = Lx + f;
+  const C = Lx + 2*f;
+
+  // Ray A: parallel to axis -> reflects through F. Always drawn in full as
+  // an idealized construction line (the standard textbook diagram assumes
+  // an imaginary large mirror for this purpose) — the physical aperture only
+  // limits the "accurate fan" of real light rays, not these 4 principal rays.
+  {
+    const p1 = new THREE.Vector3(objX, objH, 0);
+    const mx = mirrorSurfaceX(Lx, objH);
+    const p2 = new THREE.Vector3(mx, objH, 0);
+    const dir = new THREE.Vector3(F-mx, 0-objH, 0).normalize();
+    const p3 = p2.clone().addScaledVector(dir, EXT);
+    const legs = [{points:[p1,p2,p3]}];
+    if(f>0){ // convex: virtual, dashed extension behind mirror through F and on beyond it,
+      // so it reads as a continuing ray rather than one that stops dead at a point.
+      const dirF = new THREE.Vector3(F-mx, 0-objH, 0).normalize();
+      const farF = p2.clone().addScaledVector(dirF, EXT);
+      legs.push({points:[p2, farF], dashed:true, branch:true});
+    }
+    emitRay(legs, COL_A);
+  }
+  // Ray C: through F -> reflects parallel. Always drawn in full (see Ray A note).
+  {
+    const t = (Lx-objX)/((F-objX)||1e-9);
+    const hM = objH + (0-objH)*t;
+    const mx = mirrorSurfaceX(Lx, hM);
+    const p1 = new THREE.Vector3(objX, objH, 0);
+    const p2 = new THREE.Vector3(mx, hM, 0);
+    const p3 = new THREE.Vector3(mx-EXT, hM, 0);
+    emitRay([{points:[p1,p2], dashed:t<0||t>1}, {points:[p2,p3]}], COL_C);
+  }
+  // Ray B: through centre of curvature C -> retraces (undeviated line). Always drawn in full (see Ray A note).
+  {
+    const t = (Lx-objX)/((C-objX)||1e-9);
+    const hM = objH + (0-objH)*t;
+    const mx = mirrorSurfaceX(Lx, hM);
+    const p1 = new THREE.Vector3(objX, objH, 0);
+    const p2 = new THREE.Vector3(mx, hM, 0);
+    const dir = new THREE.Vector3(mx-objX, hM-objH, 0).normalize();
+    const p3 = p2.clone().addScaledVector(dir, -EXT);
+    emitRay([{points:[p1,p2]}, {points:[p2,p3]}], COL_B);
+  }
+  // Ray D: the 4th principal ray, aimed straight at the pole -> reflects
+  // making an equal angle with the principal axis on the other side. At the
+  // pole the mirror's tangent plane is exactly vertical (perpendicular to
+  // the axis), so this is a plain specular reflection off a normal of
+  // (1,0,0): the along-axis component of the direction flips sign, the
+  // transverse component is preserved — which is exactly the textbook
+  // "equal angles" construction, and works for any point on the object,
+  // on- or off-axis. Drawn unconditionally alongside rays A/B/C, governed
+  // only by the master "Ray lines" toggle (via emitRay/state.showRays).
+  {
+    const p1 = new THREE.Vector3(objX, objH, 0);
+    const mx = mirrorSurfaceX(Lx, 0);
+    const p2 = new THREE.Vector3(mx, 0, 0);
+    const din = new THREE.Vector3(mx-objX, 0-objH, 0).normalize();
+    const dOut = new THREE.Vector3(-din.x, din.y, 0);
+    const p3 = p2.clone().addScaledVector(dOut, EXT);
+    emitRay([{points:[p1,p2,p3]}], COL_D);
+  }
+  // Ray E: from the object's foot (its base, sitting on the axis) straight
+  // along the principal axis to the pole -> since it arrives dead-on-axis
+  // (zero angle), the law of reflection just sends it straight back the way
+  // it came. This is the "foot maps to foot" ray — the base of every real
+  // object/image pair sits on the axis, and this is why.
+  {
+    const p1 = new THREE.Vector3(objX, 0, 0);
+    const mx = mirrorSurfaceX(Lx, 0);
+    const p2 = new THREE.Vector3(mx, 0, 0);
+    const p3 = new THREE.Vector3(mx-EXT, 0, 0);
+    emitRay([{points:[p1,p2,p3]}], COL_E);
+  }
+}
+
+/* -------- FLAME RAY FAN (true per-point reflection off the curved surface) --------
+   The 3 principal rays above use the ideal paraxial construction (parallel->F,
+   F->parallel, through-C) which is exact for thin, paraxial optics and drives
+   the physics readout (u, v, f, m). The fan below is a *second*, independent
+   set of rays fired from the flame tip at many angles around the full 360°,
+   each reflected off the mirror's actual curved surface using its real local
+   normal — this is what lets students see every point emit light in every
+   direction, see rays that miss the mirror, and see mild spherical aberration
+   (wide-angle rays not landing exactly on the paraxial image) the way a real
+   curved mirror actually behaves. */
+let currentMirrorProfile = null; // {fn(r), aperture} for the active mirror, set by rebuildElement
+
+// Finds where a ray from p0 in direction dir=(dx,dy) (dx>0, heading toward the
+// mirror) meets the surface x=fn(|y|). Fixed-point iteration converges in a
+// handful of steps since the surface only deviates a little from x=0 across
+// the aperture. Returns null if the ray's height at the surface exceeds the
+// physical aperture (i.e. it misses the mirror).
+function traceRayToMirror(fn, aperture, p0, dir){
+  if(dir.x <= 1e-6) return null;
+  let t = Math.max((0 - p0.x)/dir.x, 0);
+  for(let i=0;i<24;i++){
+    const y = p0.y + dir.y*t;
+    if(Math.abs(y) > aperture*1.3) return null;
+    const xs = fn(Math.min(Math.abs(y), aperture));
+    t = (xs - p0.x)/dir.x;
+    if(t<0) return null;
+  }
+  const y = p0.y + dir.y*t;
+  if(Math.abs(y) > aperture || t<=1e-6) return null;
+  const x = p0.x + dir.x*t;
+  const eps = 0.6;
+  const ya = Math.max(Math.abs(y)-eps, 0), yb = Math.min(Math.abs(y)+eps, aperture);
+  const sgn = y>=0 ? 1 : -1;
+  const tangent = new THREE.Vector2(fn(yb)-fn(ya), sgn*(yb-ya)).normalize();
+  let normal = new THREE.Vector2(-tangent.y, tangent.x);
+  if(normal.x*dir.x + normal.y*dir.y > 0) normal.negate(); // normal must oppose the incoming ray
+  return {x, y, normal};
+}
+function reflectDir2D(dir, normal){
+  const d = dir.x*normal.x + dir.y*normal.y;
+  return {x: dir.x - 2*d*normal.x, y: dir.y - 2*d*normal.y};
+}
+function quadrantOf(dx, dy){
+  const right = dx > 0.02;
+  const up = dy >= 0;
+  return right ? (up?'ur':'lr') : (up?'ul':'ll');
+}
+function buildFlameRayFan(objX, objH, isReal){
+  if(!state.showRays || !currentMirrorProfile || state.rayDensity<=0) return;
+  const {fn, aperture} = currentMirrorProfile;
+  const p0 = {x:objX, y:objH};
+  const n = state.rayDensity;
+  for(let i=0;i<n;i++){
+    const ang = (i/n)*Math.PI*2;
+    const dx = Math.cos(ang), dy = Math.sin(ang);
+    const quad = quadrantOf(dx,dy);
+    if(!state.rayQuadrants[quad]) continue;
+    const p1 = new THREE.Vector3(p0.x, p0.y, 0);
+    if(dx <= 0.02){
+      // Heading away from the mirror — this light never interacts with it,
+      // but it's still a real ray of light, so it keeps going like any other.
+      const p2 = new THREE.Vector3(p0.x+dx*EXT, p0.y+dy*EXT, 0);
+      rayGroup.add(rayLine([p1,p2], 0x39434e, false));
+      continue;
+    }
+    const hit = traceRayToMirror(fn, aperture, p0, {x:dx,y:dy});
+    if(!hit){
+      if(!state.showMissedRays) continue;
+      const p2 = new THREE.Vector3(p0.x+dx*EXT, p0.y+dy*EXT, 0);
+      rayGroup.add(rayLine([p1,p2], COL_MISS, true));
+      continue;
+    }
+    const pHit = new THREE.Vector3(hit.x, hit.y, 0);
+    const refl = reflectDir2D({x:dx,y:dy}, hit.normal);
+    const pFar = new THREE.Vector3(hit.x+refl.x*EXT, hit.y+refl.y*EXT, 0);
+    rayGroup.add(rayLine([p1,pHit], 0xffb454, false));
+    rayGroup.add(rayLine([pHit,pFar], 0xffb454, false));
+    if(!isReal){
+      const pBack = new THREE.Vector3(hit.x-refl.x*EXT, hit.y-refl.y*EXT, 0);
+      rayGroup.add(rayLine([pHit,pBack], COL_VIRTUAL, true, true));
+    }
+  }
+}
+
+/* -------- PROJECTION SCREEN -------- */
+const screenMat = new THREE.MeshStandardMaterial({color:0xe9edf1, roughness:0.92, metalness:0, side:THREE.DoubleSide});
+// Soft radial-gradient sprite standing in for a defocused (or in-focus) spot
+// of light landing on the screen. `sharpness` 1 = tight, in-focus point;
+// toward 0 = spread into a dim, diffuse circle of confusion.
+function spotTexture(sharpness, alpha){
+  const size=128;
+  const cvs=document.createElement('canvas'); cvs.width=size; cvs.height=size;
+  const ctx=cvs.getContext('2d');
+  const grad = ctx.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2);
+  const stop = Math.max(0.04, sharpness*0.75);
+  grad.addColorStop(0, `rgba(255,232,190,${alpha})`);
+  grad.addColorStop(stop, `rgba(255,205,150,${alpha*0.65})`);
+  grad.addColorStop(1, 'rgba(255,205,150,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,size,size);
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.needsUpdate = true;
+  return tex;
+}
+function updateScreen(result){
+  disposeGroup(screenGroup);
+  screenGroup.visible = state.mode==='mirror' && state.screenOn;
+  if(!screenGroup.visible) return;
+  const sx = state.screenX, sy = state.screenY;
+  const baseSize = state.screenSize;
+
+  // Work out the projected spot first (if any), so the screen can auto-
+  // enlarge to fit it before we build the geometry at its final size.
+  let showSpot=false, dist=0, sharpness=0, alpha=0, spread=0, imgH=0;
+  if(result && result.real && !result.atInfinity){
+    showSpot = true;
+    dist = Math.abs(sx - result.imgX);
+    sharpness = Math.max(0, 1 - dist/70);
+    alpha = Math.max(0.05, 1 - dist/160);
+    spread = 8 + dist*0.9;
+    imgH = result.imgH;
+  }
+  // Auto-enlarge: the manual slider sets a *minimum* size; if the projected
+  // spot (or its offset from centre) would spill past the edge, grow the
+  // screen to comfortably contain it rather than clipping the image.
+  const neededForSpot = showSpot ? Math.max(spread*1.4, Math.abs(imgH)*2.3) : 0;
+  const size = Math.max(baseSize, Math.min(neededForSpot, 400));
+
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(size, size*0.72), screenMat);
+  plane.rotation.y = Math.PI/2;
+  plane.position.set(sx, sy, 0);
+  plane.receiveShadow = true;
+  screenGroup.add(plane);
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(plane.geometry), new THREE.LineBasicMaterial({color:0x4a5866}));
+  edges.rotation.copy(plane.rotation); edges.position.copy(plane.position);
+  screenGroup.add(edges);
+  // A thin stand so the screen doesn't look like it's floating above the floor.
+  const groundY = -95;
+  const screenBottom = sy - size*0.36;
+  const standH = Math.max(4, screenBottom - groundY);
+  const standMat = new THREE.MeshStandardMaterial({color:0x2a323c, roughness:.7});
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.4, standH, 8), standMat);
+  stand.position.set(sx, groundY + standH/2, 0);
+  screenGroup.add(stand);
+
+  // Only REAL images ever land on the screen — a virtual image's rays only
+  // *appear* to diverge from a point, so there is nothing there to project.
+  if(showSpot){
+    const tex = spotTexture(sharpness, alpha);
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false}));
+    const clampedH = Math.max(-size*0.32, Math.min(size*0.32, imgH));
+    spr.position.set(sx+0.6, clampedH, 0); // spot sits at the image height on the screen
+    spr.scale.set(Math.min(spread, size*0.9), Math.min(spread, size*0.9), 1);
+    spr.renderOrder = 6;
+    screenGroup.add(spr);
+  }
+}
+
+// A collimated light source: a cylinder with two flat circular faces, axis along
+// the optical axis. Parallel rays are shown leaving its front circular face.
+// tiltYRad/tiltZRad tilt the whole source (and the beam it emits) away from the
+// optical axis — rotating it about its OWN long axis would do nothing visually
+// since it's radially symmetric, so those two are the only tilts that matter.
+function buildBeamSource(sourceX, radius, tiltYRad=0, tiltZRad=0){
+  const grp = new THREE.Group();
+  const bodyLen = 46;
+  const geo = new THREE.CylinderGeometry(radius, radius, bodyLen, 28, 1, true);
+  geo.rotateZ(Math.PI/2); // cylinder axis -> world X
+  const mat = new THREE.MeshStandardMaterial({
+    color:0x30414f, transparent:true, opacity:0.28, side:THREE.DoubleSide,
+    roughness:0.5, metalness:0.1, emissive:0x1c2a35, emissiveIntensity:0.4
+  });
+  const body = new THREE.Mesh(geo, mat);
+  grp.add(body);
+  // flat circular end caps (front face = emitting face, facing +X toward the element)
+  const capGeo = new THREE.RingGeometry(0, radius, 28);
+  const frontCap = new THREE.Mesh(capGeo, new THREE.MeshBasicMaterial({color:0xffb454, transparent:true, opacity:0.16, side:THREE.DoubleSide}));
+  frontCap.rotation.y = Math.PI/2;
+  frontCap.position.x = bodyLen/2;
+  grp.add(frontCap);
+  const backCap = new THREE.Mesh(capGeo, new THREE.MeshBasicMaterial({color:0x5fd0e0, transparent:true, opacity:0.1, side:THREE.DoubleSide}));
+  backCap.rotation.y = Math.PI/2;
+  backCap.position.x = -bodyLen/2;
+  grp.add(backCap);
+  // rim ring on the emitting face for a glowing edge
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.8, 6, 32), new THREE.MeshBasicMaterial({color:0xffb454}));
+  rim.rotation.y = Math.PI/2;
+  rim.position.x = bodyLen/2;
+  grp.add(rim);
+  grp.position.x = sourceX - bodyLen/2;
+  // Tilt about Y (up/down, in-plane) and Z (left/right, out-of-plane) — everything
+  // except a spin about the beam's own X axis, which is a no-op on a circular source.
+  grp.rotation.z = tiltYRad;
+  grp.rotation.y = -tiltZRad;
+  return grp;
+}
+
+// Paraxial transfer through a sequence of thin, rotationally-symmetric elements
+// (lenses, or a mirror expressed as a single {x,f} element), tracking BOTH
+// transverse axes (y = up/down, z = left/right) independently. This is what
+// lets the parallel-ray demo be tilted off the optical axis in either plane:
+// to first order a rotationally-symmetric system acts on y and z the same way
+// it acts on a single height, so the two components just evolve in parallel.
+function traceThroughLenses3D(elements, startX, y0, z0, thetaY0, thetaZ0){
+  const waypoints = [{x:startX, y:y0, z:z0}];
+  let x = startX, y = y0, z = z0, thY = thetaY0, thZ = thetaZ0, missed = false;
+  const sorted = elements.slice().sort((a,b)=>a.x-b.x);
+  for(const el of sorted){
+    if(el.x <= x + 1e-6) continue;
+    y = y + thY*(el.x - x);
+    z = z + thZ*(el.x - x);
+    x = el.x;
+    waypoints.push({x,y,z});
+    if(Math.hypot(y,z) > currentAperture){ missed = true; break; }
+    thY = thY - y/el.f;
+    thZ = thZ - z/el.f;
+  }
+  return {waypoints, x, y, z, thetaY: thY, thetaZ: thZ, missed};
+}
+
+// Fires a bundle of rays at the element — parallel to each other, but tilted
+// as a whole by state.beamTiltY/beamTiltZ if set — to demonstrate that
+// parallel rays converge through (or appear to diverge from) the focal plane,
+// independent of where the object currently is. A mirror is treated as a
+// single thin element with its own focal length, so the same 3D tracer
+// handles mirror, lens, and 2-lens modes uniformly.
+function buildParallelDemo(mode, elements, Lx, f){
+  const els = mode==='mirror' ? [{x:Lx, f}] : elements;
+  const startX = els[0].x - 260;
+  const r = state.beamRadius;
+  const tiltYRad = state.beamTiltY * Math.PI/180;
+  const tiltZRad = state.beamTiltZ * Math.PI/180;
+  const thetaY0 = Math.tan(tiltYRad);
+  const thetaZ0 = Math.tan(tiltZRad);
+  beamSourceGroup.add(buildBeamSource(startX, r, tiltYRad, tiltZRad));
+  const heights = [-0.95, -0.5, 0.5, 0.95].map(k=>k*r);
+  for(const h of heights){
+    const res = traceThroughLenses3D(els, startX, h, 0, thetaY0, thetaZ0);
+    const pts = res.waypoints.map(w=>new THREE.Vector3(w.x, w.y, w.z));
+    pts.push(new THREE.Vector3(res.x, res.y, res.z));
+    const farX = res.x + 420;
+    pts.push(new THREE.Vector3(farX, res.y + res.thetaY*420, res.z + res.thetaZ*420));
+    rayGroup.add(rayLine(pts, 0x4a5a6a, false));
+  }
+}
+
+/* ============================== PHYSICS ============================== */
+function solveSingle(kind, f, Lx, objX, objH){
+  const u = objX - Lx;
+  if(Math.abs(u) < 1e-6) return null;
+  let v, m, real;
+  if(kind==='mirror'){
+    const denom = 1/f - 1/u;
+    v = Math.abs(denom)<1e-9 ? Math.sign(denom||1)*1e7 : 1/denom;
+    m = -v/u;
+    real = v < 0;
+  } else {
+    const denom = 1/f + 1/u;
+    v = Math.abs(denom)<1e-9 ? Math.sign(denom||1)*1e7 : 1/denom;
+    m = v/u;
+    real = v > 0;
+  }
+  const imgX = Lx + v;
+  const imgH = m*objH;
+  return {u,v,f,m,imgX,imgH,real, atInfinity: Math.abs(v)>5e6};
+}
+
+function solveCombo(){
+  const Lx1 = 0, Lx2 = state.sep;
+  const f1raw = bendToF(state.bend1);
+  const f2raw = bendToF(state.bend2);
+  const s1 = solveSingle('lens', f1raw, Lx1, state.objX, state.objH);
+  if(!s1) return null;
+  const s2 = solveSingle('lens', f2raw, Lx2, s1.imgX, s1.imgH);
+  if(!s2) return null;
+  return {
+    u: s1.u, v: s2.v, f: null,
+    m: s1.m*s2.m,
+    imgX: s2.imgX, imgH: s2.imgH,
+    real: s2.real,
+    atInfinity: s2.atInfinity,
+    stage1: s1, stage2: s2, Lx1, Lx2, f1: f1raw, f2: f2raw
+  };
+}
+
+/* ============================== SCENE REBUILD ============================== */
+let currentElements = []; // for lens tracing
+let currentAperture = 46; // physical half-height of the element — rays beyond this miss it
+
+function rebuildElement(){
+  disposeGroup(elementGroup);
+  disposeGroup(planeGroup);
+  currentElements = [];
+  currentMirrorProfile = null;
+
+  if(state.mode==='mirror'){
+    const f = bendToF(state.mirrorBend);
+    const {grp, aperture} = buildMirror(0, f);
+    elementGroup.add(grp);
+    currentAperture = aperture;
+    const type = f >= 0 ? 'convex' : 'concave';
+    const R = Math.max(2*Math.abs(f), 46);
+    currentMirrorProfile = {fn: r => (type==='concave') ? sag(r,R) : -sag(r,R), aperture};
+    if(state.showF) planeGroup.add(makeFocalPlane(f, 'F', 0xffb454));
+    if(state.showC) planeGroup.add(makeFocalPlane(2*f, 'C', 0x5fd0e0));
+    if(state.showLabels){
+      const pLabel = textSprite('P', '#dfe6ee');
+      pLabel.position.set(0, 16, 0);
+      planeGroup.add(pLabel);
+      placeFreeLabel(pLabel, 'axisP');
+      const axLabel = textSprite('Principal Axis', '#7c8896');
+      axLabel.position.set(-220, 10, 0);
+      planeGroup.add(axLabel);
+      placeFreeLabel(axLabel, 'axisText');
+    }
+  } else if(state.mode==='lens'){
+    const f = bendToF(state.lensBend);
+    const {grp, aperture} = buildLens(0, f);
+    elementGroup.add(grp);
+    currentAperture = aperture;
+    if(state.showF){
+      planeGroup.add(makeFocalPlane(f, 'F\u2032', 0xffb454));
+      planeGroup.add(makeFocalPlane(-f, 'F', 0x5fd0e0));
+    }
+    currentElements = [{x:0, f}];
+  } else if(state.mode==='combo'){
+    const f1 = bendToF(state.bend1);
+    const f2 = bendToF(state.bend2);
+    const Lx2 = state.sep;
+    const l1 = buildLens(0, f1), l2 = buildLens(Lx2, f2);
+    elementGroup.add(l1.grp);
+    elementGroup.add(l2.grp);
+    currentAperture = Math.min(l1.aperture, l2.aperture);
+    if(state.showF){
+      planeGroup.add(makeFocalPlane(f1, 'F\u2032\u2081', 0xffb454));
+      planeGroup.add(makeFocalPlane(-f1, 'F\u2081', 0x5fd0e0));
+      planeGroup.add(makeFocalPlane(Lx2+f2, 'F\u2032\u2082', 0xff8fa3));
+      planeGroup.add(makeFocalPlane(Lx2-f2, 'F\u2082', 0xc792ea));
+    }
+    currentElements = [{x:0,f:f1},{x:Lx2,f:f2}];
+  }
+}
+
+const objArrow = makeArrow(0xffb454, 1);
+objArrow.visible = false; // hidden by default until recompute() picks the
+                            // right object for the current mode — without
+                            // this it defaults to Object3D's visible:true
+                            // and briefly (or, if recompute ever throws
+                            // before reaching the mode branch, permanently)
+                            // renders on top of the candle in mirror mode.
+objectGroup.add(objArrow);
+// Invisible, oversized grab target so the arrow is easy to hit on both
+// mouse and touch — the visible arrow itself is too thin to reliably tap.
+const objHitGeo = new THREE.CylinderGeometry(16, 16, 200, 10);
+objHitGeo.translate(0, 0, 0);
+const objHitMat = new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false, depthTest:false});
+const objHitMesh = new THREE.Mesh(objHitGeo, objHitMat);
+objHitMesh.position.set(0, 0, 0);
+objArrow.add(objHitMesh);
+objArrow.userData.hitMesh = objHitMesh;
+// Mirror mode's object: a realistic candle instead of the plain arrow (the
+// arrow stays in use for Lens/2-Lens System mode). Gets its own grab target.
+const candleObj = buildCandle();
+objectGroup.add(candleObj);
+const candleHitMesh = new THREE.Mesh(new THREE.CylinderGeometry(15,15,150,10), objHitMat);
+candleObj.add(candleHitMesh);
+candleObj.userData.hitMesh = candleHitMesh;
+
+// Alternative Mirror-mode objects: a standing letter or number plaque,
+// selectable from the Object dropdown in place of the candle. Built from a
+// canvas-drawn glyph texture rather than THREE.TextGeometry/FontLoader, so
+// there's no external font-JSON fetch involved — any character the browser
+// can render with the page's own web font works.
+function makeGlyphTexture(text){
+  const cvs = document.createElement('canvas');
+  cvs.width = cvs.height = 256;
+  const ctx = cvs.getContext('2d');
+  ctx.font = '800 210px "Space Grotesk", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, 128, 142);
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.needsUpdate = true;
+  return tex;
+}
+const SIGN_BASE_H = 42; // the plaque's natural drawn height (local units at scale 1) — mirrors CANDLE-style proportions
+function buildSignObject(){
+  const g = new THREE.Group();
+  const footMat = new THREE.MeshStandardMaterial({color:0x3a4351, roughness:.55, metalness:.08});
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(6.4,7.2,2,18), footMat);
+  foot.position.y = 1;
+  foot.castShadow = true; foot.receiveShadow = true;
+  g.add(foot);
+  const boardMat = new THREE.MeshPhysicalMaterial({color:0x1b2330, roughness:.4, metalness:.1, clearcoat:.3, clearcoatRoughness:.35});
+  const board = new THREE.Mesh(new THREE.BoxGeometry(SIGN_BASE_H*0.62, SIGN_BASE_H, 3.2), boardMat);
+  board.position.y = SIGN_BASE_H/2 + 2;
+  board.castShadow = true; board.receiveShadow = true;
+  g.add(board);
+  // Glyph texture is painted on two back-to-back planes, proud of the board's
+  // faces, so the character reads correctly from either side (e.g. while
+  // orbiting or in Object View looking back through the plaque).
+  const glyphMat = new THREE.MeshBasicMaterial({transparent:true, depthWrite:false});
+  const glyphPlane = new THREE.Mesh(new THREE.PlaneGeometry(SIGN_BASE_H*0.56, SIGN_BASE_H*0.9), glyphMat);
+  glyphPlane.position.set(0, SIGN_BASE_H/2+2, 1.7);
+  g.add(glyphPlane);
+  const glyphPlaneBack = new THREE.Mesh(new THREE.PlaneGeometry(SIGN_BASE_H*0.56, SIGN_BASE_H*0.9), glyphMat);
+  glyphPlaneBack.position.set(0, SIGN_BASE_H/2+2, -1.7);
+  glyphPlaneBack.rotation.y = Math.PI;
+  g.add(glyphPlaneBack);
+  g.userData = {foot, board, glyphMat, glyphPlane, glyphPlaneBack};
+  return g;
+}
+// Rebuilds just the glyph texture (character changed) without touching the
+// board/foot materials — used for the real sign and both ghost signs alike.
+function setSignGlyph(group, text){
+  const tex = makeGlyphTexture(text);
+  if(group.userData.glyphMat.map) group.userData.glyphMat.map.dispose();
+  group.userData.glyphMat.map = tex;
+  group.userData.glyphMat.needsUpdate = true;
+}
+// Scales the plaque so its top sits at `height` above the axis — same
+// upright-only convention as setCandle(): the real object never flips, a
+// negative height is just treated as its magnitude.
+function setSignObject(group, height){
+  const h = Math.max(Math.abs(height), 7);
+  const s = h/SIGN_BASE_H;
+  group.scale.set(s, s, s);
+  group.rotation.z = 0;
+}
+const signObj = buildSignObject();
+objectGroup.add(signObj);
+setSignGlyph(signObj, state.objectGlyph);
+const signHitMesh = new THREE.Mesh(new THREE.CylinderGeometry(15,15,150,10), objHitMat);
+signObj.add(signHitMesh);
+signObj.userData.hitMesh = signHitMesh;
+
+let activeObjVisual = objArrow; // whichever of objArrow/candleObj/signObj is currently in play — drag code reads this
+let objectViewActive = false; // true while the camera is parked at the object's own tip (see btnObjectView)
+const imgArrowReal = makeArrow(0x4ade80, 0.95, false, 0.55);
+const imgArrowVirtual = makeArrow(0xd66bff, 0.85, false, 0.55);
+// Always draw on top of the mirror/lens glass and the studio specular
+// highlight, and never depth-sort behind them — the whole point is that
+// this reads as a distinct floating marker, not something blended into
+// the element's surface shading.
+[imgArrowReal, imgArrowVirtual].forEach(a=>{
+  a.userData.mat.depthTest = false;
+  a.userData.shaft.renderOrder = 9;
+  a.userData.cone.renderOrder = 9;
+});
+// Small always-on-top labels so the computed image reads unmistakably as
+// "the image, sitting at its own point in space" rather than something
+// smeared onto the element's glass — depthTest:false (set inside
+// textSprite) means these punch through the mirror/lens mesh instead of
+// getting buried behind it.
+const imgLabelReal = pillLabelSprite('IMAGE', '#4ade80');
+const imgLabelVirtual = pillLabelSprite('IMAGE (virtual)', '#d66bff');
+imgLabelReal.renderOrder = 12;
+imgLabelVirtual.renderOrder = 12;
+imgArrowReal.add(imgLabelReal);
+imgArrowVirtual.add(imgLabelVirtual);
+imageGroup.add(imgArrowReal, imgArrowVirtual);
+
+// Ghost-candle image markers for Mirror mode: same geometry as the real
+// candle object, reused via buildCandle()/setCandle() so it scales and
+// stands upright the same way, but re-skinned as a translucent single-color
+// silhouette (like the image arrows) so it reads as "a phantom copy of the
+// candle" rather than a plain arrow sitting next to a realistic candle.
+function buildGhostCandle(color, respectDepth=false){
+  const g = buildCandle();
+  const mat = new THREE.MeshBasicMaterial({color, transparent:true, opacity:.5, depthWrite:respectDepth, depthTest:respectDepth});
+  g.traverse(obj=>{
+    if(obj.isMesh){
+      obj.material = mat;
+      obj.castShadow = false;
+      obj.receiveShadow = false;
+      obj.renderOrder = 9;
+    }
+  });
+  // The flame's point light is real scene lighting, not part of the ghost
+  // silhouette — drop it so the ghost image doesn't relight the mirror bench.
+  g.userData.flameGroup.remove(g.userData.flameLight);
+  g.userData.mat = mat;
+  return g;
+}
+// Scales/orients a ghost candle for a given (signed) image height. Reuses
+// setCandle() for the wax/wick/flame proportions, then — unlike the real
+// candle, which always stands upright — flips it for a negative height so a
+// mirror's inverted real image actually reads as inverted, not just shorter.
+function setGhostCandle(group, height){
+  setCandle(group, height);
+  group.rotation.z = height>=0 ? 0 : Math.PI;
+}
+const ghostCandleReal = buildGhostCandle(0x4ade80);
+const ghostCandleVirtual = buildGhostCandle(0xd66bff, true);
+const ghostLabelReal = pillLabelSprite('IMAGE', '#4ade80');
+const ghostLabelVirtual = pillLabelSprite('IMAGE (virtual)', '#d66bff');
+ghostLabelReal.renderOrder = 12;
+ghostLabelVirtual.renderOrder = 12;
+ghostCandleReal.add(ghostLabelReal);
+ghostCandleVirtual.add(ghostLabelVirtual);
+imageGroup.add(ghostCandleReal, ghostCandleVirtual);
+
+// Ghost-sign image markers: the Letter/Number counterpart to the ghost
+// candle above, for when state.objectType isn't 'candle'. Reuses the same
+// plaque geometry as the real sign, re-skinned translucent in the same
+// real/virtual green/purple as every other image marker in the scene.
+function buildGhostSign(color, respectDepth=false){
+  const g = buildSignObject();
+  const ghostMat = new THREE.MeshBasicMaterial({color, transparent:true, opacity:.35, depthWrite:respectDepth, depthTest:respectDepth});
+  g.userData.foot.material = ghostMat;
+  g.userData.board.material = ghostMat;
+  g.userData.glyphMat.color = new THREE.Color(color);
+  g.userData.glyphMat.opacity = 1;
+  g.userData.glyphMat.depthTest = respectDepth;
+  g.traverse(obj=>{ if(obj.isMesh) obj.renderOrder = 9; });
+  return g;
+}
+// Same upright/flip convention as setGhostCandle(): sized off setSignObject,
+// then flipped for a negative (inverted) image height, which the real sign
+// itself never does.
+function setGhostSign(group, height){
+  setSignObject(group, height);
+  group.rotation.z = height>=0 ? 0 : Math.PI;
+}
+const ghostSignReal = buildGhostSign(0x4ade80);
+const ghostSignVirtual = buildGhostSign(0xd66bff, true);
+setSignGlyph(ghostSignReal, state.objectGlyph);
+setSignGlyph(ghostSignVirtual, state.objectGlyph);
+const ghostSignLabelReal = pillLabelSprite('IMAGE', '#4ade80');
+const ghostSignLabelVirtual = pillLabelSprite('IMAGE (virtual)', '#d66bff');
+ghostSignLabelReal.renderOrder = 12;
+ghostSignLabelVirtual.renderOrder = 12;
+ghostSignReal.add(ghostSignLabelReal);
+ghostSignVirtual.add(ghostSignLabelVirtual);
+imageGroup.add(ghostSignReal, ghostSignVirtual);
+
+// Image point markers: a small dot sitting exactly on the principal axis at
+// the image's location — independent of the "Image arrow" toggle, which
+// controls the full candle/sign/arrow representation. This is the minimal
+// "just show me where the image distance v lands" marker, real and virtual,
+// usable in every mode (mirror, lens, combo).
+function buildImagePointMarker(color, respectDepth=false){
+  const geo = new THREE.SphereGeometry(3.2, 16, 16);
+  const mat = new THREE.MeshBasicMaterial({color, transparent:true, opacity:.9, depthWrite:respectDepth, depthTest:respectDepth});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.renderOrder = 10;
+  return mesh;
+}
+const imagePointReal = buildImagePointMarker(0x4ade80);
+const imagePointVirtual = buildImagePointMarker(0xd66bff, true);
+imageGroup.add(imagePointReal, imagePointVirtual);
+
+function clampObjX(){
+  const minGap = 8;
+  if(state.mode==='mirror'){
+    // The candle may only ever sit on the reflective (front) side — it can
+    // never cross into the mirror's solid body or its opaque back. The
+    // limit is measured against the *actual* curved surface at the
+    // candle's own height (not just the flat pole), so a strongly bent
+    // mirror's bulging rim can't be sidestepped by dragging past it.
+    state.objH = Math.max(6, state.objH); // candle always stands upright with positive height
+    const surfaceX = mirrorSurfaceX(0, state.objH);
+    state.objX = Math.max(-260, Math.min(surfaceX - minGap, state.objX));
+  } else if(state.mode==='combo'){
+    if(Math.abs(state.objX) < minGap) state.objX = -minGap;
+  } else {
+    if(Math.abs(state.objX) < minGap) state.objX = state.objX<0?-minGap:minGap;
+  }
+}
+
+function recompute(){
+  clampObjX();
+  objectGroup.position.set(state.objX, 0, 0);
+  // Visibility is set up front, before any shape/scale math runs below —
+  // if setCandle/setArrow ever throws on an edge-case value, the *wrong*
+  // object staying visible (e.g. the arrow bleeding through in mirror mode)
+  // is a worse failure than the right object just not having its size
+  // refreshed that frame, so this ordering makes that failure mode impossible.
+  if(state.mode==='mirror'){
+    const useCandle = state.objectType==='candle';
+    candleObj.visible = useCandle && state.showObject;
+    signObj.visible = !useCandle && state.showObject;
+    objArrow.visible = false;
+    activeObjVisual = useCandle ? candleObj : signObj;
+    if(useCandle) setCandle(candleObj, state.objH);
+    else setSignObject(signObj, state.objH);
+  } else {
+    objArrow.visible = state.showObject;
+    candleObj.visible = false;
+    signObj.visible = false;
+    activeObjVisual = objArrow;
+    setArrow(objArrow, state.objH);
+  }
+  updateSunVisibility();
+  objectGroup.visible = state.showObject;
+  imageGroup.visible = state.showObject;
+  // Object View puts the camera at the object's own tip, so its own
+  // candle/arrow body would just be an ugly wall right up against the lens —
+  // re-applied here (rather than just once on entry) because any slider
+  // change mid-POV re-runs this visibility logic and would otherwise pop it
+  // back into view.
+  if(objectViewActive) activeObjVisual.visible = false;
+
+  disposeGroup(rayGroup);
+  disposeGroup(particleGroup);
+  disposeGroup(beamSourceGroup);
+  activeRayPaths = [];
+
+  let result = null;
+
+  // Focal/curvature planes and the parallel-ray demo are properties of the
+  // element itself, not the object, so they still run even with the object hidden.
+  if(state.mode==='mirror'){
+    const f = bendToF(state.mirrorBend);
+    if(state.showObject){
+      result = solveSingle('mirror', f, 0, state.objX, state.objH);
+      buildMirrorRays(0, f, state.objX, state.objH);
+      if(!state.onlyPrincipalRays) buildFlameRayFan(state.objX, state.objH, result ? result.real : true);
+    }
+    if(state.showParallel) buildParallelDemo('mirror', null, 0, f);
+    updateScreen(state.showObject ? result : null);
+  } else if(state.mode==='lens'){
+    const f = bendToF(state.lensBend);
+    if(state.showObject){
+      result = solveSingle('lens', f, 0, state.objX, state.objH);
+      buildLensRays(currentElements, state.objX, state.objH);
+      if(state.accuratePointSource && !state.onlyPrincipalRays) buildLensRayFan(currentElements, state.objX, state.objH);
+    }
+    if(state.showParallel) buildParallelDemo('lens', currentElements, 0, f);
+  } else if(state.mode==='combo'){
+    if(state.showObject){
+      result = solveCombo();
+      buildLensRays(currentElements, state.objX, state.objH);
+      if(state.accuratePointSource && !state.onlyPrincipalRays) buildLensRayFan(currentElements, state.objX, state.objH);
+    }
+    if(state.showParallel) buildParallelDemo('lens', currentElements, 0, 0);
+  }
+
+  rebuildParticleMeshes();
+  updateImageVisual(result);
+  updateHUD(result);
+}
+
+function updateImageVisual(result){
+  imgArrowReal.visible = false;
+  imgArrowVirtual.visible = false;
+  ghostCandleReal.visible = false;
+  ghostCandleVirtual.visible = false;
+  ghostSignReal.visible = false;
+  ghostSignVirtual.visible = false;
+  imagePointReal.visible = false;
+  imagePointVirtual.visible = false;
+  if(!result || result.atInfinity) return;
+
+  // Image point marker: bundled under the same single "Image" toggle as
+  // every other image representation — one toggle controls all images
+  // that live on the principal axis.
+  if(state.showImage){
+    const pt = result.real ? imagePointReal : imagePointVirtual;
+    pt.visible = true;
+    pt.position.set(result.imgX, 0, 0);
+  }
+
+  // Magnification is height-independent (paraxial), so image height scales
+  // linearly with object height. The simplified default clips that height to
+  // whatever fraction of the object's light aims within the element's
+  // aperture — but that's a display shortcut, not real optics: any single
+  // point on the object emits in every direction, so as long as *some* of
+  // its light reaches the aperture (from any angle), that point still images
+  // fully. "Accurate point-source" mode reflects that: full height, no clip.
+  const clippedObjH = Math.sign(state.objH) * Math.min(Math.abs(state.objH), currentAperture);
+  const clipRatio = state.accuratePointSource ? 1 : (state.objH !== 0 ? clippedObjH/state.objH : 1);
+  const imgH = result.imgH * clipRatio;
+
+  // The "Image arrow" toggle now controls every image representation —
+  // ghost candle/sign in mirror mode, and the generic arrow in lens mode —
+  // so switching it off always hides the image, consistently, in every mode.
+  if(!state.showImage){
+    // leave everything hidden (already reset above)
+  } else if(state.mode==='mirror' && state.objectType!=='candle'){
+    // Letter/Number object: its image should read as a ghostly copy of the
+    // same plaque, not a candle or a generic arrow.
+    const ghost = result.real ? ghostSignReal : ghostSignVirtual;
+    ghost.visible = true;
+    ghost.position.set(result.imgX, 0, 0);
+    setGhostSign(ghost, imgH);
+    const label = ghost===ghostSignReal ? ghostSignLabelReal : ghostSignLabelVirtual;
+    label.position.set(0, Math.max(Math.abs(imgH), 12) + 8, 0);
+    placeFreeLabel(label, ghost===ghostSignReal ? 'img-sign-real' : 'img-sign-virtual');
+  } else if(state.mode==='mirror'){
+    const ghost = result.real ? ghostCandleReal : ghostCandleVirtual;
+    ghost.visible = true;
+    ghost.position.set(result.imgX, 0, 0);
+    setGhostCandle(ghost, imgH);
+    const label = ghost===ghostCandleReal ? ghostLabelReal : ghostLabelVirtual;
+    label.position.set(0, Math.max(Math.abs(imgH), 12) + 8, 0);
+    placeFreeLabel(label, ghost===ghostCandleReal ? 'img-candle-real' : 'img-candle-virtual');
+  } else {
+    const arrow = result.real ? imgArrowReal : imgArrowVirtual;
+    arrow.visible = true;
+    arrow.position.set(result.imgX, 0, 0);
+    setArrow(arrow, imgH);
+    const label = arrow===imgArrowReal ? imgLabelReal : imgLabelVirtual;
+    label.position.set(0, Math.max(Math.abs(imgH), 12) + 8, 0);
+    placeFreeLabel(label, arrow===imgArrowReal ? 'img-arrow-real' : 'img-arrow-virtual');
+  }
+}
+
+const fmt = (n)=> Number.isFinite(n) ? (Math.abs(n)>=1000? n.toFixed(0) : n.toFixed(1)) : '—';
+
+function updateHUD(r){
+  const $ = id=>document.getElementById(id);
+  if(!r){
+    $('valU').textContent='—'; $('valV').textContent='—'; $('valF').textContent='—'; $('valM').textContent='—';
+    $('verdict').innerHTML = state.showObject ? 'Object is on the element — move it away.' : 'No object — switch it back on to form an image.';
+    return;
+  }
+  $('valU').textContent = fmt(r.u);
+  $('valV').textContent = r.atInfinity ? '∞' : fmt(r.v);
+  $('valF').textContent = r.f!==null && r.f!==undefined ? fmt(r.f) : (r.f1? `${fmt(r.f1)}, ${fmt(r.f2)}` : '—');
+  if(state.mode==='combo'){
+    $('valF').textContent = `${fmt(currentElements[0].f)}, ${fmt(currentElements[1].f)}`;
+  }
+  $('valM').textContent = r.atInfinity ? '—' : fmt(r.m)+'×';
+
+  if(r.atInfinity){
+    $('verdict').innerHTML = `<span class="tag up">at infinity</span> Rays leave the system parallel — no finite image forms.`;
+    return;
+  }
+  const realTag = r.real ? '<span class="tag real">Real</span>' : '<span class="tag virtual">Virtual</span>';
+  const orientTag = r.m<0 ? '<span class="tag inv">Inverted</span>' : '<span class="tag up">Upright</span>';
+  const sizeWord = Math.abs(r.m)>1.02?'magnified':(Math.abs(r.m)<0.98?'diminished':'same size');
+  $('verdict').innerHTML = `${realTag}${orientTag}<br>Image is <b>${sizeWord}</b> (m = ${r.m.toFixed(2)}), height ${fmt(Math.abs(r.imgH))} units, ${r.imgX-  (state.mode==='combo'?state.sep:0) >=0 ? 'behind':'in front of'} the element.`;
+}
+
+/* ============================== UI WIRING ============================== */
+function fDerivedText(bend, f){
+  if(Math.abs(bend) < 0.5) return 'Flat — acts like a plane surface (f ≈ ∞).';
+  return `${bend<0?'Convex':'Concave'} · derived focal length f = ${Math.abs(f).toFixed(0)} units.`;
+}
+function refreshBendLabels(){
+  document.getElementById('bendLabel').textContent = state.mode==='mirror' ? state.mirrorBend : state.lensBend;
+  document.getElementById('bendSlider').value = state.mode==='mirror' ? state.mirrorBend : state.lensBend;
+  const f = bendToF(state.mode==='mirror' ? state.mirrorBend : state.lensBend);
+  document.getElementById('fDerivedHint').textContent = fDerivedText(state.mode==='mirror' ? state.mirrorBend : state.lensBend, f);
+  document.getElementById('bend1Label').textContent = state.bend1;
+  document.getElementById('bend2Label').textContent = state.bend2;
+}
+
+// Human-readable name for whatever's currently standing in as the object —
+// used for the drag-tip hint text.
+function objectNoun(){
+  if(state.mode!=='mirror') return 'amber arrow';
+  if(state.objectType==='candle') return 'candle';
+  return `${state.objectType} "${state.objectGlyph}"`;
+}
+function setMode(mode){
+  state.mode = mode;
+  // Set immediately, before anything else in this function (or the
+  // rebuildElement()/recompute() calls at the end) has a chance to throw —
+  // the correct object for the new mode must never be blocked from hiding
+  // by an unrelated error further down.
+  const useCandle = mode==='mirror' && state.objectType==='candle';
+  const useSign = mode==='mirror' && state.objectType!=='candle';
+  candleObj.visible = useCandle && state.showObject;
+  signObj.visible = useSign && state.showObject;
+  objArrow.visible = (mode!=='mirror') && state.showObject;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+  document.getElementById('singleParams').style.display = (mode==='combo')?'none':'block';
+  document.getElementById('comboParams').style.display = (mode==='combo')?'block':'none';
+  // The Candle/Letter/Number picker only makes sense for Mirror mode — Lens
+  // and 2-Lens System always use the arrow.
+  document.getElementById('objectTypeRow').style.display = (mode==='mirror') ? 'flex' : 'none';
+  // Centre of curvature only has a clean single-point meaning for a mirror;
+  // lenses have two separate surface curvatures, so hide C there.
+  const cRow = document.getElementById('toggleCRow');
+  cRow.style.display = (mode==='mirror') ? 'flex' : 'none';
+  const selfReflectionRow = document.getElementById('toggleSelfReflectionRow');
+  selfReflectionRow.style.display = (mode==='mirror') ? 'flex' : 'none';
+  if(mode!=='mirror' && state.showC){
+    state.showC = false;
+    document.getElementById('toggleC').checked = false;
+  }
+  // sensible default object position on mode switch
+  if(mode==='combo'){
+    document.getElementById('oxSlider').min = -260;
+    document.getElementById('oxSlider').max = 260;
+    document.getElementById('ohSlider').min = -90;
+    if(state.objX > -20) { state.objX = -140; }
+  }
+
+  const mirrorLab = document.getElementById('mirrorLabSection');
+  const snapRow = document.getElementById('snapAxisRow');
+  const placementHint = document.getElementById('placementHint');
+  const oxSlider = document.getElementById('oxSlider');
+  const ohSlider = document.getElementById('ohSlider');
+  const dragTip = document.getElementById('dragTip');
+  if(mode==='mirror'){
+    mirrorLab.style.display = 'block';
+    snapRow.style.display = 'flex';
+    placementHint.style.display = 'block';
+    oxSlider.min = -260; oxSlider.max = -5;
+    ohSlider.min = 6; ohSlider.max = 95;
+    if(state.objX > -5) state.objX = -140;
+    if(state.objH < 6) state.objH = 42;
+  } else {
+    mirrorLab.style.display = 'none';
+    snapRow.style.display = 'none';
+    placementHint.style.display = 'none';
+    oxSlider.min = -260; oxSlider.max = 260;
+    ohSlider.min = -90; ohSlider.max = 90;
+  }
+  dragTip.innerHTML = `Drag the <b>${objectNoun()}</b> to move it · scroll/drag canvas to orbit`;
+  oxSlider.value = state.objX; document.getElementById('oxLabel').textContent = state.objX;
+  ohSlider.value = state.objH; document.getElementById('ohLabel').textContent = state.objH;
+
+  refreshBendLabels();
+  rebuildElement();
+  recompute();
+}
+
+document.querySelectorAll('.mode-btn').forEach(b=> b.addEventListener('click', ()=> setMode(b.dataset.mode)) );
+
+/* ------ Object type (Candle / Letter / Number) + character picker ------ */
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const NUMBERS = '0123456789'.split('');
+function refreshObjectGlyphOptions(){
+  const sel = document.getElementById('objectGlyphSelect');
+  const glyphs = state.objectType==='number' ? NUMBERS : LETTERS;
+  // Only rebuild the <option> list when the glyph set actually changed
+  // (switching Letter<->Number), so re-selecting the same type doesn't
+  // reset the user's chosen character.
+  if(sel.dataset.set !== state.objectType){
+    sel.innerHTML = glyphs.map(g=>`<option value="${g}">${g}</option>`).join('');
+    sel.dataset.set = state.objectType;
+    if(!glyphs.includes(state.objectGlyph)) state.objectGlyph = glyphs[0];
+  }
+  sel.value = state.objectGlyph;
+}
+function applyObjectGlyph(){
+  setSignGlyph(signObj, state.objectGlyph);
+  setSignGlyph(ghostSignReal, state.objectGlyph);
+  setSignGlyph(ghostSignVirtual, state.objectGlyph);
+}
+document.getElementById('objectTypeSelect').addEventListener('change', e=>{
+  state.objectType = e.target.value;
+  const isGlyph = state.objectType !== 'candle';
+  document.getElementById('objectGlyphField').style.display = isGlyph ? 'block' : 'none';
+  if(isGlyph){ refreshObjectGlyphOptions(); applyObjectGlyph(); }
+  document.getElementById('dragTip').innerHTML = `Drag the <b>${objectNoun()}</b> to move it · scroll/drag canvas to orbit`;
+  recompute();
+});
+document.getElementById('objectGlyphSelect').addEventListener('change', e=>{
+  state.objectGlyph = e.target.value;
+  applyObjectGlyph();
+  document.getElementById('dragTip').innerHTML = `Drag the <b>${objectNoun()}</b> to move it · scroll/drag canvas to orbit`;
+  recompute();
+});
+refreshObjectGlyphOptions();
+
+document.getElementById('sizeSlider').addEventListener('input', e=>{
+  state.sizeScale = (+e.target.value)/100;
+  document.getElementById('sizeLabel').textContent = e.target.value;
+  rebuildElement(); recompute();
+});
+
+document.getElementById('thicknessSlider').addEventListener('input', e=>{
+  state.thicknessScale = (+e.target.value)/100;
+  document.getElementById('thicknessLabel').textContent = e.target.value;
+  rebuildElement(); recompute();
+});
+
+document.getElementById('bendSlider').addEventListener('input', e=>{
+  const v = +e.target.value;
+  if(state.mode==='mirror') state.mirrorBend = v; else state.lensBend = v;
+  refreshBendLabels();
+  rebuildElement(); recompute();
+});
+document.getElementById('bend1Slider').addEventListener('input', e=>{
+  state.bend1 = +e.target.value; document.getElementById('bend1Label').textContent = state.bend1;
+  rebuildElement(); recompute();
+});
+document.getElementById('bend2Slider').addEventListener('input', e=>{
+  state.bend2 = +e.target.value; document.getElementById('bend2Label').textContent = state.bend2;
+  rebuildElement(); recompute();
+});
+document.getElementById('sep').addEventListener('input', e=>{
+  state.sep = +e.target.value; document.getElementById('sepLabel').textContent = state.sep;
+  rebuildElement(); recompute();
+});
+
+document.getElementById('oxSlider').addEventListener('input', e=>{
+  state.objX = +e.target.value; document.getElementById('oxLabel').textContent = state.objX;
+  recompute();
+});
+document.getElementById('ohSlider').addEventListener('input', e=>{
+  state.objH = +e.target.value; document.getElementById('ohLabel').textContent = state.objH;
+  recompute();
+});
+
+document.getElementById('toggleObject').addEventListener('change', e=>{ state.showObject=e.target.checked; recompute(); });
+document.getElementById('toggleRays').addEventListener('change', e=>{ state.showRays=e.target.checked; recompute(); });
+document.getElementById('toggleRayParticles').addEventListener('change', e=>{ state.showRayParticles=e.target.checked; recompute(); });
+document.getElementById('toggleMissed').addEventListener('change', e=>{ state.showMissedRays=e.target.checked; recompute(); });
+document.getElementById('toggleOnlyPrincipal').addEventListener('change', e=>{ state.onlyPrincipalRays=e.target.checked; recompute(); });
+document.getElementById('toggleSelfReflection').addEventListener('change', e=>{ state.mirrorSelfReflection=e.target.checked; });
+document.getElementById('toggleAccurate').addEventListener('change', e=>{ state.accuratePointSource=e.target.checked; recompute(); });
+document.getElementById('toggleParallel').addEventListener('change', e=>{
+  state.showParallel=e.target.checked;
+  const disp = e.target.checked ? 'block' : 'none';
+  document.getElementById('beamRadiusField').style.display = disp;
+  document.getElementById('beamTiltYField').style.display = disp;
+  document.getElementById('beamTiltZField').style.display = disp;
+  recompute();
+});
+document.getElementById('beamRadiusSlider').addEventListener('input', e=>{
+  state.beamRadius = +e.target.value;
+  document.getElementById('beamRadiusLabel').textContent = state.beamRadius;
+  recompute();
+});
+document.getElementById('beamTiltYSlider').addEventListener('input', e=>{
+  state.beamTiltY = +e.target.value;
+  document.getElementById('beamTiltYLabel').textContent = state.beamTiltY;
+  recompute();
+});
+document.getElementById('beamTiltZSlider').addEventListener('input', e=>{
+  state.beamTiltZ = +e.target.value;
+  document.getElementById('beamTiltZLabel').textContent = state.beamTiltZ;
+  recompute();
+});
+document.getElementById('toggleF').addEventListener('change', e=>{ state.showF=e.target.checked; rebuildElement(); recompute(); });
+document.getElementById('toggleC').addEventListener('change', e=>{ state.showC=e.target.checked; rebuildElement(); recompute(); });
+document.getElementById('toggleImage').addEventListener('change', e=>{ state.showImage=e.target.checked; recompute(); });
+document.getElementById('toggleSolidGrid').addEventListener('change', e=>{ state.solidGrid=e.target.checked; refreshGridStyle(); });
+
+/* -------- MIRROR LAB WIRING (ray sectors, screen, labels, snap) -------- */
+document.getElementById('toggleSnapAxis').addEventListener('change', e=>{
+  state.snapAxis = e.target.checked;
+  if(state.snapAxis){
+    state.objH = 6;
+    document.getElementById('ohSlider').value = 6;
+    document.getElementById('ohLabel').textContent = 6;
+    recompute();
+  }
+});
+const quadIds = {ul:'toggleQuadUL', ur:'toggleQuadUR', ll:'toggleQuadLL', lr:'toggleQuadLR'};
+Object.keys(quadIds).forEach(q=>{
+  document.getElementById(quadIds[q]).addEventListener('change', e=>{
+    state.rayQuadrants[q] = e.target.checked;
+    recompute();
+  });
+});
+function setAllQuadrants(v){
+  Object.keys(quadIds).forEach(q=>{
+    state.rayQuadrants[q] = v;
+    document.getElementById(quadIds[q]).checked = v;
+  });
+}
+document.querySelectorAll('[data-preset]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const preset = btn.dataset.preset;
+    if(preset==='all'){ state.showRays=true; document.getElementById('toggleRays').checked=true; setAllQuadrants(true); state.rayDensity=12; }
+    else if(preset==='none'){ setAllQuadrants(false); state.rayDensity=0; }
+    else if(preset==='principal'){ setAllQuadrants(false); state.rayDensity=0; state.showRays=true; document.getElementById('toggleRays').checked=true; }
+    else if(preset==='multi'){ state.showRays=true; document.getElementById('toggleRays').checked=true; setAllQuadrants(true); state.rayDensity=8; }
+    else if(preset==='physical'){ state.showRays=true; document.getElementById('toggleRays').checked=true; setAllQuadrants(true); state.rayDensity=28; }
+    recompute();
+  });
+});
+document.getElementById('toggleScreen').addEventListener('change', e=>{
+  state.screenOn = e.target.checked;
+  const disp = e.target.checked ? 'block' : 'none';
+  document.getElementById('screenXField').style.display = disp;
+  document.getElementById('screenYField').style.display = disp;
+  document.getElementById('screenSizeField').style.display = disp;
+  document.getElementById('screenHint').style.display = disp;
+  recompute();
+});
+document.getElementById('screenXSlider').addEventListener('input', e=>{
+  state.screenX = +e.target.value;
+  document.getElementById('screenXLabel').textContent = state.screenX;
+  recompute();
+});
+document.getElementById('screenYSlider').addEventListener('input', e=>{
+  state.screenY = +e.target.value;
+  document.getElementById('screenYLabel').textContent = state.screenY;
+  recompute();
+});
+document.getElementById('screenSizeSlider').addEventListener('input', e=>{
+  state.screenSize = +e.target.value;
+  document.getElementById('screenSizeLabel').textContent = state.screenSize;
+  recompute();
+});
+document.getElementById('toggleLabels').addEventListener('change', e=>{
+  state.showLabels = e.target.checked;
+  rebuildElement(); recompute();
+});
+
+// Press-and-hold continuous zoom (a single click still nudges it a little,
+// since a quick tap fires down->up within a frame or two of holding).
+function wireHoldZoom(btnId, dir){
+  const btn = document.getElementById(btnId);
+  const start = (e)=>{ e.preventDefault(); controls.startZoom(dir); };
+  const stop = ()=> controls.stopZoom();
+  btn.addEventListener('pointerdown', start);
+  btn.addEventListener('pointerup', stop);
+  btn.addEventListener('pointerleave', stop);
+  btn.addEventListener('pointercancel', stop);
+}
+wireHoldZoom('btnZoomIn', -1);
+wireHoldZoom('btnZoomOut', 1);
+
+// Mini "stats" window (HUD) and the right control panel can each be
+// collapsed independently — HUD toggles a class on itself; the panel
+// toggles a class on #app so the toggle button (which lives outside the
+// panel, and would otherwise get clipped by its own overflow:hidden) can
+// slide with it via CSS.
+const hudEl = document.getElementById('hud');
+const hudCollapseBtn = document.getElementById('hudCollapseBtn');
+function setHudCollapsed(collapsed){
+  hudEl.classList.toggle('collapsed', collapsed);
+  hudCollapseBtn.textContent = collapsed ? '+' : '−';
+  hudCollapseBtn.title = collapsed ? 'Expand stats' : 'Collapse stats';
+}
+hudCollapseBtn.addEventListener('click', e=>{
+  e.stopPropagation();
+  setHudCollapsed(!hudEl.classList.contains('collapsed'));
+});
+// Clicking anywhere on the collapsed pill also re-expands it — a bigger,
+// easier target than the tiny button alone, especially on touch.
+hudEl.addEventListener('click', ()=>{
+  if(hudEl.classList.contains('collapsed')) setHudCollapsed(false);
+});
+
+const appEl = document.getElementById('app');
+const panelCollapseBtn = document.getElementById('panelCollapseBtn');
+const isStackedLayout = () => window.matchMedia('(max-width:760px)').matches;
+function setPanelCollapsed(collapsed){
+  appEl.classList.toggle('panel-collapsed', collapsed);
+  const stacked = isStackedLayout();
+  panelCollapseBtn.textContent = stacked
+    ? (collapsed ? '▴' : '▾')
+    : (collapsed ? '‹' : '›');
+  panelCollapseBtn.title = collapsed ? 'Expand controls' : 'Collapse controls';
+}
+panelCollapseBtn.addEventListener('click', ()=>{
+  setPanelCollapsed(!appEl.classList.contains('panel-collapsed'));
+});
+window.addEventListener('resize', ()=> setPanelCollapsed(appEl.classList.contains('panel-collapsed')));
+setPanelCollapsed(false);
+
+document.getElementById('btnSide').addEventListener('click', ()=>{
+  exitObjectView();
+  controls.setView(SIDE_POS, new THREE.Vector3(0,0,0));
+});
+document.getElementById('btnOrbit').addEventListener('click', ()=>{
+  exitObjectView();
+  controls.setView(new THREE.Vector3(260,180,340), new THREE.Vector3(0,0,0));
+});
+
+/* ------ Object View: on entry, parks the camera ONCE, a safe distance
+   BEHIND the object's own x-position but riding the principal axis itself
+   (y=0, z=0) rather than up at the object's own height — like standing
+   right on the axis, at the pole's eye-level, and looking straight down it
+   at the mirror/lens vertex. That viewpoint is then completely fixed:
+   dragging the object afterward moves only the object itself, never the
+   camera (see applyObjectViewCamera(), called only here and nowhere in
+   the animate() loop). The object itself is hidden while this view is
+   active, so it's never in frame. Free-orbit dragging is suspended while
+   active, since the camera is being held in place manually. ------ */
+const OBJECT_VIEW_EXIT_POS = new THREE.Vector3(260,180,340);
+// Eye sits at the object's x-position but at y=0 — ON the principal axis,
+// not up at the object's own height. This is what makes the view read as
+// "standing on the axis, looking straight down it at the pole" rather than
+// a camera floating up at the tip of the candle/arrow.
+function objectEyePosition(){
+  return new THREE.Vector3(state.objX, 0, 0);
+}
+// Computes and applies the Object View camera ONCE, from wherever the object
+// is right now. Called only on entry (see enterObjectView()) — deliberately
+// NOT called every frame, so dragging the object afterward moves only the
+// object itself while the camera/viewport stays completely fixed.
+function applyObjectViewCamera(){
+  const eye = objectEyePosition();
+  // A fixed 42° lens only shows the whole mirror/lens when the object is
+  // reasonably far from it — stand close (small |objX|) and the element's
+  // edges fall outside the frame entirely, since up close it subtends a
+  // much wider angle. Widen the FOV so the full element (plus a little
+  // padding) stays in view. The angle a circular rim of radius
+  // `currentAperture` subtends from distance d is 2*asin(r/d), NOT
+  // 2*atan(r/d) — atan under-counts badly once the eye gets close (as
+  // d -> r, the true half-angle races to 90° while atan(r/d) only reaches
+  // 45°), which is why close-up shots used to clip the rim even at the old
+  // fov cap. Even asin can't fully rescue an eye that's essentially
+  // touching the rim (r/d -> 1 needs a ~180° lens), so past a MAX_FOV cap
+  // we instead push the camera further back along the principal axis
+  // (on top of the SAFE_BEHIND margin below) to guarantee the whole
+  // element stays framed.
+  const pad = 1.15;
+  const MAX_FOV = 120;
+  // Stand SAFE_BEHIND world units further back than the object's own
+  // x-position, along the principal axis itself, so the viewpoint reads as
+  // "a person standing on the axis behind the object, looking straight
+  // down it" rather than a camera glued to the object's own height.
+  // Combined with activeObjVisual being hidden while Object View is
+  // active, the object itself is never in frame from this vantage point.
+  const SAFE_BEHIND = 55;
+  const trueDist = Math.max(eye.length(), 1);
+  const minDistForMaxFov = (currentAperture*pad) / Math.sin(THREE.MathUtils.degToRad(MAX_FOV/2));
+  // Always at least trueDist+SAFE_BEHIND back, and never so close that the
+  // mirror/lens would need more than MAX_FOV to stay fully in frame — this
+  // is what guarantees the element is fully visible from this fixed spot.
+  const dist = Math.max(trueDist + SAFE_BEHIND, minDistForMaxFov);
+  const dir = eye.clone().normalize();
+  camera.position.copy(dir.multiplyScalar(dist));
+  camera.lookAt(0, 0, 0);
+  const ratio = THREE.MathUtils.clamp((currentAperture*pad)/dist, 0, 0.999);
+  const neededFov = THREE.MathUtils.radToDeg(2*Math.asin(ratio));
+  const fov = THREE.MathUtils.clamp(neededFov, DEFAULT_FOV, MAX_FOV);
+  camera.fov = fov;
+  camera.updateProjectionMatrix();
+}
+function enterObjectView(){
+  objectViewActive = true;
+  controls.enabled = false;
+  activeObjVisual.visible = false;
+  applyObjectViewCamera(); // parked once, right here — never re-driven per frame
+  document.getElementById('btnObjectView').textContent = 'Exit View';
+  document.getElementById('dragTip').style.display = 'none';
+}
+function exitObjectView(){
+  if(!objectViewActive) return;
+  objectViewActive = false;
+  controls.enabled = true;
+  document.getElementById('btnObjectView').textContent = 'Object View';
+  document.getElementById('dragTip').style.display = '';
+  recompute(); // restores the object's normal visibility for the current mode
+  // applyObjectViewCamera() may have widened camera.fov to fit the whole
+  // element in frame — reset it here so every other view goes back to the
+  // normal, undistorted 42° lens.
+  camera.fov = DEFAULT_FOV;
+  camera.updateProjectionMatrix();
+  // Object View parks the camera directly via camera.position (see
+  // applyObjectViewCamera()) without ever touching the orbit controls'
+  // internal spherical state, so resuming controls.update() unchanged would
+  // snap back to wherever the camera was before Object View was entered.
+  // Explicitly re-seating the controls here avoids that jump.
+  controls.setView(OBJECT_VIEW_EXIT_POS, new THREE.Vector3(0,0,0));
+}
+document.getElementById('btnObjectView').addEventListener('click', ()=>{
+  if(objectViewActive) exitObjectView(); else enterObjectView();
+});
+
+/* ============================== DRAG OBJECT ============================== */
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const dragPlane = new THREE.Plane(new THREE.Vector3(0,0,1), 0);
+let dragging = false;
+
+function pointerNDC(evt){
+  const rect = renderer.domElement.getBoundingClientRect();
+  const cx = (evt.touches? evt.touches[0].clientX : evt.clientX);
+  const cy = (evt.touches? evt.touches[0].clientY : evt.clientY);
+  mouse.x = ((cx-rect.left)/rect.width)*2-1;
+  mouse.y = -((cy-rect.top)/rect.height)*2+1;
+}
+
+function nearHandle(evt){
+  pointerNDC(evt);
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObject(activeObjVisual.userData.hitMesh, false);
+  if(hits.length) return true;
+  // Fallback: generous screen-space radius around the tip, larger still for
+  // touch input since fingers are far less precise than a mouse cursor.
+  const isTouch = evt.pointerType === 'touch' || (evt.touches && evt.touches.length);
+  const tipWorld = new THREE.Vector3(state.objX, state.objH, 0);
+  const proj = tipWorld.clone().project(camera);
+  const dx = (proj.x-mouse.x), dy=(proj.y-mouse.y);
+  return Math.sqrt(dx*dx+dy*dy) < (isTouch ? 0.17 : 0.1);
+}
+
+let dragPointerId = null;
+renderer.domElement.addEventListener('pointerdown', (evt)=>{
+  if(objectViewActive) return; // camera is parked at the object itself — nothing to grab
+  if(nearHandle(evt)){
+    dragging = true;
+    dragPointerId = evt.pointerId;
+    controls.enabled = false;
+    // Lock this touch to the canvas so it can't leak onto a slider
+    // (or leave 'dragging' stuck true if pointerup misfires on mobile).
+    if(renderer.domElement.setPointerCapture){ try{ renderer.domElement.setPointerCapture(evt.pointerId); }catch(err){} }
+  }
+});
+function endObjectDrag(evt){
+  if(evt && dragPointerId !== null && evt.pointerId !== dragPointerId) return;
+  dragging = false; dragPointerId = null; controls.enabled = true;
+}
+// The full recompute (ray tracing + geometry rebuild) is too heavy to run on
+// every single touchmove/mousemove — touch devices in particular fire move
+// events much faster than the display refreshes, which made dragging feel
+// stuttery. Instead the arrow snaps to the latest pointer position instantly
+// (cheap), while the expensive recompute is coalesced to once per animation
+// frame via requestAnimationFrame, so motion always looks fluid.
+let recomputeScheduled = false;
+function scheduleRecompute(){
+  if(recomputeScheduled) return;
+  recomputeScheduled = true;
+  requestAnimationFrame(()=>{ recomputeScheduled = false; recompute(); });
+}
+renderer.domElement.addEventListener('pointermove', (evt)=>{
+  if(!dragging) return;
+  if(dragPointerId !== null && evt.pointerId !== dragPointerId) return;
+  pointerNDC(evt);
+  raycaster.setFromCamera(mouse, camera);
+  const pt = new THREE.Vector3();
+  raycaster.ray.intersectPlane(dragPlane, pt);
+  if(pt){
+    let nx, nh;
+    if(state.mode==='mirror'){
+      // Collision constraint: the candle must stay on the mirror's reflective
+      // (front) side and never pass through the glass — clamp against the
+      // true curved surface at this height (not a flat constant), so the
+      // rim of a strongly bent mirror can't be dragged through either.
+      nh = Math.max(6, Math.min(95, pt.y));
+      if(state.snapAxis) nh = 6;
+      const surfaceX = mirrorSurfaceX(0, nh);
+      nx = Math.max(-255, Math.min(surfaceX - 5, pt.x));
+    } else {
+      nx = Math.max(-280, Math.min(280, pt.x));
+      nh = Math.max(-95, Math.min(95, pt.y));
+    }
+    state.objX = nx; state.objH = nh;
+    document.getElementById('oxSlider').value = nx.toFixed(0);
+    document.getElementById('ohSlider').value = nh.toFixed(0);
+    document.getElementById('oxLabel').textContent = nx.toFixed(0);
+    document.getElementById('ohLabel').textContent = nh.toFixed(0);
+    // Instant, cheap visual feedback for the object itself
+    objectGroup.position.set(nx, 0, 0);
+    if(state.mode==='mirror') setCandle(candleObj, nh); else setArrow(objArrow, nh);
+    scheduleRecompute();
+  }
+});
+renderer.domElement.addEventListener('pointerup', endObjectDrag);
+renderer.domElement.addEventListener('pointercancel', endObjectDrag);
+renderer.domElement.addEventListener('lostpointercapture', endObjectDrag);
+
+/* ============================== FREE LABELS ("cardboard sign" cards) ==============================
+   Every text label in the scene (P, Principal Axis, F/C/F'/F₁/etc, IMAGE tags)
+   can be picked up, dragged anywhere, rotated to any angle, and resized —
+   like a small cardboard card that's been peeled off the diagram and placed
+   wherever the user wants. Two complications this has to work around:
+     1. The axis/F/C/P labels are fully destroyed and rebuilt from scratch by
+        rebuildElement() on nearly every interaction (slider drags, toggles).
+     2. The IMAGE labels persist as real objects, but their local position is
+        reset every recompute() to sit naturally on their parent ghost/arrow.
+   So rather than tracking "the sprite", every free-placeable label is
+   tracked by a stable string KEY. Once the user moves/rotates/resizes a
+   label, its transform is saved as an absolute WORLD-space override keyed
+   by that string. Every place in the code that positions a label "naturally"
+   funnels through placeFreeLabel(sprite, key) right after — which re-applies
+   the saved override on top of the natural placement if one exists. That's
+   what makes a moved label stay exactly where the user put it, completely
+   independent of the principal axis or the optical element, even though the
+   underlying sprite object may be a brand new instance a moment later. ------ */
+const labelOverrides = {};         // key -> {x,y,z, rot, scale}
+const labelBaseScale = {};         // key -> {x,y} natural (un-resized) sprite scale
+const freeLabelMap = new Map();    // key -> currently-live THREE.Sprite instance
+
+function placeFreeLabel(sprite, key){
+  sprite.userData.freeKey = key;
+  if(!(key in labelBaseScale)) labelBaseScale[key] = {x:sprite.scale.x, y:sprite.scale.y};
+  freeLabelMap.set(key, sprite);
+  const ov = labelOverrides[key];
+  if(ov){
+    const local = new THREE.Vector3(ov.x, ov.y, ov.z);
+    if(sprite.parent) sprite.parent.worldToLocal(local);
+    sprite.position.copy(local);
+    sprite.material.rotation = ov.rot;
+    const base = labelBaseScale[key];
+    sprite.scale.set(base.x*ov.scale, base.y*ov.scale, 1);
+  }
+}
+function ensureOverride(key){
+  if(!labelOverrides[key]) labelOverrides[key] = {x:0,y:0,z:0,rot:0,scale:1};
+  return labelOverrides[key];
+}
+// Walks all the way up to `scene` — a sprite that's been disposed/detached
+// by a rebuild (or hidden by a parent group, e.g. a toggled-off ghost) fails
+// this and is correctly excluded from picking, even though a stale
+// freeLabelMap entry might still technically reference it.
+function isEffectivelyVisible(obj){
+  let o = obj, last = null;
+  while(o){ if(!o.visible) return false; last = o; o = o.parent; }
+  return last === scene;
+}
+
+const labelOverlay = document.getElementById('labelOverlay');
+const lblSelBox = document.getElementById('lblSelBox');
+const lblRotLine = document.getElementById('lblRotLine');
+const lblResizeHandle = document.getElementById('lblResizeHandle');
+const lblRotHandle = document.getElementById('lblRotHandle');
+const lblResetBtn = document.getElementById('lblResetBtn');
+
+function worldToScreen(v){
+  const rect = renderer.domElement.getBoundingClientRect();
+  const p = v.clone().project(camera);
+  return { x: (p.x*0.5+0.5)*rect.width, y: (1-(p.y*0.5+0.5))*rect.height };
+}
+function rot2(x,y,rad){
+  const c=Math.cos(rad), s=Math.sin(rad);
+  return {x: x*c - y*s, y: x*s + y*c};
+}
+// Approximates the sprite's on-screen half-width/half-height by projecting
+// its center plus points offset along the camera's own right/up vectors —
+// this stays correct under perspective (closer labels read bigger) without
+// needing the sprite's actual screen-space quad math.
+function spriteScreenExtents(sprite){
+  const center = new THREE.Vector3(); sprite.getWorldPosition(center);
+  const camRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0);
+  const camUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1);
+  const p0 = worldToScreen(center);
+  const pR = worldToScreen(center.clone().addScaledVector(camRight, sprite.scale.x/2));
+  const pU = worldToScreen(center.clone().addScaledVector(camUp, sprite.scale.y/2));
+  return { center:p0, halfW: Math.hypot(pR.x-p0.x, pR.y-p0.y), halfH: Math.hypot(pU.x-p0.x, pU.y-p0.y) };
+}
+
+let selectedLabelKey = null;
+let labelInteractionMode = null; // 'move' | 'rotate' | 'resize'
+let labelDragData = null;
+let labelPointerId = null;
+
+function updateSelectionOverlay(){
+  const sprite = selectedLabelKey ? freeLabelMap.get(selectedLabelKey) : null;
+  if(!sprite || !isEffectivelyVisible(sprite)){ deselectLabel(); return; }
+  const ext = spriteScreenExtents(sprite);
+  const angle = sprite.material.rotation;
+  const pad = 8;
+  const hw = ext.halfW+pad, hh = ext.halfH+pad;
+  const pts = [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([x,y])=>{
+    const r = rot2(x,y,angle);
+    return `${ext.center.x+r.x},${ext.center.y+r.y}`;
+  });
+  lblSelBox.setAttribute('points', pts.join(' '));
+  const br = rot2(hw,hh,angle);
+  lblResizeHandle.setAttribute('x', ext.center.x+br.x-7);
+  lblResizeHandle.setAttribute('y', ext.center.y+br.y-7);
+  const rotPt = rot2(0,-hh-22,angle);
+  lblRotHandle.setAttribute('cx', ext.center.x+rotPt.x);
+  lblRotHandle.setAttribute('cy', ext.center.y+rotPt.y);
+  const tc = rot2(0,-hh,angle);
+  lblRotLine.setAttribute('x1', ext.center.x+tc.x);
+  lblRotLine.setAttribute('y1', ext.center.y+tc.y);
+  lblRotLine.setAttribute('x2', ext.center.x+rotPt.x);
+  lblRotLine.setAttribute('y2', ext.center.y+rotPt.y);
+  const tl = rot2(-hw-14,-hh-14,angle);
+  lblResetBtn.setAttribute('transform', `translate(${ext.center.x+tl.x} ${ext.center.y+tl.y})`);
+  labelOverlay.style.display = 'block';
+}
+function selectLabelByKey(key){
+  selectedLabelKey = key;
+  lblSelBox.classList.add('draggable');
+  updateSelectionOverlay();
+}
+function deselectLabel(){
+  selectedLabelKey = null;
+  labelInteractionMode = null;
+  labelDragData = null;
+  lblSelBox.classList.remove('draggable');
+  labelOverlay.style.display = 'none';
+}
+
+function hitTestLabel(evt){
+  pointerNDC(evt);
+  raycaster.setFromCamera(mouse, camera);
+  const candidates = [...freeLabelMap.values()].filter(isEffectivelyVisible);
+  if(!candidates.length) return null;
+  const hits = raycaster.intersectObjects(candidates, false);
+  return hits.length ? hits[0].object : null;
+}
+
+function beginLabelDrag(mode, evt){
+  const sprite = freeLabelMap.get(selectedLabelKey);
+  if(!sprite) return;
+  labelInteractionMode = mode;
+  controls.enabled = false;
+  labelPointerId = evt.pointerId;
+  if(renderer.domElement.setPointerCapture){ try{ renderer.domElement.setPointerCapture(evt.pointerId); }catch(err){} }
+  const worldPos = new THREE.Vector3(); sprite.getWorldPosition(worldPos);
+  const screenCenter = worldToScreen(worldPos);
+  const base = labelBaseScale[selectedLabelKey] || {x:sprite.scale.x, y:sprite.scale.y};
+  pointerNDC(evt);
+  raycaster.setFromCamera(mouse, camera);
+  const startPt = new THREE.Vector3();
+  raycaster.ray.intersectPlane(dragPlane, startPt);
+  const rect = renderer.domElement.getBoundingClientRect();
+  const px = (evt.touches? evt.touches[0].clientX : evt.clientX) - rect.left;
+  const py = (evt.touches? evt.touches[0].clientY : evt.clientY) - rect.top;
+  labelDragData = {
+    sprite,
+    startWorld: worldPos.clone(),
+    startPointerWorld: (startPt || worldPos).clone(),
+    startRot: sprite.material.rotation,
+    startScale: sprite.scale.x / base.x,
+    screenCenter,
+    startAngle: Math.atan2(py-screenCenter.y, px-screenCenter.x),
+    startDist: Math.max(1, Math.hypot(px-screenCenter.x, py-screenCenter.y)),
+  };
+  evt.preventDefault();
+}
+function setLabelWorldPosition(sprite, worldVec){
+  const local = worldVec.clone();
+  if(sprite.parent) sprite.parent.worldToLocal(local);
+  sprite.position.copy(local);
+}
+function endLabelDrag(evt){
+  if(evt && labelPointerId!==null && evt.pointerId!==labelPointerId) return;
+  labelInteractionMode = null;
+  labelDragData = null;
+  labelPointerId = null;
+  controls.enabled = true;
+}
+
+renderer.domElement.addEventListener('pointerdown', (evt)=>{
+  if(objectViewActive || dragging) return;
+  const hit = hitTestLabel(evt);
+  if(hit){
+    selectLabelByKey(hit.userData.freeKey);
+    beginLabelDrag('move', evt);
+  } else if(selectedLabelKey){
+    deselectLabel();
+  }
+});
+renderer.domElement.addEventListener('pointermove', (evt)=>{
+  if(!labelInteractionMode) return;
+  if(labelPointerId!==null && evt.pointerId!==labelPointerId) return;
+  const sprite = labelDragData.sprite;
+  const key = selectedLabelKey;
+  if(labelInteractionMode==='move'){
+    pointerNDC(evt);
+    raycaster.setFromCamera(mouse, camera);
+    const pt = new THREE.Vector3();
+    raycaster.ray.intersectPlane(dragPlane, pt);
+    if(pt){
+      const newWorld = labelDragData.startWorld.clone().add(pt.clone().sub(labelDragData.startPointerWorld));
+      setLabelWorldPosition(sprite, newWorld);
+      const ov = ensureOverride(key);
+      ov.x=newWorld.x; ov.y=newWorld.y; ov.z=newWorld.z;
+    }
+  } else {
+    const rect = renderer.domElement.getBoundingClientRect();
+    const px = (evt.touches? evt.touches[0].clientX : evt.clientX) - rect.left;
+    const py = (evt.touches? evt.touches[0].clientY : evt.clientY) - rect.top;
+    if(labelInteractionMode==='rotate'){
+      const ang = Math.atan2(py-labelDragData.screenCenter.y, px-labelDragData.screenCenter.x);
+      const newRot = labelDragData.startRot + (ang - labelDragData.startAngle);
+      sprite.material.rotation = newRot;
+      ensureOverride(key).rot = newRot;
+    } else if(labelInteractionMode==='resize'){
+      const dist = Math.hypot(px-labelDragData.screenCenter.x, py-labelDragData.screenCenter.y);
+      const newScale = Math.max(0.3, Math.min(4, labelDragData.startScale * (dist/labelDragData.startDist)));
+      const base = labelBaseScale[key];
+      sprite.scale.set(base.x*newScale, base.y*newScale, 1);
+      ensureOverride(key).scale = newScale;
+    }
+  }
+  updateSelectionOverlay();
+});
+renderer.domElement.addEventListener('pointerup', endLabelDrag);
+renderer.domElement.addEventListener('pointercancel', endLabelDrag);
+renderer.domElement.addEventListener('lostpointercapture', endLabelDrag);
+
+lblSelBox.addEventListener('pointerdown', (evt)=>{ evt.stopPropagation(); beginLabelDrag('move', evt); });
+lblResizeHandle.addEventListener('pointerdown', (evt)=>{ evt.stopPropagation(); beginLabelDrag('resize', evt); });
+lblRotHandle.addEventListener('pointerdown', (evt)=>{ evt.stopPropagation(); beginLabelDrag('rotate', evt); });
+lblResetBtn.addEventListener('pointerdown', (evt)=>{
+  evt.stopPropagation();
+  if(!selectedLabelKey) return;
+  delete labelOverrides[selectedLabelKey];
+  rebuildElement(); recompute();
+  updateSelectionOverlay();
+});
+document.addEventListener('keydown', (evt)=>{
+  if(evt.key==='Escape' && selectedLabelKey) deselectLabel();
+});
+
+/* ============================== RESIZE / LOOP ============================== */
+function onResize(){
+  const w = host.clientWidth, h = host.clientHeight;
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+}
+window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', ()=> setTimeout(onResize, 120));
+if(window.visualViewport){ window.visualViewport.addEventListener('resize', onResize); }
+
+const PARTICLE_SPEED = 90; // units per second along the ray path
+function updateRayParticles(){
+  if(!state.showRayParticles) return;
+  const t = clock.getElapsedTime();
+  activeRayPaths.forEach(path=>{
+    if(!path._meshes || !path.points || path.points.length<2) return;
+    if(!path._cum) computePathCum(path);
+    if(!path._total) return;
+    const n = path._meshes.length;
+    for(let i=0;i<n;i++){
+      const phase = i/n;
+      let frac = ((t*PARTICLE_SPEED/path._total) + phase) % 1;
+      if(frac<0) frac += 1;
+      const p = pointAtFrac(path, frac);
+      path._meshes[i].position.copy(p);
+    }
+  });
+}
+
+function updateCandleFlicker(){
+  if(state.mode!=='mirror' || !candleObj.visible) return;
+  const t = clock.getElapsedTime();
+  const flick = 1 + 0.08*Math.sin(t*9.7) + 0.05*Math.sin(t*23.1);
+  const ud = candleObj.userData;
+  ud.flameGroup.scale.set(flick, flick*(1+0.05*Math.sin(t*15)), flick);
+  ud.flameLight.intensity = 0.75 + 0.22*Math.sin(t*13) + 0.14*Math.sin(t*31);
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(objectViewActive){
+    // Deliberately empty: the camera was parked once in enterObjectView() via
+    // applyObjectViewCamera() and is never touched again per frame while
+    // active — dragging the object moves only the object, not the viewport.
+    // controls.update() is skipped too, since controls.enabled is false and
+    // the camera should not drift from wherever it was parked.
+  } else {
+    controls.update();
+  }
+  updateRayParticles();
+  updateMirrorReflection();
+  updateCandleFlicker();
+  if(selectedLabelKey) updateSelectionOverlay();
+  renderer.render(scene, camera);
+}
+
+/* ============================== INIT ============================== */
+refreshGridStyle();
+setMode('mirror');
+onResize();
+animate();
+</script>
+</body>
+</html>
